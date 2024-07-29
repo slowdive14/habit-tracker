@@ -1,0 +1,24 @@
+
+# 2024-07-18 10:54:29.069343
++/exit
+
+# 2024-07-18 10:56:03.502869
++I want to freeze the habit column
+
+# 2024-07-18 11:04:01.535920
++I want to pin the columns that show Exercise, English reading, Reading, etc. below the habit column in the app. Modify the relevant files again.
+
+# 2024-07-18 11:09:06.395386
++/add src\HabitTracker.js
+
+# 2024-07-18 11:09:43.283691
++Do I need to modify anything here to freeze the columns?
+
+# 2024-07-18 11:32:03.064616
++Check your code changes, and figure out what's still not working.
+
+# 2024-07-18 13:23:03.958276
++habit
+
+# 2024-07-18 13:24:03.558090
++I created a tab and separated it, but the habit selection disappeared from the graph, and the reason I created the tab, which was to freeze the left column, is not working. Fix.

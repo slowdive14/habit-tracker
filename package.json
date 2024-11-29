@@ -2,7 +2,7 @@
   "name": "habit-tracker",
   "version": "1.0.0",
   "description": "A habit tracker application",
-  "main": "index.js",
+  "main": "src/index.tsx",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",

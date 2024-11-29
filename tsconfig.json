@@ -1,0 +1,7 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "jsx": "react"
+    // ... 다른 설정들
+  }
+} 

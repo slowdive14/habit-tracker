@@ -2,8 +2,15 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId} {
-      allow read: if true;  // 모든 사용자가 읽기 가능
-      allow write: if userId == 'sIOyGOi27KPY9794P20Z8dsq4Ap2';  // 특정 사용자만 쓰기 가능
+      // spacekatb@gmail.com 계정에 대한 규칙
+      allow read, write: if request.auth != null && 
+                        request.auth.token.email == 'spacekatb@gmail.com' &&
+                        (
+                          // 자신의 문서에 대한 모든 권한
+                          userId == request.auth.uid ||
+                          // 이전 계정 데이터에 대한 읽기 권한
+                          (userId == 'sIOyGOi27KPY9794P20Z8dsq4Ap2' && request.method == 'get')
+                        );
     }
   }
-} 
+}

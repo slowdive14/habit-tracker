@@ -1,7 +1,7 @@
 {
-  "name": "habit-tracker",
+  "name": "habitflow",
   "version": "1.0.0",
-  "description": "A habit tracker application",
+  "description": "A smooth and intuitive habit tracking application",
   "main": "index.js",
   "scripts": {
     "start": "react-scripts start",

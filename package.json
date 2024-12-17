@@ -2,7 +2,7 @@
   "name": "habitflow",
   "version": "1.0.0",
   "description": "A smooth and intuitive habit tracking application",
-  "main": "index.js",
+  "main": "src/index.tsx",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",

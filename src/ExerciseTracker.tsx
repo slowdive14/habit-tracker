@@ -251,8 +251,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
     const tweetText = `${shareDate} 운동 기록 📝
 
-Push-up: ${dayData.pushups}회 🏋️
-Pull-up: ${dayData.pullups}회 💪
+Push-up: ${dayData.pushups}회 💪
+Pull-up: ${dayData.pullups}회 🏋️
 Dips: ${dayData.dips}회 🔥
 Steps: ${dayData.steps}보 🚶
 

@@ -86,10 +86,13 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   });
   const [weeklyData, setWeeklyData] = useState<any[]>([]);
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   // 데이터 로드
   useEffect(() => {
-    loadExerciseData();
+    if (user) {  // user가 있을 때만 데이터 로드
+      loadExerciseData();
+    }
   }, [user]);
 
   // 주간/월간 데이터 계산
@@ -119,6 +122,11 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   }, [selectedDate, exerciseData]);
 
   const loadExerciseData = async () => {
+    if (!user) {
+      console.log('No user found, skipping data load');
+      return;
+    }
+    
     console.log('Loading exercise data for user:', user.uid);
     try {
       const exercisesRef = collection(db, 'exercises');
@@ -126,28 +134,26 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         exercisesRef,
         where('userId', '==', user.uid)
       );
-      console.log('Executing query...');
       const querySnapshot = await getDocs(q);
-      console.log('Query results:', querySnapshot.size, 'documents found');
+      const newData: ExerciseData = {};
       
-      const data: ExerciseData = {};
       querySnapshot.forEach((doc) => {
-        console.log('Processing document:', doc.id);
-        const dateStr = doc.id.split('_')[1]; // Extract date from document ID
-        data[dateStr] = doc.data() as Exercise;
+        const data = doc.data();
+        const date = data.timestamp.toDate().toISOString().split('T')[0];
+        newData[date] = {
+          timestamp: data.timestamp,
+          pushups: data.pushups || 0,
+          pullups: data.pullups || 0,
+          dips: data.dips || 0,
+          steps: data.steps || 0
+        };
       });
       
-      console.log('Processed exercise data:', data);
-      setExerciseData(data);
-      console.log('Exercise data loaded successfully');
+      console.log('Loaded exercise data:', newData);
+      setExerciseData(newData);
     } catch (error) {
       console.error('Error loading exercise data:', error);
-      if (error instanceof Error) {
-        console.error('Error details:', {
-          message: error.message,
-          stack: error.stack
-        });
-      }
+      setError('운동 데이터를 불러오는 중 오류가 발생했습니다.');
     }
   };
 
@@ -246,6 +252,11 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
   return (
     <Box sx={{ p: 2 }}>
+      {error && (
+        <Typography variant="h6" color="error" sx={{ mb: 2 }}>
+          {error}
+        </Typography>
+      )}
       <Paper elevation={3} sx={{ 
         p: 3, 
         maxWidth: '800px', 

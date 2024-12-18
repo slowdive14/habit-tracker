@@ -1,6 +1,0 @@
-{
-  "version": 2,
-  "buildCommand": "CI=false npm run build",
-  "devCommand": "npm run start",
-  "installCommand": "npm install"
-}

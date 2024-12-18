@@ -2,15 +2,23 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId} {
-      // spacekatb@gmail.com 계정에 대한 규칙
+      // spacekatb@gmail.com 계정은 모든 데이터에 접근 가능
       allow read, write: if request.auth != null && 
-                        request.auth.token.email == 'spacekatb@gmail.com' &&
-                        (
-                          // 자신의 문서에 대한 모든 권한
-                          userId == request.auth.uid ||
-                          // 이전 계정 데이터에 대한 읽기 권한
-                          (userId == 'sIOyGOi27KPY9794P20Z8dsq4Ap2' && request.method == 'get')
-                        );
+                        request.auth.token.email == 'spacekatb@gmail.com';
+    }
+    
+    match /habits/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    match /exercises/{document=**} {
+      // spacekatb@gmail.com 계정은 모든 데이터에 접근 가능
+      // 다른 사용자는 자신의 데이터만 접근 가능
+      allow read, write: if request.auth != null && (
+        request.auth.token.email == 'spacekatb@gmail.com' ||
+        request.auth.uid == resource.data.userId ||
+        request.auth.uid == request.resource.data.userId
+      );
     }
   }
 }

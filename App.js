@@ -3,6 +3,7 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, on
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth, db } from './firebase';
 import HabitTracker from './HabitTracker';
+import ExerciseTracker from './ExerciseTracker';
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -101,8 +102,18 @@ const App = () => {
   };
 
   return (
-    <div>
-      {!user ? (
+    <div className="App">
+      {user ? (
+        <div>
+          <button onClick={handleLogout}>Logout</button>
+          <HabitTracker 
+            saveHabitData={saveHabitData} 
+            loadHabitData={loadHabitData} 
+            user={user}
+          />
+          <ExerciseTracker user={user} />
+        </div>
+      ) : (
         <div>
           <h1>Login</h1>
           {error && <p style={{ color: 'red' }}>{error}</p>}
@@ -110,14 +121,6 @@ const App = () => {
           <input type="password" placeholder="Password" id="password" />
           <button onClick={() => handleLogin(document.getElementById('email').value, document.getElementById('password').value)}>Login</button>
           <button onClick={() => handleSignup(document.getElementById('email').value, document.getElementById('password').value)}>Signup</button>
-        </div>
-      ) : (
-        <div>
-          <button onClick={handleLogout}>Logout</button>
-          <HabitTracker 
-            saveHabitData={saveHabitData} 
-            loadHabitData={loadHabitData} 
-          />
         </div>
       )}
     </div>

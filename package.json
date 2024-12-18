@@ -2,6 +2,7 @@
   "name": "habit-tracker",
   "version": "1.0.0",
   "description": "A habit tracker application",
+  "homepage": ".",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",

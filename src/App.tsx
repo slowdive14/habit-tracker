@@ -240,9 +240,10 @@ const App: React.FC = () => {
           <Tab value="exercise" label="운동 기록" />
         </Tabs>
       </Box>
-      {activeTab === 'habits' ? (
+      {activeTab === 'habits' && (
         <HabitTracker user={user} saveHabitData={saveHabitData} loadHabitData={loadHabitData} />
-      ) : (
+      )}
+      {activeTab === 'exercise' && (
         <ExerciseTracker user={user} />
       )}
       <Fab 

@@ -7,7 +7,8 @@ import {
   Typography,
   Tabs,
   Tab,
-  Grid
+  Grid,
+  Alert
 } from '@mui/material';
 import { User } from 'firebase/auth';
 import {
@@ -169,14 +170,12 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     setSelectedDate(e.target.value);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Form submitted with data:', formData);
-    console.log('Selected date:', selectedDate);
-    console.log('User ID:', user.uid);
+  const saveExerciseData = async () => {
+    if (!user) return;
     
     try {
-      const exerciseDoc = {
+      const exerciseRef = doc(db, 'exercises', `${user.uid}_${selectedDate}`);
+      const exerciseData = {
         userId: user.uid,
         timestamp: Timestamp.fromDate(new Date(selectedDate)),
         pushups: Number(formData.pushups) || 0,
@@ -185,30 +184,12 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         steps: Number(formData.steps) || 0
       };
 
-      console.log('Saving exercise doc:', exerciseDoc);
-      const docRef = doc(db, 'exercises', `${user.uid}_${selectedDate}`);
-      await setDoc(docRef, exerciseDoc);
-      console.log('Document saved with ID:', docRef.id);
-      
-      setExerciseData(prev => {
-        const newData = {
-          ...prev,
-          [selectedDate]: exerciseDoc
-        };
-        console.log('Updated exercise data:', newData);
-        return newData;
-      });
-
+      await setDoc(exerciseRef, exerciseData);
       await loadExerciseData();
       console.log('Exercise data saved and reloaded successfully');
     } catch (error) {
       console.error('Error saving exercise data:', error);
-      if (error instanceof Error) {
-        console.error('Error details:', {
-          message: error.message,
-          stack: error.stack
-        });
-      }
+      setError('운동 데이터를 저장하는 중 오류가 발생했습니다.');
     }
   };
 
@@ -253,9 +234,9 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   return (
     <Box sx={{ p: 2 }}>
       {error && (
-        <Typography variant="h6" color="error" sx={{ mb: 2 }}>
+        <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
           {error}
-        </Typography>
+        </Alert>
       )}
       <Paper elevation={3} sx={{ 
         p: 3, 
@@ -266,7 +247,10 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         <Typography variant="h5" gutterBottom>
           운동 기록
         </Typography>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          saveExerciseData();
+        }}>
           <Grid container spacing={2}>
             <Grid item xs={12}>
               <TextField

@@ -186,14 +186,7 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, [dataMigrated]);
 
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-        <CircularProgress />
-      </Box>
-    );
-  }
-
+  // 로그인하지 않은 경우 로그인 화면 표시
   if (!user) {
     return (
       <Box
@@ -232,13 +225,28 @@ const App: React.FC = () => {
     );
   }
 
+  // 로딩 중인 경우 로딩 화면 표시
+  if (loading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="100vh"
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <Container maxWidth="lg">
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ width: '100%', mb: 3 }}>
         <Tabs 
           value={activeTab} 
           onChange={(e, newValue) => setActiveTab(newValue)}
           aria-label="habit tracker tabs"
+          variant="fullWidth"
         >
           <Tab 
             value="habits" 
@@ -281,6 +289,7 @@ const App: React.FC = () => {
       >
         <KeyboardArrowUpIcon />
       </Fab>
+
       <Snackbar 
         open={!!error} 
         autoHideDuration={6000} 

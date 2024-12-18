@@ -25,7 +25,7 @@ const App: React.FC = () => {
   const [showScroll, setShowScroll] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dataMigrated, setDataMigrated] = useState(false);
-  const [activeTab, setActiveTab] = useState('habits');
+  const [activeTab, setActiveTab] = useState<string>('habits');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -235,17 +235,38 @@ const App: React.FC = () => {
   return (
     <Container maxWidth="lg">
       <Box sx={{ mb: 3 }}>
-        <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
-          <Tab value="habits" label="습관 기록" />
-          <Tab value="exercise" label="운동 기록" />
+        <Tabs 
+          value={activeTab} 
+          onChange={(e, newValue) => setActiveTab(newValue)}
+          aria-label="habit tracker tabs"
+        >
+          <Tab 
+            value="habits" 
+            label="습관 기록" 
+            id="habits-tab"
+            aria-controls="habits-panel"
+          />
+          <Tab 
+            value="exercise" 
+            label="운동 기록" 
+            id="exercise-tab"
+            aria-controls="exercise-panel"
+          />
         </Tabs>
       </Box>
-      {activeTab === 'habits' && (
-        <HabitTracker user={user} saveHabitData={saveHabitData} loadHabitData={loadHabitData} />
-      )}
-      {activeTab === 'exercise' && (
-        <ExerciseTracker user={user} />
-      )}
+
+      <Box role="tabpanel" hidden={activeTab !== 'habits'} id="habits-panel">
+        {activeTab === 'habits' && (
+          <HabitTracker user={user} saveHabitData={saveHabitData} loadHabitData={loadHabitData} />
+        )}
+      </Box>
+
+      <Box role="tabpanel" hidden={activeTab !== 'exercise'} id="exercise-panel">
+        {activeTab === 'exercise' && (
+          <ExerciseTracker user={user} />
+        )}
+      </Box>
+
       <Fab 
         color="primary" 
         size="small"

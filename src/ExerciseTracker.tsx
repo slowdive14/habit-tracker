@@ -8,8 +8,14 @@ import {
   Tabs,
   Tab,
   Grid,
-  Alert
+  Alert,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
+import TwitterIcon from '@mui/icons-material/Twitter';
 import { User } from 'firebase/auth';
 import {
   collection,
@@ -79,6 +85,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   const [tabValue, setTabValue] = useState(0);
   const [exerciseData, setExerciseData] = useState<ExerciseData>({});
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [shareDate, setShareDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [openShareDialog, setOpenShareDialog] = useState(false);
   const [formData, setFormData] = useState({
     pushups: '',
     pullups: '',
@@ -231,6 +239,30 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     setMonthlyData(data);
   };
 
+  const handleShare = () => {
+    if (!shareDate || !exerciseData) return;
+
+    const dayData = exerciseData[shareDate];
+
+    if (!dayData) {
+      setError('No exercise data for selected date');
+      return;
+    }
+
+    const tweetText = `${shareDate} 운동 기록 📝
+
+Push-up: ${dayData.pushups}회 🏋️
+Pull-up: ${dayData.pullups}회 💪
+Dips: ${dayData.dips}회 🔥
+Steps: ${dayData.steps}보 🚶
+
+#내재역량 #저속노화 #감정조절 #인지기능개선`;
+
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+    window.open(twitterUrl, '_blank');
+    setOpenShareDialog(false);
+  };
+
   return (
     <Box sx={{ p: 2 }}>
       {error && (
@@ -327,7 +359,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         margin: '20px auto',
         borderRadius: 2
       }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Tabs
             value={tabValue}
             onChange={(_, newValue) => setTabValue(newValue)}
@@ -336,6 +368,13 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
             <Tab label="주간 통계" />
             <Tab label="월간 통계" />
           </Tabs>
+          <IconButton 
+            color="primary" 
+            onClick={() => setOpenShareDialog(true)}
+            sx={{ mr: 2 }}
+          >
+            <TwitterIcon />
+          </IconButton>
         </Box>
 
         <TabPanel value={tabValue} index={0}>
@@ -446,6 +485,23 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           </ResponsiveContainer>
         </TabPanel>
       </Paper>
+
+      <Dialog open={openShareDialog} onClose={() => setOpenShareDialog(false)}>
+        <DialogTitle>Share Exercise Record</DialogTitle>
+        <DialogContent>
+          <TextField
+            type="date"
+            value={shareDate}
+            onChange={(e) => setShareDate(e.target.value)}
+            fullWidth
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenShareDialog(false)}>Cancel</Button>
+          <Button onClick={handleShare} variant="contained">Share</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

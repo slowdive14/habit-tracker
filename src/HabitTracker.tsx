@@ -88,42 +88,43 @@ const getWeekInfo = (date: Date): { weekNumber: number; weekStart: Date; weekEnd
 // 데이터 변환 유틸리티 함수
 const transformDataForComponents = (rawData: HabitData | null): HabitData => {
   const result: HabitData = {};
-  const currentYear = new Date().getFullYear().toString();
-  const currentMonth = MONTHS[new Date().getMonth()];
-
+  const years = ['2024', '2025'];
+  
   if (!rawData) {
-    // 현재 년도와 월에 대해서만 기본 데이터 생성
-    result[currentYear] = {
-      [currentMonth]: HABITS.map(habit => ({
-        ...habit,
-        days: Array(31).fill(0),
-        weekNumbers: Array(31).fill(0).map((_, index) => 
-          getWeekInfo(new Date(Number(currentYear), new Date().getMonth(), index + 1)).weekNumber
-        )
-      }))
-    };
-    return result;
-  }
-
-  // 데이터 구조 확인 및 변환
-  for (const year in rawData) {
-    if (!result[year]) {
+    // 2024년과 2025년에 대해 기본 데이터 생성
+    years.forEach(year => {
       result[year] = {};
-    }
-
-    for (const month in rawData[year]) {
-      const monthIndex = MONTHS.indexOf(month);
-      result[year][month] = HABITS.map((habit, index) => {
-        const existingData = rawData[year][month][index]?.days || Array(31).fill(0);
-        return {
+      MONTHS.forEach(month => {
+        result[year][month] = HABITS.map(habit => ({
           ...habit,
-          days: existingData,
-          weekNumbers: Array(31).fill(0).map((_, dayIndex) => 
-            getWeekInfo(new Date(Number(year), monthIndex, dayIndex + 1)).weekNumber
+          days: Array(31).fill(0),
+          weekNumbers: Array(31).fill(0).map((_, index) => 
+            getWeekInfo(new Date(Number(year), MONTHS.indexOf(month), index + 1)).weekNumber
           )
-        };
+        }));
       });
-    }
+    });
+  } else {
+    // 기존 데이터 유지하면서 누락된 연도/월 데이터 추가
+    years.forEach(year => {
+      if (!rawData[year]) {
+        rawData[year] = {};
+      }
+      
+      MONTHS.forEach(month => {
+        if (!rawData[year][month]) {
+          rawData[year][month] = HABITS.map(habit => ({
+            ...habit,
+            days: Array(31).fill(0),
+            weekNumbers: Array(31).fill(0).map((_, index) => 
+              getWeekInfo(new Date(Number(year), MONTHS.indexOf(month), index + 1)).weekNumber
+            )
+          }));
+        }
+      });
+    });
+    
+    return rawData;
   }
 
   return result;

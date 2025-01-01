@@ -7,13 +7,18 @@ import { auth, db } from './firebase';
 import HabitTracker from './HabitTracker';
 import ExerciseTracker from './ExerciseTracker';
 
+// Types
+interface HabitBase {
+  id: string;
+  title: string;
+  name: string;
+  color: string;
+}
+
 interface HabitData {
-  [month: string]: Array<{
-    name: string;
-    color: string;
-    title: string;
-    days: number[];
-  }>;
+  [year: string]: {
+    [month: string]: Array<HabitBase & { days: number[]; weekNumbers: number[] }>;
+  };
 }
 
 const ALLOWED_EMAIL = 'spacekatb@gmail.com'; // 여기에 허용할 이메일 주소를 입력하세요

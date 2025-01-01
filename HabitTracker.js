@@ -14,10 +14,18 @@ const months = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-const initialHabitData = months.reduce((acc, month) => {
-  acc[month] = habits.map(habit => ({ ...habit, days: Array(new Date(2024, months.indexOf(month) + 1, 0).getDate()).fill(0) }));
-  return acc;
-}, {});
+const initialHabitData = (() => {
+  const currentYear = new Date().getFullYear().toString();
+  return {
+    [currentYear]: months.reduce((acc, month) => {
+      acc[month] = habits.map(habit => ({ 
+        ...habit, 
+        days: Array(new Date(currentYear, months.indexOf(month) + 1, 0).getDate()).fill(0) 
+      }));
+      return acc;
+    }, {})
+  };
+})();
 
 const HabitTracker = ({ saveHabitData, loadHabitData }) => {
   const currentMonthName = months[new Date().getMonth()];
@@ -38,13 +46,17 @@ const HabitTracker = ({ saveHabitData, loadHabitData }) => {
   }, [loadHabitData]);
 
   const handleScoreChange = (habitIndex, dayIndex, score) => {
+    const currentYear = new Date().getFullYear().toString();
     const newHabitData = {
       ...habitData,
-      [currentMonth]: habitData[currentMonth].map((habit, index) =>
-        index === habitIndex
-          ? { ...habit, days: habit.days.map((day, idx) => idx === dayIndex ? score : day) }
-          : habit
-      )
+      [currentYear]: {
+        ...habitData[currentYear],
+        [currentMonth]: habitData[currentYear][currentMonth].map((habit, index) =>
+          index === habitIndex
+            ? { ...habit, days: habit.days.map((day, idx) => idx === dayIndex ? score : day) }
+            : habit
+        )
+      }
     };
 
     setHabitData(newHabitData);
@@ -56,9 +68,16 @@ const HabitTracker = ({ saveHabitData, loadHabitData }) => {
   };
 
   const handleReset = () => {
+    const currentYear = new Date().getFullYear().toString();
     const newHabitData = {
       ...habitData,
-      [currentMonth]: habits.map(habit => ({ ...habit, days: Array(new Date(2024, months.indexOf(currentMonth) + 1, 0).getDate()).fill(0) }))
+      [currentYear]: {
+        ...habitData[currentYear],
+        [currentMonth]: habits.map(habit => ({ 
+          ...habit, 
+          days: Array(new Date(currentYear, months.indexOf(currentMonth) + 1, 0).getDate()).fill(0) 
+        }))
+      }
     };
 
     setHabitData(newHabitData);
@@ -88,8 +107,9 @@ const HabitTracker = ({ saveHabitData, loadHabitData }) => {
 
   const weeklyData = useMemo(() => {
     const data = [];
-    const daysInMonth = new Date(2024, months.indexOf(currentMonth) + 1, 0).getDate();
-    let currentDay = new Date(2024, months.indexOf(currentMonth), 1);
+    const currentYear = new Date().getFullYear().toString();
+    const daysInMonth = new Date(currentYear, months.indexOf(currentMonth) + 1, 0).getDate();
+    let currentDay = new Date(currentYear, months.indexOf(currentMonth), 1);
 
     while (currentDay.getMonth() === months.indexOf(currentMonth)) {
       const weekNumber = getWeekNumber(currentDay);
@@ -100,7 +120,7 @@ const HabitTracker = ({ saveHabitData, loadHabitData }) => {
       };
 
       habits.forEach((habit, index) => {
-        const weekTotal = habitData[currentMonth][index].days.slice(
+        const weekTotal = habitData[currentYear][currentMonth][index].days.slice(
           monday.getDate() - 1, Math.min(sunday.getDate(), daysInMonth)
         ).reduce((sum, day) => sum + day, 0);
         weekData[habit.name] = weekTotal;
@@ -114,17 +134,19 @@ const HabitTracker = ({ saveHabitData, loadHabitData }) => {
   }, [currentMonth, habitData]);
 
   const yearlyData = useMemo(() => {
-    return months.map(month => {
-      const monthlyData = habitData[month];
-      return {
-        name: month,
-        ...habits.reduce((acc, habit, index) => {
-          const monthlyTotal = monthlyData[index].days.reduce((sum, day) => sum + day, 0);
-          acc[habit.name] = monthlyTotal;
-          return acc;
-        }, {})
-      };
-    });
+    return Object.keys(habitData).map(year => {
+      return months.map(month => {
+        const monthlyData = habitData[year][month];
+        return {
+          name: month,
+          ...habits.reduce((acc, habit, index) => {
+            const monthlyTotal = monthlyData[index].days.reduce((sum, day) => sum + day, 0);
+            acc[habit.name] = monthlyTotal;
+            return acc;
+          }, {})
+        };
+      });
+    }).flat();
   }, [habitData]);
 
   const handleMonthChange = (e) => {
@@ -145,7 +167,7 @@ const HabitTracker = ({ saveHabitData, loadHabitData }) => {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Advanced Habit Tracker - {currentMonth} 2024</h1>
+      <h1 className="text-2xl font-bold mb-4">Advanced Habit Tracker - {currentMonth} {new Date().getFullYear()}</h1>
       <div className="flex mb-4">
         <select onChange={handleMonthChange} value={currentMonth} className="mb-4 p-2 border rounded">
           {months.map(month => <option key={month} value={month}>{month}</option>)}
@@ -157,13 +179,13 @@ const HabitTracker = ({ saveHabitData, loadHabitData }) => {
           <thead className="sticky top-0 bg-white">
             <tr>
               <th className="border p-2">Habit</th>
-              {[...Array(new Date(2024, months.indexOf(currentMonth) + 1, 0).getDate())].map((_, i) => (
+              {[...Array(new Date().getDate())].map((_, i) => (
                 <th key={i + 1} className={`border p-2 ${new Date().getDate() === i + 1 && new Date().getMonth() === months.indexOf(currentMonth) ? 'bg-yellow-200' : ''}`}>{i + 1}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {habitData[currentMonth].map((habit, habitIndex) => (
+            {habitData[new Date().getFullYear().toString()][currentMonth].map((habit, habitIndex) => (
               <tr key={habitIndex}>
                 <td className="border p-2 font-bold">{habit.name}</td>
                 {habit.days.map((score, dayIndex) => (

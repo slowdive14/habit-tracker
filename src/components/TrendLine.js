@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   LineChart,
   Line,
@@ -10,111 +10,104 @@ import {
   Legend
 } from 'recharts';
 
-const TrendLine = ({ habitData }) => {
+const TrendLine = ({ habitData, selectedYear }) => {
   const [selectedHabits, setSelectedHabits] = useState(new Set());
   const [chartData, setChartData] = useState([]);
 
+  // 차트 데이터 처리
   useEffect(() => {
-    if (!habitData) return;
+    if (!habitData || !habitData[selectedYear]) return;
 
-    const monthlyTotals = {};
-    const months = Object.keys(habitData);
+    const yearData = habitData[selectedYear];
+    const processedData = [];
     
-    // 각 월의 모든 습관에 대한 총점 계산
-    months.forEach(month => {
-      const monthData = habitData[month];
-      monthlyTotals[month] = {};
-      
-      console.log(`Processing month: ${month}`);
-      console.log('Month data:', monthData);
-      
-      // 각 습관별로 총점 계산
+    // 모든 월에 대해 데이터 처리
+    const monthOrder = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    
+    // 각 월별 데이터 처리
+    monthOrder.forEach(month => {
+      const monthData = yearData[month];
+      if (!monthData || !Array.isArray(monthData)) return;
+
+      const monthStats = {
+        monthKR: {
+          'January': '1월', 'February': '2월', 'March': '3월',
+          'April': '4월', 'May': '5월', 'June': '6월',
+          'July': '7월', 'August': '8월', 'September': '9월',
+          'October': '10월', 'November': '11월', 'December': '12월'
+        }[month]
+      };
+
+      // 각 습관별 점수 계산
       monthData.forEach(habit => {
-        if (!habit.days || !habit.title) {
-          console.log(`Skipping habit due to missing data:`, habit);
-          return;
+        if (habit?.days) {
+          // 해당 월의 총점 계산
+          const total = habit.days.reduce((sum, score) => sum + (score || 0), 0);
+          monthStats[habit.title] = total;
+        } else {
+          monthStats[habit.title] = 0;
         }
-        
-        const total = habit.days.reduce((acc, score) => acc + (score || 0), 0);
-        monthlyTotals[month][habit.title] = total;
-        console.log(`${habit.title} total for ${month}: ${total}`);
       });
+
+      processedData.push(monthStats);
     });
 
-    // 데이터 포맷 변환
-    const data = months.sort((a, b) => {
-      const monthOrder = {
-        'January': 0, 'February': 1, 'March': 2, 'April': 3,
-        'May': 4, 'June': 5, 'July': 6, 'August': 7,
-        'September': 8, 'October': 9, 'November': 10, 'December': 11
-      };
-      return monthOrder[a] - monthOrder[b];
-    }).map(month => {
-      const monthKR = {
-        'January': '1월', 'February': '2월', 'March': '3월',
-        'April': '4월', 'May': '5월', 'June': '6월',
-        'July': '7월', 'August': '8월', 'September': '9월',
-        'October': '10월', 'November': '11월', 'December': '12월'
-      };
-      
-      const monthData = {
-        month: monthKR[month],
-        ...monthlyTotals[month]
-      };
-      
-      console.log(`Formatted data for ${month}:`, monthData);
-      return monthData;
-    });
+    setChartData(processedData);
+  }, [habitData, selectedYear]);
 
-    console.log('Final chart data:', data);
-    setChartData(data);
-  }, [habitData]);
+  const allHabits = useMemo(() => {
+    if (!chartData || chartData.length === 0) return [];
+    return Object.keys(chartData[0]).filter(key => key !== 'monthKR');
+  }, [chartData]);
 
-  const allHabits = chartData[0] ? Object.keys(chartData[0]).filter(key => key !== 'month') : [];
-  const colors = {
-    '운동': '#0072B2',          // Blue
-    '영어 읽기': '#E69F00',     // Orange
-    '독서': '#009E73',          // Green
-    '아이들과 영어': '#D55E00', // Red
-    '아내 마사지': '#CC79A7',   // Purple
-    '코딩': '#56B4E9',          // Sky Blue
-    '기상': '#F0E442',          // Yellow
-    '산책': '#0072B2',          // Blue
-    '요가': '#009E73',          // Green
-    '공부': '#CC79A7'           // Purple
-  };
+  // 표시할 습관 목록
+  const displayHabits = useMemo(() => {
+    if (selectedHabits.size === 0) return allHabits;
+    return allHabits.filter(habit => selectedHabits.has(habit));
+  }, [selectedHabits, allHabits]);
 
-  // 표시할 습관 필터링
-  const displayHabits = allHabits.filter(habit => 
-    selectedHabits.size === 0 || selectedHabits.has(habit)
-  );
-
-  const getHabitColor = (habit) => {
-    return colors[habit] || '#808080'; // Default to gray if color not found
-  };
-
+  // 습관 토글
   const toggleHabit = (habit) => {
-    const newSelected = new Set(selectedHabits);
-    if (newSelected.has(habit)) {
-      newSelected.delete(habit);
+    const newSelectedHabits = new Set(selectedHabits);
+    if (newSelectedHabits.has(habit)) {
+      newSelectedHabits.delete(habit);
     } else {
-      newSelected.add(habit);
+      newSelectedHabits.add(habit);
     }
-    setSelectedHabits(newSelected);
+    setSelectedHabits(newSelectedHabits);
   };
 
+  // 습관별 색상
+  const getHabitColor = (habit) => {
+    const colors = {
+      '운동': '#0072B2',          // Blue
+      '영어 읽기': '#E69F00',     // Orange
+      '아이돌과 영어': '#009E73', // Green
+      '독서': '#CC79A7',          // Pink
+      '아내 마사지': '#D55E00'    // Red
+    };
+    return colors[habit] || '#666666';
+  };
+
+  // 툴팁 커스터마이징
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
         <div style={{
           backgroundColor: 'white',
-          padding: '8px',
+          padding: '10px',
           border: '1px solid #ccc',
           borderRadius: '4px'
         }}>
-          <p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>{label}</p>
+          <p style={{ margin: '0 0 5px 0' }}>{label}</p>
           {payload.map((entry, index) => (
-            <p key={index} style={{ margin: 0, color: entry.color }}>
+            <p key={index} style={{ 
+              color: entry.color,
+              margin: '0'
+            }}>
               {entry.name}: {entry.value}점
             </p>
           ))}
@@ -135,11 +128,13 @@ const TrendLine = ({ habitData }) => {
       <div style={{ 
         marginBottom: '15px',
         display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexDirection: 'column',
+        gap: '10px'
       }}>
-        <span>전체 기간 트렌드 (총점)</span>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        {/* 습관 선택 버튼들 */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
           {allHabits.map((habit) => (
             <button
               key={habit}
@@ -164,43 +159,40 @@ const TrendLine = ({ habitData }) => {
           ))}
         </div>
       </div>
+
       <div style={{ width: '100%', height: 300 }}>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis 
-              dataKey="month" 
-              stroke="#999"
-              tick={{ fontSize: 12 }}
+              dataKey="monthKR" 
+              height={60}
+              tick={{ fontSize: 14 }}
             />
             <YAxis 
-              stroke="#999"
+              width={50}
+              tick={{ fontSize: 14 }}
               tickFormatter={(value) => `${value}점`}
-              tick={{ fontSize: 12 }}
-              label={{
-                value: '총점',
-                angle: -90,
+              label={{ 
+                value: '습관 총점', 
+                angle: -90, 
                 position: 'insideLeft',
+                offset: -5,
                 style: { textAnchor: 'middle' }
               }}
             />
             <Tooltip content={<CustomTooltip />} />
-            <Legend 
-              wrapperStyle={{
-                paddingTop: '10px',
-                fontSize: '12px'
-              }}
-            />
+            <Legend />
             {displayHabits.map((habit) => (
               <Line
                 key={habit}
                 type="monotone"
                 dataKey={habit}
-                name={habit}
                 stroke={getHabitColor(habit)}
-                strokeWidth={1.5}
-                dot={{ r: 3, strokeWidth: 1 }}
-                activeDot={{ r: 5, strokeWidth: 1 }}
+                strokeWidth={2}
+                dot={{ r: 4 }}
+                activeDot={{ r: 6 }}
+                connectNulls={true}
               />
             ))}
           </LineChart>

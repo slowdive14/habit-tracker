@@ -46,6 +46,7 @@ interface Exercise {
   dips: number;
   steps: number;
   running: number;
+  avgPace: string;  // mm:ss format
 }
 
 interface ExerciseData {
@@ -83,7 +84,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
-  const [tabValue, setTabValue] = useState(0);
+  const [tabValue, setTabValue] = useState(1);  // 1: 월간 통계
   const [exerciseData, setExerciseData] = useState<ExerciseData>({});
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [shareDate, setShareDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -93,19 +94,23 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     pullups: '',
     dips: '',
     steps: '',
-    running: ''
+    running: '',
+    avgPace: ''
   });
   const [weeklyData, setWeeklyData] = useState<any[]>([]);
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
   const [averageStats, setAverageStats] = useState({
     steps: 0,
     running: 0,
+    runningDaysAvg: 0,
     pushups: 0,
     pullups: 0,
     dips: 0,
+    avgPace: '',
     daysCountedSteps: 0,
     daysCountedRunning: 0,
-    daysCountedExercises: 0
+    daysCountedExercises: 0,
+    runningDaysCount: 0
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -131,7 +136,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         pullups: String(existingData.pullups || ''),
         dips: String(existingData.dips || ''),
         steps: String(existingData.steps || ''),
-        running: String(existingData.running || '')
+        running: String(existingData.running || ''),
+        avgPace: existingData.avgPace || ''
       });
     } else {
       setFormData({
@@ -139,7 +145,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         pullups: '',
         dips: '',
         steps: '',
-        running: ''
+        running: '',
+        avgPace: ''
       });
     }
   }, [selectedDate, exerciseData]);
@@ -169,7 +176,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           pullups: data.pullups || 0,
           dips: data.dips || 0,
           steps: data.steps || 0,
-          running: data.running || 0
+          running: data.running || 0,
+          avgPace: data.avgPace || ''
         };
       });
       
@@ -181,7 +189,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -205,7 +213,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         pullups: Number(formData.pullups) || 0,
         dips: Number(formData.dips) || 0,
         steps: Number(formData.steps) || 0,
-        running: Number(formData.running) || 0
+        running: Number(formData.running) || 0,
+        avgPace: formData.avgPace
       };
 
       await setDoc(exerciseRef, exerciseData);
@@ -275,21 +284,41 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         acc.dips += data.dips || 0;
         if (date >= '2025-01-01') {
           acc.running += data.running || 0;
+          if (data.running && data.avgPace) {
+            acc.runningDays++;
+            // Convert mm:ss to total seconds
+            const [min, sec] = data.avgPace.split(':').map(Number);
+            acc.totalPaceSeconds += min * 60 + sec;
+          }
         }
         return acc;
       },
-      { steps: 0, running: 0, pushups: 0, pullups: 0, dips: 0 }
+      { steps: 0, running: 0, pushups: 0, pullups: 0, dips: 0, runningDays: 0, totalPaceSeconds: 0 }
     );
+
+    // Calculate average pace
+    let averagePace = '';
+    let runningDaysAverage = 0;
+    if (totalStats.runningDays > 0) {
+      const avgSeconds = Math.round(totalStats.totalPaceSeconds / totalStats.runningDays);
+      const avgMinutes = Math.floor(avgSeconds / 60);
+      const avgRemainderSeconds = avgSeconds % 60;
+      averagePace = `${avgMinutes.toString().padStart(2, '0')}:${avgRemainderSeconds.toString().padStart(2, '0')}`;
+      runningDaysAverage = Math.round((totalStats.running / totalStats.runningDays) * 100) / 100;
+    }
 
     setAverageStats({
       steps: Math.round((totalStats.steps / daysFromStart) * 10) / 10,
       running: Math.round((totalStats.running / daysFromRunningStart) * 100) / 100,
+      runningDaysAvg: runningDaysAverage,
       pushups: Math.round((totalStats.pushups / daysFromStart) * 10) / 10,
       pullups: Math.round((totalStats.pullups / daysFromStart) * 10) / 10,
       dips: Math.round((totalStats.dips / daysFromStart) * 10) / 10,
+      avgPace: averagePace,
       daysCountedSteps: daysFromStart,
       daysCountedRunning: daysFromRunningStart,
-      daysCountedExercises: daysFromStart
+      daysCountedExercises: daysFromStart,
+      runningDaysCount: totalStats.runningDays
     });
   };
 
@@ -309,7 +338,7 @@ Push-up: ${dayData.pushups}회 💪
 Pull-up: ${dayData.pullups}회 🏋️
 Dips: ${dayData.dips}회 🔥
 Steps: ${dayData.steps}보 🚶
-Running: ${dayData.running}km 🏃
+Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
 
 #내재역량 #저속노화 #감정조절 #인지기능개선`;
 
@@ -401,6 +430,51 @@ Running: ${dayData.running}km 🏃
                 inputProps={{ step: "0.1" }}
                 value={formData.running}
                 onChange={handleInputChange}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Avg. pace (mm:ss)"
+                name="avgPace"
+                placeholder="05:30"
+                value={formData.avgPace}
+                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+                  let value = e.target.value;
+                  
+                  // 콜론 제거
+                  value = value.replace(/:/g, '');
+                  
+                  // 숫자만 허용
+                  if (!/^[0-9]*$/.test(value)) {
+                    return;
+                  }
+
+                  // 4자리로 제한
+                  value = value.slice(0, 4);
+
+                  // mm:ss 형식으로 변환
+                  if (value.length > 2) {
+                    const minutes = value.slice(0, 2);
+                    const seconds = value.slice(2);
+                    value = `${minutes}:${seconds}`;
+                  }
+
+                  setFormData(prev => ({
+                    ...prev,
+                    avgPace: value
+                  }));
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Backspace') {
+                    e.preventDefault();
+                    const value = formData.avgPace.replace(/:/g, '');
+                    setFormData(prev => ({
+                      ...prev,
+                      avgPace: value.slice(0, -1)
+                    }));
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12}>
@@ -581,7 +655,10 @@ Running: ${dayData.running}km 🏃
             달리기 거리
           </Typography>
           <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            일일 평균: {averageStats.running}km (2025년 1월 1일부터 {averageStats.daysCountedRunning}일)
+            전체 일일 평균: {averageStats.running}km
+            {averageStats.runningDaysCount > 0 && `, 달린 날 평균: ${averageStats.runningDaysAvg}km`}
+            {averageStats.avgPace && `, 평균 페이스: ${averageStats.avgPace}/km`} 
+            (총 {averageStats.daysCountedRunning}일)
           </Typography>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={monthlyData}>

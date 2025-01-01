@@ -45,6 +45,7 @@ interface Exercise {
   pullups: number;
   dips: number;
   steps: number;
+  running: number;
 }
 
 interface ExerciseData {
@@ -91,10 +92,21 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     pushups: '',
     pullups: '',
     dips: '',
-    steps: ''
+    steps: '',
+    running: ''
   });
   const [weeklyData, setWeeklyData] = useState<any[]>([]);
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
+  const [averageStats, setAverageStats] = useState({
+    steps: 0,
+    running: 0,
+    pushups: 0,
+    pullups: 0,
+    dips: 0,
+    daysCountedSteps: 0,
+    daysCountedRunning: 0,
+    daysCountedExercises: 0
+  });
   const [error, setError] = useState<string | null>(null);
 
   // 데이터 로드
@@ -118,14 +130,16 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         pushups: String(existingData.pushups || ''),
         pullups: String(existingData.pullups || ''),
         dips: String(existingData.dips || ''),
-        steps: String(existingData.steps || '')
+        steps: String(existingData.steps || ''),
+        running: String(existingData.running || '')
       });
     } else {
       setFormData({
         pushups: '',
         pullups: '',
         dips: '',
-        steps: ''
+        steps: '',
+        running: ''
       });
     }
   }, [selectedDate, exerciseData]);
@@ -154,7 +168,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           pushups: data.pushups || 0,
           pullups: data.pullups || 0,
           dips: data.dips || 0,
-          steps: data.steps || 0
+          steps: data.steps || 0,
+          running: data.running || 0
         };
       });
       
@@ -189,7 +204,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         pushups: Number(formData.pushups) || 0,
         pullups: Number(formData.pullups) || 0,
         dips: Number(formData.dips) || 0,
-        steps: Number(formData.steps) || 0
+        steps: Number(formData.steps) || 0,
+        running: Number(formData.running) || 0
       };
 
       await setDoc(exerciseRef, exerciseData);
@@ -214,7 +230,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       pushups: exerciseData[date]?.pushups || 0,
       pullups: exerciseData[date]?.pullups || 0,
       dips: exerciseData[date]?.dips || 0,
-      steps: exerciseData[date]?.steps || 0
+      steps: exerciseData[date]?.steps || 0,
+      running: exerciseData[date]?.running || 0
     }));
 
     setWeeklyData(data);
@@ -233,10 +250,47 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       pushups: exerciseData[date]?.pushups || 0,
       pullups: exerciseData[date]?.pullups || 0,
       dips: exerciseData[date]?.dips || 0,
-      steps: exerciseData[date]?.steps || 0
+      steps: exerciseData[date]?.steps || 0,
+      running: exerciseData[date]?.running || 0
     }));
 
     setMonthlyData(data);
+
+    // 평균 계산
+    let startDate = new Date('2025-01-01'); // 달리기 시작일
+    let firstRecordDate = Object.keys(exerciseData).sort()[0]; // 전체 데이터 시작일
+
+    // 현재까지의 총 일수 계산
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const todayDate = new Date();
+    const daysFromStart = Math.floor((todayDate.getTime() - new Date(firstRecordDate).getTime()) / msPerDay) + 1;
+    const daysFromRunningStart = Math.floor((todayDate.getTime() - startDate.getTime()) / msPerDay) + 1;
+
+    // 총합 계산
+    const totalStats = Object.entries(exerciseData).reduce(
+      (acc, [date, data]) => {
+        acc.steps += data.steps || 0;
+        acc.pushups += data.pushups || 0;
+        acc.pullups += data.pullups || 0;
+        acc.dips += data.dips || 0;
+        if (date >= '2025-01-01') {
+          acc.running += data.running || 0;
+        }
+        return acc;
+      },
+      { steps: 0, running: 0, pushups: 0, pullups: 0, dips: 0 }
+    );
+
+    setAverageStats({
+      steps: Math.round((totalStats.steps / daysFromStart) * 10) / 10,
+      running: Math.round((totalStats.running / daysFromRunningStart) * 100) / 100,
+      pushups: Math.round((totalStats.pushups / daysFromStart) * 10) / 10,
+      pullups: Math.round((totalStats.pullups / daysFromStart) * 10) / 10,
+      dips: Math.round((totalStats.dips / daysFromStart) * 10) / 10,
+      daysCountedSteps: daysFromStart,
+      daysCountedRunning: daysFromRunningStart,
+      daysCountedExercises: daysFromStart
+    });
   };
 
   const handleShare = () => {
@@ -255,6 +309,7 @@ Push-up: ${dayData.pushups}회 💪
 Pull-up: ${dayData.pullups}회 🏋️
 Dips: ${dayData.dips}회 🔥
 Steps: ${dayData.steps}보 🚶
+Running: ${dayData.running}km 🏃
 
 #내재역량 #저속노화 #감정조절 #인지기능개선`;
 
@@ -334,6 +389,17 @@ Steps: ${dayData.steps}보 🚶
                 name="steps"
                 type="number"
                 value={formData.steps}
+                onChange={handleInputChange}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="달리기 (km)"
+                name="running"
+                type="number"
+                inputProps={{ step: "0.1" }}
+                value={formData.running}
                 onChange={handleInputChange}
               />
             </Grid>
@@ -429,12 +495,35 @@ Steps: ${dayData.steps}보 🚶
               />
             </LineChart>
           </ResponsiveContainer>
+
+          {/* 달리기 차트 */}
+          <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+            달리기 거리
+          </Typography>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={weeklyData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis domain={[0, 'auto']} />
+              <Tooltip />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="running"
+                stroke="#e91e63"
+                name="달리기 (km)"
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>
           {/* 운동 차트 (푸시업, 풀업, 딥스) */}
           <Typography variant="h6" gutterBottom>
             운동 기록
+          </Typography>
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+            일일 평균: 푸시업 {averageStats.pushups}회, 풀업 {averageStats.pullups}회, 딥스 {averageStats.dips}회 (총 {averageStats.daysCountedExercises}일)
           </Typography>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={monthlyData}>
@@ -468,6 +557,9 @@ Steps: ${dayData.steps}보 🚶
           <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
             걸음 수
           </Typography>
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+            일일 평균: {averageStats.steps.toLocaleString()}보 (총 {averageStats.daysCountedSteps}일)
+          </Typography>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -480,6 +572,29 @@ Steps: ${dayData.steps}보 🚶
                 dataKey="steps"
                 stroke="#ff7300"
                 name="걸음 수"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+
+          {/* 달리기 차트 */}
+          <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+            달리기 거리
+          </Typography>
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+            일일 평균: {averageStats.running}km (2025년 1월 1일부터 {averageStats.daysCountedRunning}일)
+          </Typography>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={monthlyData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis domain={[0, 'auto']} />
+              <Tooltip />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="running"
+                stroke="#e91e63"
+                name="달리기 (km)"
               />
             </LineChart>
           </ResponsiveContainer>

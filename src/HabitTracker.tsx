@@ -9,9 +9,12 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  SelectChangeEvent
+  SelectChangeEvent,
+  Stack
 } from '@mui/material';
 import { User } from 'firebase/auth';
+import { HeatMapGrid } from 'react-grid-heatmap';
+import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import WeeklyTrend from './components/WeeklyTrend';
 import HabitStats from './components/HabitStats';
 import HabitInsight from './components/HabitInsight';
@@ -43,6 +46,9 @@ const HABITS: HabitBase[] = [
   { id: 'reading', name: 'Reading', color: '#009E73', title: '독서' },
   { id: 'english-kids', name: 'English with kids', color: '#D55E00', title: '아이들과 영어' },
   { id: 'massage', name: 'Wife Massage', color: '#CC79A7', title: '아내 마사지' },
+  { id: 'back-pain', name: 'Back Pain', color: '#882255', title: '등 결림' },
+  { id: 'esophagitis', name: 'Esophagitis', color: '#661188', title: '식도염' },
+  { id: 'stool-condition', name: 'Stool Condition', color: '#44AA99', title: '대변 상태' },
 ];
 
 const MONTHS = [
@@ -55,19 +61,30 @@ const MONTHS_KR = [
   '7월', '8월', '9월', '10월', '11월', '12월'
 ];
 
+// 한국 시간 유틸리티 함수
+const getKoreanDate = (date: Date = new Date()): Date => {
+  const koreanDate = new Date(date);
+  koreanDate.setHours(koreanDate.getHours() + 9);
+  return koreanDate;
+};
+
 // 주차 정보 계산 함수
 const getWeekInfo = (date: Date): { weekNumber: number; weekStart: Date; weekEnd: Date } => {
-  const year = date.getFullYear();
-  const month = date.getMonth();
-  const day = date.getDate();
+  const koreanDate = getKoreanDate(date);
+  const year = koreanDate.getFullYear();
+  const month = koreanDate.getMonth();
+  const day = koreanDate.getDate();
   
   // 해당 주의 시작일(월요일)과 종료일(일요일) 계산
-  const weekStart = new Date(date);
+  const weekStart = new Date(koreanDate);
   const dayOfWeek = weekStart.getDay();
   const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 월요일이 0이 되도록 조정
   weekStart.setDate(weekStart.getDate() - diff); // 월요일로 조정
+  weekStart.setHours(0, 0, 0, 0);
+  
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6); // 일요일
+  weekEnd.setHours(23, 59, 59, 999);
   
   // 주차 계산
   const firstDayOfMonth = new Date(year, month, 1);
@@ -89,6 +106,7 @@ const getWeekInfo = (date: Date): { weekNumber: number; weekStart: Date; weekEnd
 const transformDataForComponents = (rawData: HabitData | null): HabitData => {
   const result: HabitData = {};
   const years = ['2024', '2025'];
+  const koreanNow = getKoreanDate();
   
   if (!rawData) {
     // 2024년과 2025년에 대해 기본 데이터 생성
@@ -132,16 +150,17 @@ const transformDataForComponents = (rawData: HabitData | null): HabitData => {
 
 const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHabitData }) => {
   const [transformedData, setTransformedData] = useState<HabitData>(() => {
-    // 초기 상태를 빈 데이터로 설정
-    const currentYear = new Date().getFullYear().toString();
-    const currentMonth = MONTHS[new Date().getMonth()];
+    // 초기 상태를 빈 데이터로 설정 (한국 시간 기준)
+    const koreanNow = getKoreanDate();
+    const currentYear = koreanNow.getFullYear().toString();
+    const currentMonth = MONTHS[koreanNow.getMonth()];
     return {
       [currentYear]: {
         [currentMonth]: HABITS.map(habit => ({
           ...habit,
           days: Array(31).fill(0),
           weekNumbers: Array(31).fill(0).map((_, index) => 
-            getWeekInfo(new Date(Number(currentYear), new Date().getMonth(), index + 1)).weekNumber
+            getWeekInfo(new Date(Number(currentYear), koreanNow.getMonth(), index + 1)).weekNumber
           )
         }))
       }
@@ -155,6 +174,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
 
   // 현재 날짜 정보
   const today = new Date();
+  today.setHours(today.getHours() + 9); // UTC+9 (한국 시간)
   const currentYear = today.getFullYear();
 
   // 데이터 로드
@@ -219,24 +239,32 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
         ...habit,
         days: Array(31).fill(0),
         weekNumbers: Array(31).fill(0).map((_, index) => 
-          getWeekInfo(new Date(Number(currentYear), new Date().getMonth(), index + 1)).weekNumber
+          getWeekInfo(new Date(Number(currentYear), selectedDate.getMonth(), index + 1)).weekNumber
         )
       }));
     }
 
     // 점수 업데이트
+    const updatedMonth = [...newData[currentYear][month]];
+    if (!updatedMonth[habitIndex]) {
+      updatedMonth[habitIndex] = {
+        ...HABITS[habitIndex],
+        days: Array(31).fill(0),
+        weekNumbers: Array(31).fill(0).map((_, index) => 
+          getWeekInfo(new Date(Number(currentYear), selectedDate.getMonth(), index + 1)).weekNumber
+        )
+      };
+    }
+    updatedMonth[habitIndex] = {
+      ...updatedMonth[habitIndex],
+      days: [...updatedMonth[habitIndex].days.slice(0, day), score, ...updatedMonth[habitIndex].days.slice(day + 1)]
+    };
+
     newData = {
       ...newData,
       [currentYear]: {
         ...newData[currentYear],
-        [month]: newData[currentYear][month].map((habit, index) => {
-          if (index === habitIndex) {
-            const newDays = [...habit.days];
-            newDays[day] = score;
-            return { ...habit, days: newDays };
-          }
-          return habit;
-        })
+        [month]: updatedMonth
       }
     };
 
@@ -244,12 +272,17 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     await saveHabitData(newData);
   };
 
-  // 지난 8주 데이터 계산
+  // 지난 5주 데이터 계산
   const calculateLast8WeeksData = (habitIndex: number): { name: string; value: number }[] => {
     try {
-      // 2025년 1월 6일 월요일부터 시작
-      const startDate = new Date(2025, 0, 6); // 1월 6일 월요일
-      const endDate = new Date(2025, 2, 2); // 3월 2일 일요일 (8주 후)
+      // 2025년 2월 7일로 고정
+      const targetDate = new Date(2025, 1, 7); // 월은 0부터 시작하므로 1이 2월
+      
+      // 5주 전의 월요일을 시작일로 설정
+      const startDate = new Date(targetDate);
+      const daysSinceMonday = (targetDate.getDay() + 6) % 7; // 월요일부터 몇 일이 지났는지 계산
+      startDate.setDate(targetDate.getDate() - daysSinceMonday - (4 * 7)); // 5주 전 월요일
+      startDate.setHours(0, 0, 0, 0);
 
       const weeklyData = new Map<number, {
         weekNumber: number;
@@ -260,12 +293,17 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
       }>();
 
       let currentDate = new Date(startDate);
-      while (currentDate <= endDate) {
-        const { weekNumber, weekStart, weekEnd } = getWeekInfo(currentDate);
+      while (currentDate <= targetDate) {
+        const weekStart = new Date(currentDate);
+        weekStart.setDate(currentDate.getDate() - currentDate.getDay() + 1); // 해당 주의 월요일
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6); // 해당 주의 일요일
         
-        if (!weeklyData.has(weekNumber)) {
-          weeklyData.set(weekNumber, {
-            weekNumber,
+        const weekKey = weekStart.getTime(); // 주를 구분하기 위한 고유 키
+        
+        if (!weeklyData.has(weekKey)) {
+          weeklyData.set(weekKey, {
+            weekNumber: weeklyData.size + 1,
             startDate: weekStart,
             endDate: weekEnd,
             totalScore: 0,
@@ -277,7 +315,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
         const month = MONTHS[currentDate.getMonth()];
         const monthData = transformedData[year]?.[month];
         
-        const weekData = weeklyData.get(weekNumber);
+        const weekData = weeklyData.get(weekKey);
         if (weekData && monthData && monthData[habitIndex]?.days) {
           const dayScore = Number(monthData[habitIndex].days[currentDate.getDate() - 1]) || 0;
           weekData.totalScore += dayScore;
@@ -287,7 +325,9 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
         currentDate.setDate(currentDate.getDate() + 1);
       }
 
+      // 정확히 5주의 데이터만 반환
       return Array.from(weeklyData.values())
+        .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
         .map(week => {
           const startMonth = week.startDate.getMonth() + 1;
           const endMonth = week.endDate.getMonth() + 1;
@@ -318,9 +358,18 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     return Math.round(totalScore / previousWeeksData.length);
   };
 
+  // 현재 주의 경과 일수 계산
+  const getCurrentWeekDays = (): number => {
+    const today = new Date();
+    today.setHours(today.getHours() + 9); // UTC+9 (한국 시간)
+    const dayOfWeek = today.getDay();
+    return dayOfWeek === 0 ? 7 : dayOfWeek; // 일요일이면 7, 아니면 1-6 반환
+  };
+
   // 이번 주 현재까지의 점수 계산
   const getCurrentWeekScore = (habitIndex: number): number => {
     const today = new Date();
+    today.setHours(today.getHours() + 9); // UTC+9 (한국 시간)
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay()); // 일요일로 설정
 
@@ -349,6 +398,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
   // 이전 달의 총점 계산 함수
   const getPreviousMonthTotal = (habitIndex: number): number => {
     const today = new Date();
+    today.setHours(today.getHours() + 9); // UTC+9 (한국 시간)
     const previousMonth = new Date(today.getFullYear(), today.getMonth() - 1);
     const monthName = MONTHS[previousMonth.getMonth()];
     const year = previousMonth.getFullYear().toString();
@@ -366,6 +416,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
   // 월간 목표 진행률 계산 함수 (현재 점수/이전 달 총점)
   const calculateMonthProgress = (habitIndices: number[]): { current: number; target: number } => {
     const today = new Date();
+    today.setHours(today.getHours() + 9); // UTC+9 (한국 시간)
     const currentYear = today.getFullYear().toString();
     const currentMonth = MONTHS[today.getMonth()];
     const currentDay = today.getDate();
@@ -393,6 +444,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
   // 오늘의 총점 계산 함수
   const calculateTodayScore = (): number => {
     const today = new Date();
+    today.setHours(today.getHours() + 9); // UTC+9 (한국 시간)
     const currentYear = today.getFullYear().toString();
     const currentMonth = MONTHS[today.getMonth()];
     const currentDay = today.getDate();
@@ -422,6 +474,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
   // 연속 달성일 계산 함수
   const calculateStreak = (habitIndex: number): number => {
     const today = new Date();
+    today.setHours(today.getHours() + 9); // UTC+9 (한국 시간)
     today.setHours(0, 0, 0, 0);  // 시간 부분을 0으로 설정
     
     let streak = 0;
@@ -470,6 +523,18 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
       name: HABITS[index].title,
       progress: calculateMonthProgress([index])
     }));
+
+    // 건강 상태 정보
+    const healthStatus = [5, 6].map(index => {
+      const currentYear = today.getFullYear().toString();
+      const currentMonth = MONTHS[today.getMonth()];
+      const currentDay = today.getDate();
+      const score = transformedData[currentYear]?.[currentMonth]?.[index]?.days?.[currentDay - 1] || 0;
+      return {
+        name: HABITS[index].title,
+        score: score
+      };
+    });
     
     let tweetText = `📊 ${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')} 습관 기록\n\n`;
     
@@ -482,6 +547,11 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     tweetText += `\n📈 월간 진행\n`;
     monthlyProgress.forEach(item => {
       tweetText += `${item.name}: ${item.progress.current}/${item.progress.target}점\n`;
+    });
+
+    tweetText += `\n🏥 건강 상태 (0:좋음~3:나쁨)\n`;
+    healthStatus.forEach(item => {
+      tweetText += `${item.name}: ${item.score}점\n`;
     });
     
     tweetText += `\n💪 내일을 위한 짧은 다짐:\n\n`;
@@ -569,6 +639,33 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     }
   };
 
+  // 평가 기준 정보
+  const getHealthStatusInfo = (id: string) => {
+    if (id === 'back-pain') {
+      return [
+        { score: 0, title: '통증 없음', desc: '전혀 통증이 없으며 움직임이 완전히 자유로움' },
+        { score: 1, title: '약간 불편함', desc: '가벼운 뻣뻣함, 15-20분 내 자연스럽게 완화' },
+        { score: 2, title: '중간 통증', desc: '확실한 통증, 스트레칭으로 어느 정도 완화 가능' },
+        { score: 3, title: '심한 통증', desc: '움직임 제한, 일상생활에 영향' }
+      ];
+    } else if (id === 'esophagitis') {
+      return [
+        { score: 0, title: '전혀 없음', desc: '어떠한 불편감이나 통증도 없음' },
+        { score: 1, title: '약함', desc: '가끔 약간의 불편감, 일상생활 지장 없음' },
+        { score: 2, title: '중간', desc: '불편감이 분명하나 견딜만한 수준' },
+        { score: 3, title: '심함', desc: '확실한 통증, 일상생활에 지장' }
+      ];
+    } else if (id === 'stool-condition') {
+      return [
+        { score: 0, title: '매우 나쁨', desc: '물처럼 묽은 설사, 불규칙한 형태' },
+        { score: 1, title: '나쁨', desc: '무른 변, 형태가 불안정함' },
+        { score: 2, title: '양호', desc: '약간 무른 편이나 형태 유지, 배변이 수월함' },
+        { score: 3, title: '매우 좋음', desc: '바나나 모양의 부드러운 변, 배변이 편안하고 규칙적' }
+      ];
+    }
+    return [];
+  };
+
   if (isLoading) {
     return <div>데이터를 불러오는 중...</div>;
   }
@@ -603,11 +700,52 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
           const currentWeekScore = getCurrentWeekScore(index);
           const remainingScore = Math.max(0, weeklyAverage - currentWeekScore);
           
+          // 건강 상태 항목인 경우 다른 메시지 표시
+          const isHealthStatus = habit.id === 'back-pain' || habit.id === 'esophagitis' || habit.id === 'stool-condition';
+          
           return (
             <Grid item xs={12} sm={6} md={4} key={habit.id}>
               <Paper sx={{ p: 2 }}>
                 <Typography variant="h6" sx={{ color: habit.color, mb: 2 }}>
                   {habit.title}
+                  {isHealthStatus && (
+                    <Box sx={{ mt: 1 }}>
+                      <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
+                        (0: 좋음 ~ 3: 나쁨)
+                      </Typography>
+                      <Box sx={{ 
+                        fontSize: '0.75rem', 
+                        color: 'text.secondary',
+                        p: 1,
+                        bgcolor: 'rgba(0,0,0,0.02)',
+                        borderRadius: 1,
+                        border: '1px solid rgba(0,0,0,0.05)'
+                      }}>
+                        {getHealthStatusInfo(habit.id).map((info) => (
+                          <Box key={info.score} sx={{ mb: 0.5, '&:last-child': { mb: 0 } }}>
+                            <Box component="span" sx={{ 
+                              display: 'inline-block',
+                              width: 20,
+                              height: 20,
+                              lineHeight: '20px',
+                              textAlign: 'center',
+                              borderRadius: '50%',
+                              bgcolor: `${habit.color}${info.score * 30}`,
+                              color: info.score > 1 ? 'white' : 'inherit',
+                              mr: 1,
+                              fontSize: '0.7rem'
+                            }}>
+                              {info.score}
+                            </Box>
+                            <Box component="span" sx={{ fontWeight: 'bold' }}>{info.title}</Box>
+                            <Box component="span" sx={{ ml: 1, color: 'text.secondary' }}>
+                              - {info.desc}
+                            </Box>
+                          </Box>
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
                   {[0, 1, 2, 3].map((score) => {
@@ -640,12 +778,21 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
                   borderRadius: 1,
                   fontSize: '0.9rem'
                 }}>
-                  <div>지난 8주 평균: {weeklyAverage}점</div>
-                  <div>이번 주 현재: {currentWeekScore}점</div>
-                  {remainingScore > 0 && (
-                    <div style={{ color: habit.color, fontWeight: 'bold', marginTop: '4px' }}>
-                      평균 달성까지 {remainingScore}점 남음
-                    </div>
+                  {!isHealthStatus ? (
+                    <>
+                      <div>지난 5주 평균: {weeklyAverage}점</div>
+                      <div>이번 주 현재: {currentWeekScore}점</div>
+                      {remainingScore > 0 && (
+                        <div style={{ color: habit.color, fontWeight: 'bold', marginTop: '4px' }}>
+                          평균 달성까지 {remainingScore}점 남음
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div>지난 5주 평균: {weeklyAverage}점</div>
+                      <div>이번 주 평균: {(currentWeekScore / Math.max(1, getCurrentWeekDays())).toFixed(1)}점</div>
+                    </>
                   )}
                 </Box>
               </Paper>
@@ -654,56 +801,182 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
         })}
       </Grid>
 
-      {/* 트윗 공유 버튼 */}
-      <Box sx={{ mb: 4 }}>
-        <Button
-          variant="contained"
-          onClick={shareTweet}
-          sx={{
-            bgcolor: '#1DA1F2', // Twitter blue
-            color: 'white',
-            '&:hover': {
-              bgcolor: '#1a91da'
-            }
-          }}
-        >
-          트위터로 공유하기
-        </Button>
+      {/* 주요 습관 현황 */}
+      <Box sx={{ mb: 6 }}>
+        <Typography variant="h6" sx={{ mb: 3, fontWeight: 500, color: 'text.primary' }}>
+          주요 습관 현황
+        </Typography>
+        <Grid container spacing={3}>
+          {HABITS.slice(0, 3).map((habit, index) => (
+            <Grid item xs={12} md={4} key={habit.id}>
+              <Paper 
+                elevation={2}
+                sx={{ 
+                  p: 2.5,
+                  borderRadius: 2,
+                  borderLeft: `6px solid ${habit.color}`,
+                  height: '100%',
+                  transition: 'transform 0.2s',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                  }
+                }}
+              >
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    mb: 2,
+                    fontWeight: 600,
+                    color: habit.color,
+                    fontSize: '1.1rem'
+                  }}
+                >
+                  {habit.title}
+                </Typography>
+                <Stack direction="row" spacing={4} sx={{ mb: 1 }}>
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      현재 연속
+                    </Typography>
+                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                      <Typography variant="h4" sx={{ fontWeight: 600 }}>
+                        {calculateStreak(index)}
+                      </Typography>
+                      {calculateStreak(index) >= 3 && (
+                        <LocalFireDepartmentIcon sx={{ color: 'orange', fontSize: '1.5rem' }} />
+                      )}
+                    </Stack>
+                  </Box>
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      최고 기록
+                    </Typography>
+                    <Typography variant="h4" sx={{ fontWeight: 600 }}>
+                      {calculateStreak(index)}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
       </Box>
 
-      {/* 통계 섹션 */}
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={4}>
-          <HabitStats
-            habitData={transformedData}
-            selectedHabit={selectedHabit}
-            habitName={activeHabit?.name || '전체 습관'}
-            currentStreak={calculateStreak(0)}
-            bestStreak={calculateStreak(0)}
-            weeklyImprovement={calculate8WeekAverage(0)}
-            totalDays={31}
-            themeColor={activeHabit?.color || '#1976d2'}
-          />
-        </Grid>
+      {/* 월간 습관 기록 */}
+      <Box sx={{ mb: 6 }}>
+        <Typography variant="h6" sx={{ mb: 3, fontWeight: 500, color: 'text.primary' }}>
+          월간 습관 기록
+        </Typography>
+        <Grid container spacing={3}>
+          {HABITS.map((habit, index) => {
+            // 해당 월의 첫 날과 마지막 날 계산
+            const firstDay = new Date(Number(selectedDate.getFullYear()), selectedDate.getMonth(), 1);
+            const lastDay = new Date(Number(selectedDate.getFullYear()), selectedDate.getMonth() + 1, 0);
+            const totalDays = lastDay.getDate();
 
-        {/* 상세 분석 */}
-        <Grid item xs={12} md={8}>
-          <HabitInsight
-            habitData={transformedData}
-          />
-        </Grid>
-      </Grid>
+            // 6x7 그리드 초기화
+            const grid: number[][] = Array(6).fill(0).map(() => Array(7).fill(-1));
 
-      {/* 월근 8주 트렌드 모음 */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h6" sx={{ mb: 3, color: '#333' }}>
-          최근 8주 트렌드
+            // 달력 채우기
+            let currentDay = 1;
+            const monthData = transformedData[selectedDate.getFullYear().toString()]?.[MONTHS[selectedDate.getMonth()]]?.[index]?.days || Array(31).fill(0);
+            
+            for (let week = 0; week < 6; week++) {
+              for (let day = 0; day < 7; day++) {
+                if (week === 0 && day < firstDay.getDay()) continue;
+                if (currentDay > totalDays) continue;
+                grid[week][day] = monthData[currentDay - 1] || 0;
+                currentDay++;
+              }
+            }
+
+            // 실제 사용된 주 수만큼 잘라내기
+            const data = grid.filter(week => week.some(day => day !== -1));
+
+            return (
+              <Grid item xs={12} md={6} key={habit.id}>
+                <Paper 
+                  elevation={2}
+                  sx={{ 
+                    p: 2.5, 
+                    borderRadius: 2,
+                    transition: 'transform 0.2s',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                    }
+                  }}
+                >
+                  <Typography 
+                    variant="subtitle1" 
+                    sx={{ 
+                      mb: 2, 
+                      color: habit.color, 
+                      fontWeight: 600,
+                      fontSize: '1rem'
+                    }}
+                  >
+                    {habit.title}
+                  </Typography>
+                  <Box sx={{ width: '100%', height: '130px' }}>
+                    <HeatMapGrid
+                      data={data}
+                      xLabels={['일', '월', '화', '수', '목', '금', '토']}
+                      yLabels={Array(data.length).fill(0).map((_, i) => `${i + 1}주`)}
+                      cellHeight="22px"
+                      cellRender={(_x: number, _y: number, value: number) => (
+                        <div title={`${value}점`}>
+                          {value > 0 ? value : ''}
+                        </div>
+                      )}
+                      cellStyle={(_x: number, _y: number, value: number) => {
+                        if (value === -1) return { background: 'transparent' };
+                        const maxValue = 3;
+                        const intensity = Math.min(value / maxValue, 1);
+                        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(habit.color);
+                        let background = habit.color;
+                        if (result) {
+                          const r = parseInt(result[1], 16);
+                          const g = parseInt(result[2], 16);
+                          const b = parseInt(result[3], 16);
+                          background = `rgba(${r}, ${g}, ${b}, ${intensity})`;
+                        }
+                        return {
+                          background,
+                          fontSize: '11px',
+                          color: value > 1.5 ? '#fff' : '#000',
+                          border: value === -1 ? 'none' : '1px solid #fff',
+                          borderRadius: '2px'
+                        };
+                      }}
+                    />
+                  </Box>
+                </Paper>
+              </Grid>
+            );
+          })}
+        </Grid>
+      </Box>
+
+      {/* 최근 5주 트렌드 모음 */}
+      <Box sx={{ mb: 6 }}>
+        <Typography variant="h6" sx={{ mb: 3, color: '#333', fontWeight: 500 }}>
+          최근 5주 트렌드
         </Typography>
         <Grid container spacing={3}>
           {HABITS.map((habit, index) => (
             <Grid item xs={12} md={6} key={habit.id}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, color: habit.color }}>
+              <Paper 
+                elevation={2}
+                sx={{ 
+                  p: 2.5,
+                  borderRadius: 2,
+                  transition: 'transform 0.2s',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                  }
+                }}
+              >
+                <Typography variant="subtitle1" sx={{ mb: 2, color: habit.color, fontWeight: 600 }}>
                   {habit.title}
                 </Typography>
                 <WeeklyTrend
@@ -715,6 +988,42 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
             </Grid>
           ))}
         </Grid>
+      </Box>
+
+      {/* 연간 트렌드 섹션 */}
+      <Box sx={{ mb: 6 }}>
+        <Typography variant="h6" sx={{ mb: 3, color: '#333', fontWeight: 500 }}>
+          연간 트렌드
+        </Typography>
+        <Paper 
+          elevation={2}
+          sx={{ 
+            p: 3,
+            borderRadius: 2
+          }}
+        >
+          <HabitInsight
+            habitData={transformedData}
+            habits={HABITS}
+          />
+        </Paper>
+      </Box>
+
+      {/* 트윗 공유 버튼 */}
+      <Box sx={{ mb: 6 }}>
+        <Button
+          variant="contained"
+          onClick={shareTweet}
+          sx={{
+            bgcolor: '#1DA1F2',
+            color: 'white',
+            '&:hover': {
+              bgcolor: '#1a91da'
+            }
+          }}
+        >
+          트위터로 공유하기
+        </Button>
       </Box>
     </Box>
   );

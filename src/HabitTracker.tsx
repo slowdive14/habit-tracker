@@ -104,28 +104,24 @@ const getWeekInfo = (date: Date): { weekNumber: number; weekStart: Date; weekEnd
 const transformDataForComponents = (rawData: HabitData | null): HabitData => {
   console.log('변환 전 원본 데이터:', rawData);
   const result: HabitData = {};
-  const years = ['2025'];
   
   if (!rawData) {
-    // 빈 데이터일 경우 기본 구조 생성
-    years.forEach(year => {
-      result[year] = {};
-      MONTHS.forEach(month => {
-        // 2025년 2월부터 데이터 생성
-        if (year === '2025' && MONTHS.indexOf(month) >= MONTHS.indexOf('February')) {
-        result[year][month] = HABITS.map(habit => ({
+    // 빈 데이터일 경우 2025년 2월부터의 기본 구조만 생성
+    result['2025'] = {};
+    MONTHS.forEach(month => {
+      if (MONTHS.indexOf(month) >= MONTHS.indexOf('February')) {
+        result['2025'][month] = HABITS.map(habit => ({
           ...habit,
           days: Array(31).fill(0),
           weekNumbers: Array(31).fill(0).map((_, index) => 
-            getWeekInfo(new Date(Number(year), MONTHS.indexOf(month), index + 1)).weekNumber
+            getWeekInfo(new Date(2025, MONTHS.indexOf(month), index + 1)).weekNumber
           )
         }));
-        }
-      });
+      }
     });
   } else {
-    // 데이터 정리 및 재구성
-    years.forEach(year => {
+    // 모든 연도의 데이터 처리
+    Object.keys(rawData).forEach(year => {
       result[year] = {};
       
       // 각 월에 대해
@@ -167,26 +163,11 @@ const transformDataForComponents = (rawData: HabitData | null): HabitData => {
             )
           };
         });
-
-        // 4. 데이터 유효성 검사 및 로깅
-        result[year][month].forEach((habitData, index) => {
-          if (!Array.isArray(habitData.days) || habitData.days.length !== 31) {
-            console.warn(`Invalid days data for ${year}-${month}-${habitData.title}, recreating...`);
-            habitData.days = Array(31).fill(0);
-          }
-          if (!Array.isArray(habitData.weekNumbers) || habitData.weekNumbers.length !== 31) {
-            console.warn(`Invalid weekNumbers for ${year}-${month}-${habitData.title}, recreating...`);
-            habitData.weekNumbers = Array(31).fill(0).map((_, idx) => 
-              getWeekInfo(new Date(Number(year), MONTHS.indexOf(month), idx + 1)).weekNumber
-            );
-          }
-        });
       });
     });
   }
 
-  console.log('변환 후 정리된 데이터:', result);
-  console.log('2025년 2월 데이터 확인:', result['2025']?.['February']);
+  console.log('변환 후 데이터:', result);
   return result;
 };
 

@@ -55,7 +55,7 @@ const HabitInsight: React.FC<HabitInsightProps> = ({ habitData, habits }) => {
           const average = scores.length > 0 ? sum / scores.length : 0;
           
           // 건강 상태(등결림, 식도염)의 경우 점수를 반전
-          const isHealthStatus = habit.id === 'back-pain' || habit.id === 'esophagitis' || habit.id === 'stool-condition';
+          const isHealthStatus = habit.id === 'back-pain' || habit.id === 'esophagitis';
           result[habit.id] = Number(isHealthStatus ? (3 - average).toFixed(1) : average.toFixed(1));
         } else {
           result[habit.id] = 0;
@@ -75,9 +75,7 @@ const HabitInsight: React.FC<HabitInsightProps> = ({ habitData, habits }) => {
     const { cx, cy, stroke, dataKey } = props;
     const habit = habits.find(h => h.id === dataKey);
     const isHealthStatus = habit?.id === 'back-pain' || 
-                         habit?.id === 'esophagitis' || 
-                         habit?.id === 'stool-condition' || 
-                         false;
+                         habit?.id === 'esophagitis';
 
     if (!isHealthStatus) {
       return <circle cx={cx} cy={cy} r={4} fill={stroke} />;
@@ -115,9 +113,7 @@ const HabitInsight: React.FC<HabitInsightProps> = ({ habitData, habits }) => {
               formatter={(value: number, name: string) => {
                 const habit = habits.find(h => h.id === name);
                 const isHealthStatus = habit?.id === 'back-pain' || 
-                                    habit?.id === 'esophagitis' || 
-                                    habit?.id === 'stool-condition' || 
-                                    false;
+                                    habit?.id === 'esophagitis';
                 return [
                   isHealthStatus ? `${value} (${value === 0 ? '나쁨' : value === 3 ? '좋음' : '중간'})` : value,
                   habit?.title || name
@@ -177,9 +173,7 @@ const HabitInsight: React.FC<HabitInsightProps> = ({ habitData, habits }) => {
               formatter={(value: number, name: string) => {
                 const habit = habits.find(h => h.id === name);
                 const isHealthStatus = habit?.id === 'back-pain' || 
-                                    habit?.id === 'esophagitis' || 
-                                    habit?.id === 'stool-condition' || 
-                                    false;
+                                    habit?.id === 'esophagitis';
                 return [
                   isHealthStatus ? `${value} (${value === 0 ? '나쁨' : value === 3 ? '좋음' : '중간'})` : value,
                   habit?.title || name
@@ -191,7 +185,7 @@ const HabitInsight: React.FC<HabitInsightProps> = ({ habitData, habits }) => {
               return habit?.title || value;
             }} />
             {habits
-              .filter(habit => ['back-pain', 'esophagitis', 'stool-condition'].includes(habit.id))
+              .filter(habit => ['back-pain', 'esophagitis'].includes(habit.id))
               .map(habit => (
                 <Line
                   key={habit.id}

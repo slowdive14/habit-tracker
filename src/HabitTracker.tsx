@@ -479,27 +479,39 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     
     let streak = 0;
     let currentDate = new Date(today);
+    let maxStreak = 0;
+    let currentStreak = 0;
     
-    while (true) {
+    // 최근 365일 동안의 기록을 확인
+    for (let i = 0; i < 365; i++) {
       const year = currentDate.getFullYear().toString();
       const month = MONTHS[currentDate.getMonth()];
       const day = currentDate.getDate();
+      
+      // 해당 날짜의 데이터가 있는지 확인
+      const monthData = transformedData[year]?.[month];
+      const hasDataForDate = monthData && monthData[habitIndex]?.days[day - 1] !== undefined;
+      
+      if (!hasDataForDate) {
+        // 데이터가 없는 날짜는 건너뛰기
+        currentDate.setDate(currentDate.getDate() - 1);
+        continue;
+      }
+      
       const score = getHabitScoreForDate(habitIndex, currentDate);
       
-      if (score <= 0) {
-        break;
+      if (score > 0) {
+        currentStreak++;
+        maxStreak = Math.max(maxStreak, currentStreak);
+      } else {
+        // 0점인 경우에만 연속 기록이 끊김
+        currentStreak = 0;
       }
-      
-      streak++;
       
       currentDate.setDate(currentDate.getDate() - 1);
-      
-      if (streak > 365) {
-        break;
-      }
     }
     
-    return streak;
+    return currentStreak;
   };
 
   // 트윗 텍스트 생성 함수

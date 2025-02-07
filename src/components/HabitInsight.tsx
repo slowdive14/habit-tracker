@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Box } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import { Box, FormControl, Select, MenuItem } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface HabitBase {
@@ -20,6 +20,8 @@ const MONTHS = [
 ];
 
 const HabitInsight: React.FC<HabitInsightProps> = ({ habitData, habits }) => {
+  const [selectedYear, setSelectedYear] = useState<string>('2024');
+
   useEffect(() => {
     console.log('HabitInsight mounted with data:', habitData);
     console.log('Habits:', habits);
@@ -30,8 +32,8 @@ const HabitInsight: React.FC<HabitInsightProps> = ({ habitData, habits }) => {
     const monthlyData = MONTHS.map(month => {
       const result: any = { month };
       
-      // 2025년 데이터 가져오기
-      const monthHabits = habitData['2025']?.[month];
+      // 선택된 연도의 데이터 가져오기
+      const monthHabits = habitData[selectedYear]?.[month];
       if (!monthHabits) {
         habits.forEach(habit => {
           result[habit.id] = 0;
@@ -93,6 +95,20 @@ const HabitInsight: React.FC<HabitInsightProps> = ({ habitData, habits }) => {
 
   return (
     <Box>
+      {/* 연도 선택 */}
+      <Box sx={{ mb: 3 }}>
+        <FormControl size="small">
+          <Select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+            sx={{ minWidth: 120 }}
+          >
+            <MenuItem value="2024">2024년</MenuItem>
+            <MenuItem value="2025">2025년</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
+
       {/* 모든 습관 트렌드 */}
       <Box sx={{ width: '100%', height: 400, mb: 6 }}>
         <ResponsiveContainer>
@@ -176,12 +192,8 @@ const HabitInsight: React.FC<HabitInsightProps> = ({ habitData, habits }) => {
             <Tooltip 
               formatter={(value: number, name: string) => {
                 const habit = habits.find(h => h.id === name);
-                const isHealthStatus = habit?.id === 'back-pain' || 
-                                    habit?.id === 'esophagitis' || 
-                                    habit?.id === 'stool-condition' || 
-                                    false;
                 return [
-                  isHealthStatus ? `${value} (${value === 0 ? '나쁨' : value === 3 ? '좋음' : '중간'})` : value,
+                  `${value} (${value === 0 ? '나쁨' : value === 3 ? '좋음' : '중간'})`,
                   habit?.title || name
                 ];
               }}

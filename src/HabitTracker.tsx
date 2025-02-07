@@ -452,22 +452,43 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     return score;
   };
 
-  // 이전 달의 총점 계산 함수
+  // 오늘의 총점 계산 함수
+  const calculateTodayScore = (): number => {
+    const today = getKoreanDate(new Date('2025-02-07')); // 2025년 2월 7일로 고정
+    const currentYear = today.getFullYear().toString();
+    const currentMonth = MONTHS[today.getMonth()];
+    const currentDay = today.getDate();
+    
+    let todayTotal = 0;
+    const habitIndices = [0, 1, 2]; // 운동, 영어 읽기, 독서
+    
+    habitIndices.forEach(index => {
+      const habitData = transformedData[currentYear]?.[currentMonth]?.[index];
+      if (habitData?.days) {
+        const score = habitData.days[currentDay - 1] || 0;
+        console.log(`${habitData.title} 오늘(${currentYear}-${currentMonth}-${currentDay}) 점수:`, score);
+        todayTotal += score;
+      }
+    });
+    
+    console.log('오늘의 총점:', todayTotal);
+    return todayTotal;
+  };
+
+  // 이전 달의 총점 계산 함수 (목표 점수)
   const getPreviousMonthTotal = (habitIndex: number): number => {
-    const today = new Date();
-    today.setHours(today.getHours() + 9); // UTC+9 (한국 시간)
-    const previousMonth = new Date(today.getFullYear(), today.getMonth() - 1);
-    const monthName = MONTHS[previousMonth.getMonth()];
-    const year = previousMonth.getFullYear().toString();
+    const today = getKoreanDate();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
     
-    let total = 0;
-    const habitData = transformedData[year]?.[monthName]?.[habitIndex];
+    // 현재 월의 마지막 날짜 구하기 (해당 월의 총 일수)
+    const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
     
-    if (habitData?.days) {
-      total = habitData.days.reduce((sum, score) => sum + (score || 0), 0);
-    }
+    // 목표 점수 = 해당 월의 일수 × 3
+    const targetScore = lastDay * 3;
+    console.log(`${HABITS[habitIndex].title} 이번 달 목표 점수:`, targetScore);
     
-    return total || 60;
+    return targetScore;
   };
 
   // 월간 목표 진행률 계산 함수 (현재 점수/이전 달 총점)
@@ -496,27 +517,6 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
       current: currentScore,
       target: targetScore
     };
-  };
-
-  // 오늘의 총점 계산 함수
-  const calculateTodayScore = (): number => {
-    const today = new Date();
-    today.setHours(today.getHours() + 9); // UTC+9 (한국 시간)
-    const currentYear = today.getFullYear().toString();
-    const currentMonth = MONTHS[today.getMonth()];
-    const currentDay = today.getDate();
-    
-    let todayTotal = 0;
-    const habitIndices = [0, 1, 2]; // 운동, 원서 읽기, 독서
-    
-    habitIndices.forEach(index => {
-      const habitData = transformedData[currentYear]?.[currentMonth]?.[index];
-      if (habitData?.days) {
-        todayTotal += habitData.days[currentDay - 1] || 0;
-      }
-    });
-    
-    return todayTotal;
   };
 
   // 특정 날짜의 습관 점수를 가져오는 함수
@@ -596,7 +596,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
 
   // 트윗 텍스트 생성 함수
   const generateTweetText = (): string => {
-    const today = new Date();
+    const today = getKoreanDate(new Date('2025-02-07')); // 2025년 2월 7일로 고정
     
     const todayScore = calculateTodayScore();
     
@@ -621,10 +621,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
       .filter(habit => ['back-pain', 'esophagitis'].includes(habit.id))
       .map(habit => {
         const index = HABITS.findIndex(h => h.id === habit.id);
-        const currentYear = today.getFullYear().toString();
-        const currentMonth = MONTHS[today.getMonth()];
-        const currentDay = today.getDate();
-        const score = transformedData[currentYear]?.[currentMonth]?.[index]?.days?.[currentDay - 1] || 0;
+        const score = transformedData[today.getFullYear().toString()]?.[MONTHS[today.getMonth()]]?.[index]?.days?.[today.getDate() - 1] || 0;
         return {
           name: habit.title,
           score: score
@@ -634,7 +631,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     const parts: string[] = [];
     
     parts.push(`📊 ${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')} 습관 기록\n`);
-    parts.push(`✨ 오늘의 총점: ${todayScore}/15\n`);
+    parts.push(`✨ 오늘의 총점: ${todayScore}/9\n`);
     
     if (streakData.length > 0) {
       parts.push(`🔥 연속 달성: ${streakData.map(item => `${item.name} ${item.streak}일`).join(', ')}\n`);

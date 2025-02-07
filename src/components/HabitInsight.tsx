@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Box, FormControl, Select, MenuItem } from '@mui/material';
+import React, { useEffect } from 'react';
+import { Box } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface HabitBase {
@@ -9,14 +9,8 @@ interface HabitBase {
   color: string;
 }
 
-interface HabitData {
-  [year: string]: {
-    [month: string]: Array<HabitBase & { days: number[]; weekNumbers: number[] }>;
-  };
-}
-
 interface HabitInsightProps {
-  habitData: HabitData;
+  habitData: any;
   habits: HabitBase[];
 }
 
@@ -26,27 +20,18 @@ const MONTHS = [
 ];
 
 const HabitInsight: React.FC<HabitInsightProps> = ({ habitData, habits }) => {
-  // 사용 가능한 연도 목록 생성
-  const availableYears = Object.keys(habitData || {}).sort((a, b) => b.localeCompare(a));
-  const [selectedYear, setSelectedYear] = useState<string>(
-    availableYears.includes(new Date().getFullYear().toString())
-      ? new Date().getFullYear().toString()
-      : availableYears[0] || new Date().getFullYear().toString()
-  );
-
   useEffect(() => {
     console.log('HabitInsight mounted with data:', habitData);
     console.log('Habits:', habits);
-    console.log('Available years:', availableYears);
-  }, [habitData, habits, availableYears]);
+  }, [habitData, habits]);
 
   // 월별 평균 점수 계산
   const calculateMonthlyAverages = () => {
     const monthlyData = MONTHS.map(month => {
       const result: any = { month };
       
-      // 선택된 연도의 데이터 가져오기
-      const monthHabits = habitData[selectedYear]?.[month];
+      // 2025년 데이터 가져오기
+      const monthHabits = habitData['2025']?.[month];
       if (!monthHabits) {
         habits.forEach(habit => {
           result[habit.id] = 0;
@@ -108,21 +93,6 @@ const HabitInsight: React.FC<HabitInsightProps> = ({ habitData, habits }) => {
 
   return (
     <Box>
-      {/* 연도 선택 */}
-      <Box sx={{ mb: 3 }}>
-        <FormControl size="small">
-          <Select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-            sx={{ minWidth: 120 }}
-          >
-            {availableYears.map(year => (
-              <MenuItem key={year} value={year}>{year}년</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
-
       {/* 모든 습관 트렌드 */}
       <Box sx={{ width: '100%', height: 400, mb: 6 }}>
         <ResponsiveContainer>
@@ -206,8 +176,12 @@ const HabitInsight: React.FC<HabitInsightProps> = ({ habitData, habits }) => {
             <Tooltip 
               formatter={(value: number, name: string) => {
                 const habit = habits.find(h => h.id === name);
+                const isHealthStatus = habit?.id === 'back-pain' || 
+                                    habit?.id === 'esophagitis' || 
+                                    habit?.id === 'stool-condition' || 
+                                    false;
                 return [
-                  `${value} (${value === 0 ? '나쁨' : value === 3 ? '좋음' : '중간'})`,
+                  isHealthStatus ? `${value} (${value === 0 ? '나쁨' : value === 3 ? '좋음' : '중간'})` : value,
                   habit?.title || name
                 ];
               }}

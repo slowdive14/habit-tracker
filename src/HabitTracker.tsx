@@ -17,7 +17,6 @@ import { HeatMapGrid } from 'react-grid-heatmap';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import WeeklyTrend from './components/WeeklyTrend';
 import HabitStats from './components/HabitStats';
-import HabitInsight from './components/HabitInsight';
 
 // Types
 interface HabitBase {
@@ -48,7 +47,6 @@ const HABITS: HabitBase[] = [
   { id: 'massage', name: 'Wife Massage', color: '#CC79A7', title: '아내 마사지' },
   { id: 'back-pain', name: 'Back Pain', color: '#882255', title: '등 결림' },
   { id: 'esophagitis', name: 'Esophagitis', color: '#661188', title: '식도염' },
-  { id: 'stool-condition', name: 'Stool Condition', color: '#44AA99', title: '대변 상태' },
 ];
 
 const MONTHS = [
@@ -104,38 +102,17 @@ const getWeekInfo = (date: Date): { weekNumber: number; weekStart: Date; weekEnd
 
 // 데이터 변환 유틸리티 함수
 const transformDataForComponents = (rawData: HabitData | null): HabitData => {
+  console.log('변환 전 원본 데이터:', rawData);
   const result: HabitData = {};
-  const currentYear = new Date().getFullYear().toString();
+  const years = ['2025'];
   
-  // 기존 데이터가 없는 경우
   if (!rawData) {
-    result[currentYear] = {};
-    MONTHS.forEach(month => {
-      result[currentYear][month] = HABITS.map(habit => ({
-        ...habit,
-        days: Array(31).fill(0),
-        weekNumbers: Array(31).fill(0).map((_, index) => 
-          getWeekInfo(new Date(Number(currentYear), MONTHS.indexOf(month), index + 1)).weekNumber
-        )
-      }));
-    });
-    return result;
-  }
-
-  // 기존 데이터 복사 및 누락된 데이터 추가
-  Object.keys(rawData).forEach(year => {
-    result[year] = {};
-    MONTHS.forEach(month => {
-      if (rawData[year]?.[month]) {
-        // 기존 데이터가 있는 경우
-        result[year][month] = rawData[year][month].map(habitData => ({
-          ...habitData,
-          weekNumbers: Array(31).fill(0).map((_, index) => 
-            getWeekInfo(new Date(Number(year), MONTHS.indexOf(month), index + 1)).weekNumber
-          )
-        }));
-      } else {
-        // 누락된 월에 대한 기본 데이터 생성
+    // 빈 데이터일 경우 기본 구조 생성
+    years.forEach(year => {
+      result[year] = {};
+      MONTHS.forEach(month => {
+        // 2025년 2월부터 데이터 생성
+        if (year === '2025' && MONTHS.indexOf(month) >= MONTHS.indexOf('February')) {
         result[year][month] = HABITS.map(habit => ({
           ...habit,
           days: Array(31).fill(0),
@@ -143,28 +120,77 @@ const transformDataForComponents = (rawData: HabitData | null): HabitData => {
             getWeekInfo(new Date(Number(year), MONTHS.indexOf(month), index + 1)).weekNumber
           )
         }));
-      }
+        }
+      });
     });
-  });
+  } else {
+    // 데이터 정리 및 재구성
+    years.forEach(year => {
+      result[year] = {};
+      
+      // 각 월에 대해
+      MONTHS.forEach(month => {
+        // 2025년 2월 이전의 데이터는 무시
+        if (year === '2025' && MONTHS.indexOf(month) < MONTHS.indexOf('February')) {
+          return;
+        }
 
-  // 현재 연도가 없는 경우 추가
-  if (!result[currentYear]) {
-    result[currentYear] = {};
-    MONTHS.forEach(month => {
-      result[currentYear][month] = HABITS.map(habit => ({
-        ...habit,
-        days: Array(31).fill(0),
-        weekNumbers: Array(31).fill(0).map((_, index) => 
-          getWeekInfo(new Date(Number(currentYear), MONTHS.indexOf(month), index + 1)).weekNumber
-        )
-      }));
+        // 1. 연도 내부의 월 데이터 확인
+        let monthData = rawData[year]?.[month];
+        
+        // 2. 데이터가 없거나 잘못된 형식이면 새로 생성
+        if (!monthData || !Array.isArray(monthData)) {
+          monthData = HABITS.map(habit => ({
+            ...habit,
+            days: Array(31).fill(0),
+            weekNumbers: Array(31).fill(0).map((_, index) => 
+              getWeekInfo(new Date(Number(year), MONTHS.indexOf(month), index + 1)).weekNumber
+            )
+          }));
+        }
+        
+        // 3. 데이터 구조 확인 및 수정
+        result[year][month] = HABITS.map((habit, index) => {
+          // 기존 데이터에서 해당 습관 찾기
+          const existingData = monthData.find((h: any) => h.id === habit.id) || monthData[index];
+          
+          // 데이터 구조 검증
+          const isValidData = existingData && 
+                            Array.isArray(existingData.days) && 
+                            existingData.days.length === 31;
+          
+          return {
+            ...habit,
+            days: isValidData ? existingData.days : Array(31).fill(0),
+            weekNumbers: Array(31).fill(0).map((_, idx) => 
+              getWeekInfo(new Date(Number(year), MONTHS.indexOf(month), idx + 1)).weekNumber
+            )
+          };
+        });
+
+        // 4. 데이터 유효성 검사 및 로깅
+        result[year][month].forEach((habitData, index) => {
+          if (!Array.isArray(habitData.days) || habitData.days.length !== 31) {
+            console.warn(`Invalid days data for ${year}-${month}-${habitData.title}, recreating...`);
+            habitData.days = Array(31).fill(0);
+          }
+          if (!Array.isArray(habitData.weekNumbers) || habitData.weekNumbers.length !== 31) {
+            console.warn(`Invalid weekNumbers for ${year}-${month}-${habitData.title}, recreating...`);
+            habitData.weekNumbers = Array(31).fill(0).map((_, idx) => 
+              getWeekInfo(new Date(Number(year), MONTHS.indexOf(month), idx + 1)).weekNumber
+            );
+          }
+        });
+      });
     });
   }
 
+  console.log('변환 후 정리된 데이터:', result);
+  console.log('2025년 2월 데이터 확인:', result['2025']?.['February']);
   return result;
 };
 
-const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHabitData }) => {
+const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHabitData }): React.ReactElement => {
   const [transformedData, setTransformedData] = useState<HabitData>(() => {
     // 초기 상태를 빈 데이터로 설정 (한국 시간 기준)
     const koreanNow = getKoreanDate();
@@ -201,8 +227,26 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
       try {
         setIsLoading(true);
         const rawData = await loadHabitData();
+        console.log('로드된 원본 데이터 전체:', rawData);
+        console.log('원본 2025년 1월 데이터:', rawData?.['2025']?.['January']);
+        
         if (rawData) {
           const transformed = transformDataForComponents(rawData);
+          console.log('변환된 데이터 전체:', transformed);
+          console.log('변환된 2025년 1월 데이터:', transformed['2025']?.['January']);
+          
+          // 데이터 유효성 검사
+          if (transformed['2025']?.['January']) {
+            console.log('1월 데이터 유효성 검사:');
+            transformed['2025']['January'].forEach((habit, index) => {
+              console.log(`${habit.title}:`, {
+                daysLength: habit.days.length,
+                hasNonZeroValues: habit.days.some(score => score > 0),
+                weekNumbersLength: habit.weekNumbers.length
+              });
+            });
+          }
+          
           setTransformedData(transformed);
         }
         setIsInitialized(true);
@@ -230,6 +274,8 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
       if (!isInitialized) return;
       
       try {
+        console.log('저장하려는 데이터:', transformedData);
+        console.log('2025년 1월 데이터 (저장 시):', transformedData['2025']?.['January']);
         await saveHabitData(transformedData);
       } catch (err) {
         console.error('Error saving data:', err);
@@ -245,12 +291,22 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     const month = MONTHS[selectedDate.getMonth()];
     const day = selectedDate.getDate() - 1;
 
+    console.log('점수 업데이트 시도:', {
+      year: currentYear,
+      month,
+      habitIndex,
+      score,
+      day
+    });
+
     // 해당 연도와 월의 데이터가 없으면 생성
     let newData: HabitData = { ...transformedData };
     if (!newData[currentYear]) {
+      console.log(`${currentYear}년 데이터 없음, 새로 생성`);
       newData[currentYear] = {};
     }
     if (!newData[currentYear][month]) {
+      console.log(`${currentYear}년 ${month} 데이터 없음, 새로 생성`);
       newData[currentYear][month] = HABITS.map(habit => ({
         ...habit,
         days: Array(31).fill(0),
@@ -263,6 +319,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     // 점수 업데이트
     const updatedMonth = [...newData[currentYear][month]];
     if (!updatedMonth[habitIndex]) {
+      console.log(`습관 인덱스 ${habitIndex} 데이터 없음, 새로 생성`);
       updatedMonth[habitIndex] = {
         ...HABITS[habitIndex],
         days: Array(31).fill(0),
@@ -284,6 +341,9 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
       }
     };
 
+    console.log('업데이트된 데이터:', newData);
+    console.log('업데이트된 2025년 1월 데이터:', newData['2025']?.['January']);
+
     setTransformedData(newData);
     await saveHabitData(newData);
   };
@@ -291,14 +351,13 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
   // 지난 5주 데이터 계산
   const calculateLast8WeeksData = (habitIndex: number): { name: string; value: number }[] => {
     try {
-      // 현재 날짜 기준으로 계산
-      const targetDate = new Date();
-      targetDate.setHours(targetDate.getHours() + 9); // UTC+9 (한국 시간)
+      const today = new Date();
+      today.setHours(today.getHours() + 9); // 한국 시간으로 조정
       
       // 5주 전의 월요일을 시작일로 설정
-      const startDate = new Date(targetDate);
-      const daysSinceMonday = (targetDate.getDay() + 6) % 7; // 월요일부터 몇 일이 지났는지 계산
-      startDate.setDate(targetDate.getDate() - daysSinceMonday - (4 * 7)); // 5주 전 월요일
+      const startDate = new Date(today);
+      const daysSinceMonday = (today.getDay() + 6) % 7; // 월요일부터 몇 일이 지났는지 계산
+      startDate.setDate(today.getDate() - daysSinceMonday - (4 * 7)); // 5주 전 월요일
       startDate.setHours(0, 0, 0, 0);
 
       const weeklyData = new Map<number, {
@@ -310,7 +369,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
       }>();
 
       let currentDate = new Date(startDate);
-      while (currentDate <= targetDate) {
+      while (currentDate <= today) {
         const weekStart = new Date(currentDate);
         weekStart.setDate(currentDate.getDate() - currentDate.getDay() + 1); // 해당 주의 월요일
         const weekEnd = new Date(weekStart);
@@ -490,45 +549,68 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
 
   // 연속 달성일 계산 함수
   const calculateStreak = (habitIndex: number): number => {
-    const today = new Date();
-    today.setHours(today.getHours() + 9); // UTC+9 (한국 시간)
+    const today = getKoreanDate();
     today.setHours(0, 0, 0, 0);  // 시간 부분을 0으로 설정
+    
+    console.log('=== 연속 달성일 계산 시작 ===');
+    console.log('습관:', HABITS[habitIndex].title);
+    console.log('시작 날짜:', today.toISOString());
     
     let streak = 0;
     let currentDate = new Date(today);
-    let maxStreak = 0;
-    let currentStreak = 0;
+    currentDate.setDate(currentDate.getDate() - 1);  // 어제부터 시작
     
-    // 최근 365일 동안의 기록을 확인
-    for (let i = 0; i < 365; i++) {
+    // 2025년 2월 1일 이전의 날짜는 계산하지 않음
+    const startDate = new Date(2025, 1, 1); // 2025년 2월 1일
+    startDate.setHours(0, 0, 0, 0);
+    
+    console.log('기준 시작일:', startDate.toISOString());
+    console.log('계산 시작 날짜:', currentDate.toISOString());
+    
+    if (currentDate < startDate) {
+      console.log('현재 날짜가 기준 시작일보다 이전입니다.');
+      return 0;
+    }
+
+    // 이전 날짜들 확인
+    while (currentDate >= startDate) {
       const year = currentDate.getFullYear().toString();
       const month = MONTHS[currentDate.getMonth()];
       const day = currentDate.getDate();
-      
-      // 해당 날짜의 데이터가 있는지 확인
+
+      console.log('확인 중인 날짜:', {
+        date: currentDate.toISOString(),
+        year,
+        month,
+        day
+      });
+
       const monthData = transformedData[year]?.[month];
-      const hasDataForDate = monthData && monthData[habitIndex]?.days[day - 1] !== undefined;
+      const score = monthData?.[habitIndex]?.days?.[day - 1];
       
-      if (!hasDataForDate) {
-        // 데이터가 없는 날짜는 건너뛰기
-        currentDate.setDate(currentDate.getDate() - 1);
-        continue;
+      console.log('해당 일자 점수:', score);
+      
+      // 점수가 없거나 0 이하면 중단
+      if (typeof score !== 'number' || score <= 0) {
+        console.log('연속 기록 중단 - 점수 없음 또는 0점');
+        break;
       }
       
-      const score = getHabitScoreForDate(habitIndex, currentDate);
+      streak++;
+      console.log('현재까지 연속 일수:', streak);
       
-      if (score > 0) {
-        currentStreak++;
-        maxStreak = Math.max(maxStreak, currentStreak);
-      } else {
-        // 0점인 경우에만 연속 기록이 끊김
-        currentStreak = 0;
-      }
-      
+      // 이전 날짜로 이동
       currentDate.setDate(currentDate.getDate() - 1);
+      
+      // 안전장치: 1년 이상의 연속은 방지
+      if (streak > 365) {
+        console.log('최대 연속 일수(365일) 도달');
+        break;
+      }
     }
     
-    return currentStreak;
+    console.log('=== 최종 연속 달성일:', streak, '===');
+    return streak;
   };
 
   // 트윗 텍스트 생성 함수
@@ -552,41 +634,45 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
       name: HABITS[index].title,
       progress: calculateMonthProgress([index])
     }));
-
+    
     // 건강 상태 정보
-    const healthStatus = [5, 6].map(index => {
-      const currentYear = today.getFullYear().toString();
-      const currentMonth = MONTHS[today.getMonth()];
-      const currentDay = today.getDate();
-      const score = transformedData[currentYear]?.[currentMonth]?.[index]?.days?.[currentDay - 1] || 0;
-      return {
-        name: HABITS[index].title,
-        score: score
-      };
-    });
+    const healthStatus = HABITS
+      .filter(habit => ['back-pain', 'esophagitis'].includes(habit.id))
+      .map(habit => {
+        const index = HABITS.findIndex(h => h.id === habit.id);
+        const currentYear = today.getFullYear().toString();
+        const currentMonth = MONTHS[today.getMonth()];
+        const currentDay = today.getDate();
+        const score = transformedData[currentYear]?.[currentMonth]?.[index]?.days?.[currentDay - 1] || 0;
+        return {
+          name: habit.title,
+          score: score
+        };
+      });
     
-    let tweetText = `📊 ${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')} 습관 기록\n\n`;
+    const parts: string[] = [];
     
-    tweetText += `✨ 오늘의 총점: ${todayScore}/15\n`;
+    parts.push(`📊 ${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')} 습관 기록\n`);
+    parts.push(`✨ 오늘의 총점: ${todayScore}/15\n`);
     
     if (streakData.length > 0) {
-      tweetText += `🔥 연속 달성: ${streakData.map(item => `${item.name} ${item.streak}일`).join(', ')}\n`;
+      parts.push(`🔥 연속 달성: ${streakData.map(item => `${item.name} ${item.streak}일`).join(', ')}\n`);
     }
     
-    tweetText += `\n📈 월간 진행\n`;
+    parts.push(`\n📈 월간 진행`);
     monthlyProgress.forEach(item => {
-      tweetText += `${item.name}: ${item.progress.current}/${item.progress.target}점\n`;
+      parts.push(`\n${item.name}: ${item.progress.current}/${item.progress.target}점`);
     });
 
-    tweetText += `\n🏥 건강 상태 (0:좋음~3:나쁨)\n`;
+    parts.push(`\n\n🏥 건강 상태 (0:좋음~3:나쁨)`);
     healthStatus.forEach(item => {
-      tweetText += `${item.name}: ${item.score}점\n`;
+      parts.push(`\n${item.name}: ${item.score}점`);
     });
     
-    tweetText += `\n💪 내일을 위한 짧은 다짐:\n\n`;
-    tweetText += `#습관모니터링`;
+    parts.push(`\n\n💪 내일을 위한 짧은 다짐:\n`);
+    parts.push(`\n#습관모니터링`);
     
-    return tweetText;
+    return parts.join('');
   };
 
   // 트윗 공유 함수
@@ -684,13 +770,6 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
         { score: 2, title: '중간', desc: '불편감이 분명하나 견딜만한 수준' },
         { score: 3, title: '심함', desc: '확실한 통증, 일상생활에 지장' }
       ];
-    } else if (id === 'stool-condition') {
-      return [
-        { score: 0, title: '매우 나쁨', desc: '물처럼 묽은 설사, 불규칙한 형태' },
-        { score: 1, title: '나쁨', desc: '무른 변, 형태가 불안정함' },
-        { score: 2, title: '양호', desc: '약간 무른 편이나 형태 유지, 배변이 수월함' },
-        { score: 3, title: '매우 좋음', desc: '바나나 모양의 부드러운 변, 배변이 편안하고 규칙적' }
-      ];
     }
     return [];
   };
@@ -730,13 +809,13 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
             일상 습관
           </Typography>
           <Grid container spacing={3}>
-            {HABITS.filter(habit => !['back-pain', 'esophagitis', 'stool-condition'].includes(habit.id)).map((habit, index) => {
-              const weeklyAverage = calculate8WeekAverage(index);
-              const currentWeekScore = getCurrentWeekScore(index);
-              const remainingScore = Math.max(0, weeklyAverage - currentWeekScore);
-              
-              return (
-                <Grid item xs={12} sm={6} md={4} key={habit.id}>
+            {HABITS.filter(habit => !['back-pain', 'esophagitis'].includes(habit.id)).map((habit, index) => {
+          const weeklyAverage = calculate8WeekAverage(index);
+          const currentWeekScore = getCurrentWeekScore(index);
+          const remainingScore = Math.max(0, weeklyAverage - currentWeekScore);
+          
+          return (
+            <Grid item xs={12} sm={6} md={4} key={habit.id}>
                   <Paper 
                     sx={{ 
                       p: 2,
@@ -747,54 +826,54 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
                       }
                     }}
                   >
-                    <Typography variant="h6" sx={{ color: habit.color, mb: 2 }}>
-                      {habit.title}
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                      {[0, 1, 2, 3].map((score) => {
-                        const currentScore = transformedData[selectedDate.getFullYear().toString()]?.[MONTHS[selectedDate.getMonth()]]?.[index]?.days?.[selectedDate.getDate() - 1] || 0;
-                        return (
-                          <Button
-                            key={score}
-                            variant={currentScore === score ? 'contained' : 'outlined'}
-                            onClick={() => handleScoreUpdate(index, score)}
-                            sx={{
-                              minWidth: '40px',
-                              height: '40px',
-                              bgcolor: currentScore === score ? habit.color : 'transparent',
-                              color: currentScore === score ? 'white' : habit.color,
-                              borderColor: habit.color,
-                              '&:hover': {
-                                bgcolor: currentScore === score ? habit.color : `${habit.color}20`,
-                              }
-                            }}
-                          >
-                            {score}
-                          </Button>
-                        );
-                      })}
-                    </Box>
-                    <Box sx={{ 
-                      mt: 1, 
-                      p: 1, 
-                      bgcolor: 'rgba(0,0,0,0.03)', 
-                      borderRadius: 1,
-                      fontSize: '0.9rem'
-                    }}>
+                <Typography variant="h6" sx={{ color: habit.color, mb: 2 }}>
+                  {habit.title}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                  {[0, 1, 2, 3].map((score) => {
+                    const currentScore = transformedData[selectedDate.getFullYear().toString()]?.[MONTHS[selectedDate.getMonth()]]?.[index]?.days?.[selectedDate.getDate() - 1] || 0;
+                    return (
+                      <Button
+                        key={score}
+                        variant={currentScore === score ? 'contained' : 'outlined'}
+                        onClick={() => handleScoreUpdate(index, score)}
+                        sx={{
+                          minWidth: '40px',
+                          height: '40px',
+                          bgcolor: currentScore === score ? habit.color : 'transparent',
+                          color: currentScore === score ? 'white' : habit.color,
+                          borderColor: habit.color,
+                          '&:hover': {
+                            bgcolor: currentScore === score ? habit.color : `${habit.color}20`,
+                          }
+                        }}
+                      >
+                        {score}
+                      </Button>
+                    );
+                  })}
+                </Box>
+                <Box sx={{ 
+                  mt: 1, 
+                  p: 1, 
+                  bgcolor: 'rgba(0,0,0,0.03)', 
+                  borderRadius: 1,
+                  fontSize: '0.9rem'
+                }}>
                       <div>지난 5주 평균: {weeklyAverage}점</div>
-                      <div>이번 주 현재: {currentWeekScore}점</div>
-                      {remainingScore > 0 && (
-                        <div style={{ color: habit.color, fontWeight: 'bold', marginTop: '4px' }}>
-                          평균 달성까지 {remainingScore}점 남음
-                        </div>
-                      )}
-                    </Box>
-                  </Paper>
-                </Grid>
-              );
-            })}
+                  <div>이번 주 현재: {currentWeekScore}점</div>
+                  {remainingScore > 0 && (
+                    <div style={{ color: habit.color, fontWeight: 'bold', marginTop: '4px' }}>
+                      평균 달성까지 {remainingScore}점 남음
+                    </div>
+                  )}
+                </Box>
+              </Paper>
+            </Grid>
+          );
+        })}
           </Grid>
-        </Grid>
+      </Grid>
 
         {/* 건강 상태 섹션 */}
         <Grid item xs={12} sx={{ mt: 4 }}>
@@ -810,7 +889,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
               건강 상태 체크
             </Typography>
             <Grid container spacing={3}>
-              {HABITS.filter(habit => ['back-pain', 'esophagitis', 'stool-condition'].includes(habit.id)).map((habit, index) => {
+              {HABITS.filter(habit => ['back-pain', 'esophagitis'].includes(habit.id)).map((habit, index) => {
                 const realIndex = HABITS.findIndex(h => h.id === habit.id);
                 const weeklyAverage = calculate8WeekAverage(realIndex);
                 const currentWeekScore = getCurrentWeekScore(realIndex);
@@ -870,26 +949,26 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
                         {[0, 1, 2, 3].map((score) => {
                           const currentScore = transformedData[selectedDate.getFullYear().toString()]?.[MONTHS[selectedDate.getMonth()]]?.[realIndex]?.days?.[selectedDate.getDate() - 1] || 0;
                           return (
-                            <Button
+        <Button
                               key={score}
                               variant={currentScore === score ? 'contained' : 'outlined'}
                               onClick={() => handleScoreUpdate(realIndex, score)}
-                              sx={{
+          sx={{
                                 minWidth: '40px',
                                 height: '40px',
                                 bgcolor: currentScore === score ? habit.color : 'transparent',
                                 color: currentScore === score ? 'white' : habit.color,
                                 borderColor: habit.color,
-                                '&:hover': {
+            '&:hover': {
                                   bgcolor: currentScore === score ? habit.color : `${habit.color}20`,
-                                }
-                              }}
-                            >
+            }
+          }}
+        >
                               {score}
-                            </Button>
+        </Button>
                           );
                         })}
-                      </Box>
+      </Box>
                       <Box sx={{ 
                         mt: 1, 
                         p: 1, 
@@ -914,7 +993,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
         <Typography variant="h6" sx={{ mb: 3, fontWeight: 500, color: 'text.primary' }}>
           주요 습관 현황
         </Typography>
-        <Grid container spacing={3}>
+      <Grid container spacing={3}>
           {HABITS.slice(0, 3).map((habit, index) => (
             <Grid item xs={12} md={4} key={habit.id}>
               <Paper 
@@ -965,7 +1044,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
                   </Box>
                 </Stack>
               </Paper>
-            </Grid>
+        </Grid>
           ))}
         </Grid>
       </Box>
@@ -985,21 +1064,29 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
             // 6x7 그리드 초기화
             const grid: number[][] = Array(6).fill(0).map(() => Array(7).fill(-1));
 
-            // 달력 채우기
-            let currentDay = 1;
+            // 달력 채우기 로직 수정
             const monthData = transformedData[selectedDate.getFullYear().toString()]?.[MONTHS[selectedDate.getMonth()]]?.[index]?.days || Array(31).fill(0);
+            console.log(`${habit.title} ${selectedDate.getFullYear()}년 ${selectedDate.getMonth() + 1}월 데이터:`, monthData);
             
+            let currentDay = 1;
+            const firstDayOfMonth = firstDay.getDay(); // 해당 월의 1일의 요일 (0: 일요일, 6: 토요일)
+
             for (let week = 0; week < 6; week++) {
               for (let day = 0; day < 7; day++) {
-                if (week === 0 && day < firstDay.getDay()) continue;
-                if (currentDay > totalDays) continue;
-                grid[week][day] = monthData[currentDay - 1] || 0;
-                currentDay++;
+                if (week === 0 && day < firstDayOfMonth) {
+                  grid[week][day] = -1; // 이전 달의 날짜
+                } else if (currentDay <= totalDays) {
+                  grid[week][day] = monthData[currentDay - 1];
+                  currentDay++;
+                } else {
+                  grid[week][day] = -1; // 다음 달의 날짜
+                }
               }
             }
 
-            // 실제 사용된 주 수만큼 잘라내기
+            // 실제 사용된 주 수만큼 잘라내기 (빈 주는 제외)
             const data = grid.filter(week => week.some(day => day !== -1));
+            console.log(`${habit.title} 달력 데이터:`, data);
 
             return (
               <Grid item xs={12} md={6} key={habit.id}>
@@ -1059,10 +1146,10 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
                     />
                   </Box>
                 </Paper>
-              </Grid>
+        </Grid>
             );
           })}
-        </Grid>
+      </Grid>
       </Box>
 
       {/* 최근 5주 트렌드 모음 */}
@@ -1096,25 +1183,6 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
             </Grid>
           ))}
         </Grid>
-      </Box>
-
-      {/* 연간 트렌드 섹션 */}
-      <Box sx={{ mb: 6 }}>
-        <Typography variant="h6" sx={{ mb: 3, color: '#333', fontWeight: 500 }}>
-          연간 트렌드
-        </Typography>
-        <Paper 
-          elevation={2}
-          sx={{ 
-            p: 3,
-            borderRadius: 2
-          }}
-        >
-          <HabitInsight
-            habitData={transformedData}
-            habits={HABITS}
-          />
-        </Paper>
       </Box>
 
       {/* 트윗 공유 버튼 */}

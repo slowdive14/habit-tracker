@@ -105,14 +105,37 @@ const getWeekInfo = (date: Date): { weekNumber: number; weekStart: Date; weekEnd
 // 데이터 변환 유틸리티 함수
 const transformDataForComponents = (rawData: HabitData | null): HabitData => {
   const result: HabitData = {};
-  const years = ['2024', '2025'];
-  const koreanNow = getKoreanDate();
+  const currentYear = new Date().getFullYear().toString();
   
+  // 기존 데이터가 없는 경우
   if (!rawData) {
-    // 2024년과 2025년에 대해 기본 데이터 생성
-    years.forEach(year => {
-      result[year] = {};
-      MONTHS.forEach(month => {
+    result[currentYear] = {};
+    MONTHS.forEach(month => {
+      result[currentYear][month] = HABITS.map(habit => ({
+        ...habit,
+        days: Array(31).fill(0),
+        weekNumbers: Array(31).fill(0).map((_, index) => 
+          getWeekInfo(new Date(Number(currentYear), MONTHS.indexOf(month), index + 1)).weekNumber
+        )
+      }));
+    });
+    return result;
+  }
+
+  // 기존 데이터 복사 및 누락된 데이터 추가
+  Object.keys(rawData).forEach(year => {
+    result[year] = {};
+    MONTHS.forEach(month => {
+      if (rawData[year]?.[month]) {
+        // 기존 데이터가 있는 경우
+        result[year][month] = rawData[year][month].map(habitData => ({
+          ...habitData,
+          weekNumbers: Array(31).fill(0).map((_, index) => 
+            getWeekInfo(new Date(Number(year), MONTHS.indexOf(month), index + 1)).weekNumber
+          )
+        }));
+      } else {
+        // 누락된 월에 대한 기본 데이터 생성
         result[year][month] = HABITS.map(habit => ({
           ...habit,
           days: Array(31).fill(0),
@@ -120,29 +143,22 @@ const transformDataForComponents = (rawData: HabitData | null): HabitData => {
             getWeekInfo(new Date(Number(year), MONTHS.indexOf(month), index + 1)).weekNumber
           )
         }));
-      });
-    });
-  } else {
-    // 기존 데이터 유지하면서 누락된 연도/월 데이터 추가
-    years.forEach(year => {
-      if (!rawData[year]) {
-        rawData[year] = {};
       }
-      
-      MONTHS.forEach(month => {
-        if (!rawData[year][month]) {
-          rawData[year][month] = HABITS.map(habit => ({
-            ...habit,
-            days: Array(31).fill(0),
-            weekNumbers: Array(31).fill(0).map((_, index) => 
-              getWeekInfo(new Date(Number(year), MONTHS.indexOf(month), index + 1)).weekNumber
-            )
-          }));
-        }
-      });
     });
-    
-    return rawData;
+  });
+
+  // 현재 연도가 없는 경우 추가
+  if (!result[currentYear]) {
+    result[currentYear] = {};
+    MONTHS.forEach(month => {
+      result[currentYear][month] = HABITS.map(habit => ({
+        ...habit,
+        days: Array(31).fill(0),
+        weekNumbers: Array(31).fill(0).map((_, index) => 
+          getWeekInfo(new Date(Number(currentYear), MONTHS.indexOf(month), index + 1)).weekNumber
+        )
+      }));
+    });
   }
 
   return result;
@@ -275,8 +291,9 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
   // 지난 5주 데이터 계산
   const calculateLast8WeeksData = (habitIndex: number): { name: string; value: number }[] => {
     try {
-      // 2025년 2월 7일로 고정
-      const targetDate = new Date(2025, 1, 7); // 월은 0부터 시작하므로 1이 2월
+      // 현재 날짜 기준으로 계산
+      const targetDate = new Date();
+      targetDate.setHours(targetDate.getHours() + 9); // UTC+9 (한국 시간)
       
       // 5주 전의 월요일을 시작일로 설정
       const startDate = new Date(targetDate);

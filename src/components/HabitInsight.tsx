@@ -9,8 +9,14 @@ interface HabitBase {
   color: string;
 }
 
+interface HabitData {
+  [year: string]: {
+    [month: string]: Array<HabitBase & { days: number[]; weekNumbers: number[] }>;
+  };
+}
+
 interface HabitInsightProps {
-  habitData: any;
+  habitData: HabitData;
   habits: HabitBase[];
 }
 
@@ -20,12 +26,19 @@ const MONTHS = [
 ];
 
 const HabitInsight: React.FC<HabitInsightProps> = ({ habitData, habits }) => {
-  const [selectedYear, setSelectedYear] = useState<string>('2024');
+  // 사용 가능한 연도 목록 생성
+  const availableYears = Object.keys(habitData || {}).sort((a, b) => b.localeCompare(a));
+  const [selectedYear, setSelectedYear] = useState<string>(
+    availableYears.includes(new Date().getFullYear().toString())
+      ? new Date().getFullYear().toString()
+      : availableYears[0] || new Date().getFullYear().toString()
+  );
 
   useEffect(() => {
     console.log('HabitInsight mounted with data:', habitData);
     console.log('Habits:', habits);
-  }, [habitData, habits]);
+    console.log('Available years:', availableYears);
+  }, [habitData, habits, availableYears]);
 
   // 월별 평균 점수 계산
   const calculateMonthlyAverages = () => {
@@ -103,8 +116,9 @@ const HabitInsight: React.FC<HabitInsightProps> = ({ habitData, habits }) => {
             onChange={(e) => setSelectedYear(e.target.value)}
             sx={{ minWidth: 120 }}
           >
-            <MenuItem value="2024">2024년</MenuItem>
-            <MenuItem value="2025">2025년</MenuItem>
+            {availableYears.map(year => (
+              <MenuItem key={year} value={year}>{year}년</MenuItem>
+            ))}
           </Select>
         </FormControl>
       </Box>

@@ -695,91 +695,63 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
 
       {/* 습관 점수 입력 */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        {HABITS.map((habit, index) => {
-          const weeklyAverage = calculate8WeekAverage(index);
-          const currentWeekScore = getCurrentWeekScore(index);
-          const remainingScore = Math.max(0, weeklyAverage - currentWeekScore);
-          
-          // 건강 상태 항목인 경우 다른 메시지 표시
-          const isHealthStatus = habit.id === 'back-pain' || habit.id === 'esophagitis' || habit.id === 'stool-condition';
-          
-          return (
-            <Grid item xs={12} sm={6} md={4} key={habit.id}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" sx={{ color: habit.color, mb: 2 }}>
-                  {habit.title}
-                  {isHealthStatus && (
-                    <Box sx={{ mt: 1 }}>
-                      <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
-                        (0: 좋음 ~ 3: 나쁨)
-                      </Typography>
-                      <Box sx={{ 
-                        fontSize: '0.75rem', 
-                        color: 'text.secondary',
-                        p: 1,
-                        bgcolor: 'rgba(0,0,0,0.02)',
-                        borderRadius: 1,
-                        border: '1px solid rgba(0,0,0,0.05)'
-                      }}>
-                        {getHealthStatusInfo(habit.id).map((info) => (
-                          <Box key={info.score} sx={{ mb: 0.5, '&:last-child': { mb: 0 } }}>
-                            <Box component="span" sx={{ 
-                              display: 'inline-block',
-                              width: 20,
-                              height: 20,
-                              lineHeight: '20px',
-                              textAlign: 'center',
-                              borderRadius: '50%',
-                              bgcolor: `${habit.color}${info.score * 30}`,
-                              color: info.score > 1 ? 'white' : 'inherit',
-                              mr: 1,
-                              fontSize: '0.7rem'
-                            }}>
-                              {info.score}
-                            </Box>
-                            <Box component="span" sx={{ fontWeight: 'bold' }}>{info.title}</Box>
-                            <Box component="span" sx={{ ml: 1, color: 'text.secondary' }}>
-                              - {info.desc}
-                            </Box>
-                          </Box>
-                        ))}
-                      </Box>
+        {/* 일반 습관 섹션 */}
+        <Grid item xs={12}>
+          <Typography variant="h6" sx={{ mb: 2, color: 'text.primary', fontWeight: 500 }}>
+            일상 습관
+          </Typography>
+          <Grid container spacing={3}>
+            {HABITS.filter(habit => !['back-pain', 'esophagitis', 'stool-condition'].includes(habit.id)).map((habit, index) => {
+              const weeklyAverage = calculate8WeekAverage(index);
+              const currentWeekScore = getCurrentWeekScore(index);
+              const remainingScore = Math.max(0, weeklyAverage - currentWeekScore);
+              
+              return (
+                <Grid item xs={12} sm={6} md={4} key={habit.id}>
+                  <Paper 
+                    sx={{ 
+                      p: 2,
+                      transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: 3
+                      }
+                    }}
+                  >
+                    <Typography variant="h6" sx={{ color: habit.color, mb: 2 }}>
+                      {habit.title}
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                      {[0, 1, 2, 3].map((score) => {
+                        const currentScore = transformedData[selectedDate.getFullYear().toString()]?.[MONTHS[selectedDate.getMonth()]]?.[index]?.days?.[selectedDate.getDate() - 1] || 0;
+                        return (
+                          <Button
+                            key={score}
+                            variant={currentScore === score ? 'contained' : 'outlined'}
+                            onClick={() => handleScoreUpdate(index, score)}
+                            sx={{
+                              minWidth: '40px',
+                              height: '40px',
+                              bgcolor: currentScore === score ? habit.color : 'transparent',
+                              color: currentScore === score ? 'white' : habit.color,
+                              borderColor: habit.color,
+                              '&:hover': {
+                                bgcolor: currentScore === score ? habit.color : `${habit.color}20`,
+                              }
+                            }}
+                          >
+                            {score}
+                          </Button>
+                        );
+                      })}
                     </Box>
-                  )}
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                  {[0, 1, 2, 3].map((score) => {
-                    const currentScore = transformedData[selectedDate.getFullYear().toString()]?.[MONTHS[selectedDate.getMonth()]]?.[index]?.days?.[selectedDate.getDate() - 1] || 0;
-                    return (
-                      <Button
-                        key={score}
-                        variant={currentScore === score ? 'contained' : 'outlined'}
-                        onClick={() => handleScoreUpdate(index, score)}
-                        sx={{
-                          minWidth: '40px',
-                          height: '40px',
-                          bgcolor: currentScore === score ? habit.color : 'transparent',
-                          color: currentScore === score ? 'white' : habit.color,
-                          borderColor: habit.color,
-                          '&:hover': {
-                            bgcolor: currentScore === score ? habit.color : `${habit.color}20`,
-                          }
-                        }}
-                      >
-                        {score}
-                      </Button>
-                    );
-                  })}
-                </Box>
-                <Box sx={{ 
-                  mt: 1, 
-                  p: 1, 
-                  bgcolor: 'rgba(0,0,0,0.03)', 
-                  borderRadius: 1,
-                  fontSize: '0.9rem'
-                }}>
-                  {!isHealthStatus ? (
-                    <>
+                    <Box sx={{ 
+                      mt: 1, 
+                      p: 1, 
+                      bgcolor: 'rgba(0,0,0,0.03)', 
+                      borderRadius: 1,
+                      fontSize: '0.9rem'
+                    }}>
                       <div>지난 5주 평균: {weeklyAverage}점</div>
                       <div>이번 주 현재: {currentWeekScore}점</div>
                       {remainingScore > 0 && (
@@ -787,18 +759,125 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
                           평균 달성까지 {remainingScore}점 남음
                         </div>
                       )}
-                    </>
-                  ) : (
-                    <>
-                      <div>지난 5주 평균: {weeklyAverage}점</div>
-                      <div>이번 주 평균: {(currentWeekScore / Math.max(1, getCurrentWeekDays())).toFixed(1)}점</div>
-                    </>
-                  )}
-                </Box>
-              </Paper>
+                    </Box>
+                  </Paper>
+                </Grid>
+              );
+            })}
+          </Grid>
+        </Grid>
+
+        {/* 건강 상태 섹션 */}
+        <Grid item xs={12} sx={{ mt: 4 }}>
+          <Paper 
+            sx={{ 
+              p: 3, 
+              bgcolor: 'rgba(248, 249, 250, 1)',
+              borderRadius: 2,
+              border: '1px solid rgba(0, 0, 0, 0.1)'
+            }}
+          >
+            <Typography variant="h6" sx={{ mb: 3, color: 'text.primary', fontWeight: 500 }}>
+              건강 상태 체크
+            </Typography>
+            <Grid container spacing={3}>
+              {HABITS.filter(habit => ['back-pain', 'esophagitis', 'stool-condition'].includes(habit.id)).map((habit, index) => {
+                const realIndex = HABITS.findIndex(h => h.id === habit.id);
+                const weeklyAverage = calculate8WeekAverage(realIndex);
+                const currentWeekScore = getCurrentWeekScore(realIndex);
+                
+                return (
+                  <Grid item xs={12} sm={6} md={4} key={habit.id}>
+                    <Paper 
+                      sx={{ 
+                        p: 2,
+                        transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          boxShadow: 3
+                        }
+                      }}
+                    >
+                      <Typography variant="h6" sx={{ color: habit.color, mb: 2 }}>
+                        {habit.title}
+                        <Box sx={{ mt: 1 }}>
+                          <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
+                            (0: 좋음 ~ 3: 나쁨)
+                          </Typography>
+                          <Box sx={{ 
+                            fontSize: '0.75rem', 
+                            color: 'text.secondary',
+                            p: 1,
+                            bgcolor: 'rgba(0,0,0,0.02)',
+                            borderRadius: 1,
+                            border: '1px solid rgba(0,0,0,0.05)'
+                          }}>
+                            {getHealthStatusInfo(habit.id).map((info) => (
+                              <Box key={info.score} sx={{ mb: 0.5, '&:last-child': { mb: 0 } }}>
+                                <Box component="span" sx={{ 
+                                  display: 'inline-block',
+                                  width: 20,
+                                  height: 20,
+                                  lineHeight: '20px',
+                                  textAlign: 'center',
+                                  borderRadius: '50%',
+                                  bgcolor: `${habit.color}${info.score * 30}`,
+                                  color: info.score > 1 ? 'white' : 'inherit',
+                                  mr: 1,
+                                  fontSize: '0.7rem'
+                                }}>
+                                  {info.score}
+                                </Box>
+                                <Box component="span" sx={{ fontWeight: 'bold' }}>{info.title}</Box>
+                                <Box component="span" sx={{ ml: 1, color: 'text.secondary' }}>
+                                  - {info.desc}
+                                </Box>
+                              </Box>
+                            ))}
+                          </Box>
+                        </Box>
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                        {[0, 1, 2, 3].map((score) => {
+                          const currentScore = transformedData[selectedDate.getFullYear().toString()]?.[MONTHS[selectedDate.getMonth()]]?.[realIndex]?.days?.[selectedDate.getDate() - 1] || 0;
+                          return (
+                            <Button
+                              key={score}
+                              variant={currentScore === score ? 'contained' : 'outlined'}
+                              onClick={() => handleScoreUpdate(realIndex, score)}
+                              sx={{
+                                minWidth: '40px',
+                                height: '40px',
+                                bgcolor: currentScore === score ? habit.color : 'transparent',
+                                color: currentScore === score ? 'white' : habit.color,
+                                borderColor: habit.color,
+                                '&:hover': {
+                                  bgcolor: currentScore === score ? habit.color : `${habit.color}20`,
+                                }
+                              }}
+                            >
+                              {score}
+                            </Button>
+                          );
+                        })}
+                      </Box>
+                      <Box sx={{ 
+                        mt: 1, 
+                        p: 1, 
+                        bgcolor: 'rgba(0,0,0,0.03)', 
+                        borderRadius: 1,
+                        fontSize: '0.9rem'
+                      }}>
+                        <div>지난 5주 평균: {weeklyAverage}점</div>
+                        <div>이번 주 평균: {(currentWeekScore / Math.max(1, getCurrentWeekDays())).toFixed(1)}점</div>
+                      </Box>
+                    </Paper>
+                  </Grid>
+                );
+              })}
             </Grid>
-          );
-        })}
+          </Paper>
+        </Grid>
       </Grid>
 
       {/* 주요 습관 현황 */}

@@ -454,7 +454,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
 
   // 오늘의 총점 계산 함수
   const calculateTodayScore = (): number => {
-    const today = getKoreanDate(new Date('2025-02-07')); // 2025년 2월 7일로 고정
+    const today = getKoreanDate(); // 현재 날짜 사용
     const currentYear = today.getFullYear().toString();
     const currentMonth = MONTHS[today.getMonth()];
     const currentDay = today.getDate();
@@ -641,7 +641,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
 
   // 트윗 텍스트 생성 함수
   const generateTweetText = (): string => {
-    const today = getKoreanDate(new Date('2025-02-07')); // 2025년 2월 7일로 고정
+    const today = getKoreanDate(); // 현재 날짜 사용
     
     const todayScore = calculateTodayScore();
     

@@ -594,6 +594,40 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     return streak;
   };
 
+  // 최고 연속 달성일 계산 함수
+  const calculateBestStreak = (habitIndex: number): number => {
+    const today = getKoreanDate();
+    today.setHours(0, 0, 0, 0);
+    
+    let bestStreak = 0;
+    let currentStreak = 0;
+    let currentDate = new Date(today);
+    
+    // 2025년 2월 1일부터 오늘까지의 모든 데이터 확인
+    const startDate = new Date(2025, 1, 1);
+    startDate.setHours(0, 0, 0, 0);
+    
+    while (currentDate >= startDate) {
+      const year = currentDate.getFullYear().toString();
+      const month = MONTHS[currentDate.getMonth()];
+      const day = currentDate.getDate();
+      
+      const monthData = transformedData[year]?.[month];
+      const score = monthData?.[habitIndex]?.days?.[day - 1];
+      
+      if (typeof score === 'number' && score > 0) {
+        currentStreak++;
+        bestStreak = Math.max(bestStreak, currentStreak);
+      } else {
+        currentStreak = 0;
+      }
+      
+      currentDate.setDate(currentDate.getDate() - 1);
+    }
+    
+    return bestStreak;
+  };
+
   // 트윗 텍스트 생성 함수
   const generateTweetText = (): string => {
     const today = getKoreanDate(new Date('2025-02-07')); // 2025년 2월 7일로 고정
@@ -971,7 +1005,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
         <Typography variant="h6" sx={{ mb: 3, fontWeight: 500, color: 'text.primary' }}>
           주요 습관 현황
         </Typography>
-      <Grid container spacing={3}>
+        <Grid container spacing={3}>
           {HABITS.slice(0, 3).map((habit, index) => (
             <Grid item xs={12} md={4} key={habit.id}>
               <Paper 
@@ -1017,12 +1051,12 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
                       최고 기록
                     </Typography>
                     <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                      {calculateStreak(index)}
+                      {calculateBestStreak(index)}
                     </Typography>
                   </Box>
                 </Stack>
               </Paper>
-        </Grid>
+            </Grid>
           ))}
         </Grid>
       </Box>

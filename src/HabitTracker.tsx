@@ -538,7 +538,8 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     console.log('시작 날짜:', today.toISOString());
     
     let streak = 0;
-    let currentDate = new Date(today);  // 오늘부터 시작
+    let currentDate = new Date(today);
+    currentDate.setDate(currentDate.getDate() - 1);  // 어제부터 시작
     
     // 2025년 2월 1일 이전의 날짜는 계산하지 않음
     const startDate = new Date(2025, 1, 1); // 2025년 2월 1일
@@ -552,7 +553,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
       return 0;
     }
 
-    // 오늘부터 이전 날짜들 확인
+    // 어제부터 이전 날짜들 확인
     while (currentDate >= startDate) {
       const year = currentDate.getFullYear().toString();
       const month = MONTHS[currentDate.getMonth()];
@@ -587,6 +588,17 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
         console.log('최대 연속 일수(365일) 도달');
         break;
       }
+    }
+    
+    // 오늘의 점수가 있으면 연속 기록에 추가
+    const todayYear = today.getFullYear().toString();
+    const todayMonth = MONTHS[today.getMonth()];
+    const todayDay = today.getDate();
+    const todayScore = transformedData[todayYear]?.[todayMonth]?.[habitIndex]?.days?.[todayDay - 1];
+    
+    if (typeof todayScore === 'number' && todayScore > 0) {
+      console.log('오늘의 점수가 있어 연속 기록에 추가:', todayScore);
+      streak++;
     }
     
     console.log('=== 최종 연속 달성일:', streak, '===');

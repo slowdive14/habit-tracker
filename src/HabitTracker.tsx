@@ -62,7 +62,7 @@ const MONTHS_KR = [
 // 한국 시간 유틸리티 함수
 const getKoreanDate = (date: Date = new Date()): Date => {
   const koreanDate = new Date(date);
-  koreanDate.setHours(koreanDate.getHours() + 9);
+  // UTC+9 시간을 더하지 않고, 날짜만 그대로 사용
   return koreanDate;
 };
 
@@ -454,7 +454,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
 
   // 오늘의 총점 계산 함수
   const calculateTodayScore = (): number => {
-    const today = getKoreanDate(); // 현재 날짜 사용
+    const today = getKoreanDate();
     const currentYear = today.getFullYear().toString();
     const currentMonth = MONTHS[today.getMonth()];
     const currentDay = today.getDate();

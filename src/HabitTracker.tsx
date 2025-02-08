@@ -249,15 +249,58 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     };
   }, [loadHabitData, isInitialized]);
 
-  // 데이터 변경 시 저장
-  useEffect(() => {
-    const saveData = async () => {
-      if (!isInitialized) return;
+  // Firebase users 컬렉션에 2025년 2월 이후 데이터 저장
+  const saveToUsersCollection = async () => {
+    try {
+      // 현재 사용자의 UID를 문서 ID로 사용
+      const docId = user?.uid;
+      if (!docId) {
+        console.log('사용자 정보가 없습니다.');
+        return;
+      }
+
+      // 기존 데이터 로드
+      const existingData = await loadHabitData();
+      console.log('기존 저장된 데이터:', existingData);
+
+      // 2025년 2월 이후의 데이터만 필터링
+      const filteredData: HabitData = { '2025': {} };
+      const months = Object.keys(transformedData['2025'] || {});
       
+      months.forEach(month => {
+        const monthIndex = MONTHS.indexOf(month);
+        if (monthIndex >= 1) { // February(1) 이후의 데이터만
+          // 기존 데이터와 새로운 데이터 병합
+          filteredData['2025'][month] = {
+            ...existingData?.['2025']?.[month],
+            ...transformedData['2025'][month]
+          };
+        }
+      });
+
+      if (Object.keys(filteredData['2025']).length === 0) {
+        console.log('2025년 2월 이후의 데이터가 없습니다.');
+        return;
+      }
+
+      console.log('저장할 데이터:', filteredData);
+      await saveHabitData(filteredData);
+      console.log('2025년 2월 이후 데이터가 users 컬렉션에 저장되었습니다.');
+    } catch (error) {
+      console.error('데이터 저장 중 오류 발생:', error);
+    }
+  };
+
+  // 데이터 변경 시 자동 저장
+  useEffect(() => {
+    if (!isInitialized) return;
+    
+    const saveData = async () => {
       try {
         console.log('저장하려는 데이터:', transformedData);
         console.log('2025년 1월 데이터 (저장 시):', transformedData['2025']?.['January']);
         await saveHabitData(transformedData);
+        await saveToUsersCollection(); // users 컬렉션에도 저장
       } catch (err) {
         console.error('Error saving data:', err);
       }
@@ -538,8 +581,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     console.log('시작 날짜:', today.toISOString());
     
     let streak = 0;
-    let currentDate = new Date(today);
-    currentDate.setDate(currentDate.getDate() - 1);  // 어제부터 시작
+    let currentDate = new Date(today);  // 오늘부터 시작
     
     // 2025년 2월 1일 이전의 날짜는 계산하지 않음
     const startDate = new Date(2025, 1, 1); // 2025년 2월 1일
@@ -553,7 +595,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
       return 0;
     }
 
-    // 이전 날짜들 확인
+    // 오늘부터 이전 날짜들 확인
     while (currentDate >= startDate) {
       const year = currentDate.getFullYear().toString();
       const month = MONTHS[currentDate.getMonth()];

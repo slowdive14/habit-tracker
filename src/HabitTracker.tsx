@@ -41,7 +41,7 @@ interface HabitTrackerProps {
 // 기본 설정
 const HABITS: HabitBase[] = [
   { id: 'exercise', name: 'Exercise', color: '#0072B2', title: '운동' },
-  { id: 'english-reading', name: 'English Reading', color: '#E69F00', title: '영어 읽기' },
+  { id: 'english-reading', name: 'English Reading', color: '#E69F00', title: '원서 읽기' },
   { id: 'reading', name: 'Reading', color: '#009E73', title: '독서' },
   { id: 'english-kids', name: 'English with kids', color: '#D55E00', title: '아이들과 영어' },
   { id: 'massage', name: 'Wife Massage', color: '#CC79A7', title: '아내 마사지' },

@@ -108,7 +108,7 @@ const transformDataForComponents = (rawData: HabitData | null): HabitData => {
   if (!rawData) {
     // 빈 데이터일 경우 2025년 2월부터의 기본 구조만 생성
     result['2025'] = {};
-    MONTHS.forEach(month => {
+      MONTHS.forEach(month => {
       if (MONTHS.indexOf(month) >= MONTHS.indexOf('February')) {
         result['2025'][month] = HABITS.map(habit => ({
           ...habit,
@@ -162,8 +162,8 @@ const transformDataForComponents = (rawData: HabitData | null): HabitData => {
               getWeekInfo(new Date(Number(year), MONTHS.indexOf(month), idx + 1)).weekNumber
             )
           };
-        });
       });
+    });
     });
   }
 
@@ -464,7 +464,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     
     habitIndices.forEach(index => {
       const habitData = transformedData[currentYear]?.[currentMonth]?.[index];
-      if (habitData?.days) {
+    if (habitData?.days) {
         const score = habitData.days[currentDay - 1] || 0;
         console.log(`${habitData.title} 오늘(${currentYear}-${currentMonth}-${currentDay}) 점수:`, score);
         todayTotal += score;
@@ -1016,7 +1016,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
         <Typography variant="h6" sx={{ mb: 3, fontWeight: 500, color: 'text.primary' }}>
           주요 습관 현황
         </Typography>
-        <Grid container spacing={3}>
+      <Grid container spacing={3}>
           {HABITS.slice(0, 3).map((habit, index) => (
             <Grid item xs={12} md={4} key={habit.id}>
               <Paper 
@@ -1067,7 +1067,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
                   </Box>
                 </Stack>
               </Paper>
-            </Grid>
+        </Grid>
           ))}
         </Grid>
       </Box>

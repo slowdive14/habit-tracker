@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Container, Box, Fab, Button, Typography, CircularProgress, Alert, Snackbar, Tabs, Tab } from '@mui/material';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import { User } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
-import { db } from './firebase';
+import { onAuthStateChanged, User, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth, db } from './firebase';
 import HabitTracker from './HabitTracker';
 import ExerciseTracker from './ExerciseTracker';
 
@@ -21,101 +21,29 @@ interface HabitData {
   };
 }
 
-// 자동 로그인을 위한 기본 사용자 ID (원래 계정 ID 사용)
-const AUTO_USER_ID = 'sIOyGOi27KPY9794P20Z8dsq4Ap2';
+const ALLOWED_EMAIL = 'spacekatb@gmail.com'; // 여기에 허용할 이메일 주소를 입력하세요
+const OLD_USER_ID = 'sIOyGOi27KPY9794P20Z8dsq4Ap2';  // 이전 계정의 USER_ID
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [showScroll, setShowScroll] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dataMigrated, setDataMigrated] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('habits');
-  const [isOfflineMode, setIsOfflineMode] = useState<boolean>(false);
 
-  // 네트워크 상태 모니터링
   useEffect(() => {
-    const handleOnline = () => {
-      console.log("네트워크 연결됨");
-      setIsOfflineMode(false);
-    };
-    
-    const handleOffline = () => {
-      console.log("네트워크 연결 끊김");
-      setIsOfflineMode(true);
-      setError("오프라인 모드입니다. 일부 기능이 제한될 수 있습니다.");
-    };
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    // 초기 네트워크 상태 확인
-    setIsOfflineMode(!navigator.onLine);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  // 자동 로그인 처리
-  useEffect(() => {
-    // 가상 사용자 객체 생성
-    const mockUser = {
-      uid: AUTO_USER_ID,
-      email: 'auto@example.com',
-      displayName: 'Auto User',
-      // User 인터페이스에 필요한 다른 속성들
-      emailVerified: true,
-      isAnonymous: false,
-      metadata: {},
-      providerData: [],
-      refreshToken: '',
-      tenantId: null,
-      delete: async () => {},
-      getIdToken: async () => '',
-      getIdTokenResult: async () => ({
-        token: '',
-        signInProvider: '',
-        claims: {},
-        expirationTime: '',
-        issuedAtTime: '',
-        authTime: ''
-      }),
-      reload: async () => {},
-      toJSON: () => ({})
-    } as unknown as User;
-
-    setUser(mockUser);
-    
-    // 데이터베이스 접근 테스트
-    const testDbConnection = async () => {
-      try {
-        console.log("Firebase 데이터베이스 연결 테스트 중...");
-        const userDoc = doc(db, 'users', AUTO_USER_ID);
-        const docSnap = await getDoc(userDoc);
-        
-        if (docSnap.exists()) {
-          console.log("Firebase 연결 성공, 데이터 확인:", docSnap.exists());
-          // 연결 성공, 아무것도 하지 않음
-        } else {
-          console.log("사용자 데이터가 없습니다. 초기 데이터를 생성합니다.");
-          // 초기 데이터 생성 시도
-          try {
-            await setDoc(userDoc, { initialized: true, timestamp: new Date().toISOString() }, { merge: true });
-          } catch (error) {
-            console.error("초기 데이터 생성 실패:", error);
-          }
-        }
-      } catch (error) {
-        console.error("Firebase 연결 테스트 실패:", error);
-        setError("데이터베이스 연결에 실패했습니다. 오프라인 모드로 전환합니다.");
-        setIsOfflineMode(true);
-      } finally {
-        setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user && user.email !== ALLOWED_EMAIL) {
+        await auth.signOut();
+        setError('허용되지 않은 이메일입니다.');
+        setUser(null);
+      } else {
+        setUser(user);
       }
-    };
-    
-    testDbConnection();
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
   const checkScrollTop = () => {
@@ -135,87 +63,172 @@ const App: React.FC = () => {
     return () => window.removeEventListener('scroll', checkScrollTop);
   }, [showScroll]);
 
+  const signInWithGoogle = async () => {
+    try {
+      setError(null);
+      const provider = new GoogleAuthProvider();
+      // 팝업 옵션 추가
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
+      
+      // 로그인 시도
+      const result = await signInWithPopup(auth, provider).catch((error) => {
+        console.error('Popup error:', error);
+        if (error.code === 'auth/popup-closed-by-user') {
+          setError('로그인이 취소되었습니다.');
+        } else {
+          setError('로그인 중 오류가 발생했습니다: ' + error.message);
+        }
+        throw error;
+      });
+
+      // 이메일 확인
+      if (result?.user?.email !== ALLOWED_EMAIL) {
+        console.log('Unauthorized email:', result?.user?.email);
+        await auth.signOut();
+        setError('허용되지 않은 이메일입니다.');
+        return;
+      }
+
+      console.log('Login successful:', result.user.email);
+    } catch (error: any) {
+      console.error('Login error:', error);
+      if (!error.code?.includes('auth/popup-closed-by-user')) {
+        setError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
+      }
+    }
+  };
+
   const handleCloseError = () => {
     setError(null);
   };
 
   const saveHabitData = async (data: HabitData) => {
+    if (!user) return;
     try {
-      if (isOfflineMode) {
-        console.log('오프라인 모드: 로컬 스토리지에 데이터 저장');
-        localStorage.setItem('habitData', JSON.stringify(data));
-        return;
-      }
-      
-      console.log('Firebase에 데이터 저장 중:', AUTO_USER_ID);
-      const userDoc = doc(db, 'users', AUTO_USER_ID);
+      console.log('Saving data for user:', user.uid);
+      const userDoc = doc(db, 'users', user.uid);
       await setDoc(userDoc, { habitData: data }, { merge: true });
-      console.log('데이터 저장 성공');
-      
-      // 백업용 로컬 저장
-      localStorage.setItem('habitData', JSON.stringify(data));
+      console.log('Data saved successfully');
     } catch (error) {
-      console.error('데이터 저장 오류:', error);
-      setError('데이터를 저장하는 중 오류가 발생했습니다. 로컬에 임시 저장합니다.');
-      
-      // 오류 발생 시 로컬 스토리지에 백업
-      localStorage.setItem('habitData', JSON.stringify(data));
+      console.error('Error saving data:', error);
+      setError('데이터 저장 중 오류가 발생했습니다.');
     }
   };
 
   const loadHabitData = async (): Promise<HabitData | null> => {
+    if (!user) return null;
     try {
-      if (isOfflineMode) {
-        console.log('오프라인 모드: 로컬 스토리지에서 데이터 로드');
-        const localData = localStorage.getItem('habitData');
-        if (localData) {
-          return JSON.parse(localData) as HabitData;
-        }
-        return null;
-      }
-      
-      console.log('Firebase에서 데이터 로드 중:', AUTO_USER_ID);
-      const userDoc = doc(db, 'users', AUTO_USER_ID);
+      console.log('Loading data for user:', user.uid);
+      const userDoc = doc(db, 'users', user.uid);
       const docSnap = await getDoc(userDoc);
       
       if (docSnap.exists()) {
         const data = docSnap.data();
-        console.log('Firebase에서 데이터 로드 성공:', data);
-        
-        if (data.habitData) {
-          // 로컬에도 저장
-          localStorage.setItem('habitData', JSON.stringify(data.habitData));
-          return data.habitData as HabitData;
-        }
-      } else {
-        console.log('Firebase에 데이터가 없음, 로컬 스토리지 확인');
+        console.log('Loaded data:', data);
+        return data.habitData as HabitData;
       }
-      
-      // Firebase에 데이터가 없는 경우 로컬 스토리지 확인
-      const localData = localStorage.getItem('habitData');
-      if (localData) {
-        console.log('로컬 스토리지에서 데이터 로드');
-        return JSON.parse(localData) as HabitData;
-      }
-      
       return null;
     } catch (error) {
-      console.error('데이터 로드 오류:', error);
-      setError('데이터를 불러오는 중 오류가 발생했습니다. 로컬 데이터를 시도합니다.');
-      
-      // 오류 발생 시 로컬 스토리지에서 시도
-      try {
-        const localData = localStorage.getItem('habitData');
-        if (localData) {
-          return JSON.parse(localData) as HabitData;
-        }
-      } catch (localError) {
-        console.error('로컬 데이터 로드 오류:', localError);
-      }
-      
+      console.error('Error loading data:', error);
+      setError('데이터 로딩 중 오류가 발생했습니다.');
       return null;
     }
   };
+
+  // 데이터 마이그레이션 함수
+  const migrateData = async (newUserId: string) => {
+    try {
+      console.log('Starting data migration from', OLD_USER_ID, 'to', newUserId);
+      
+      // 이전 데이터 가져오기
+      const oldUserDoc = doc(db, 'users', OLD_USER_ID);
+      const oldDocSnap = await getDoc(oldUserDoc);
+      
+      if (oldDocSnap.exists()) {
+        const oldData = oldDocSnap.data();
+        console.log('Found old data:', oldData);
+        
+        // 새 계정으로 데이터 복사
+        const newUserDoc = doc(db, 'users', newUserId);
+        await setDoc(newUserDoc, oldData, { merge: true });
+        console.log('Data migrated successfully');
+        setDataMigrated(true);
+      } else {
+        console.log('No old data found for ID:', OLD_USER_ID);
+      }
+    } catch (error: any) {
+      console.error('Error migrating data:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      if (error.details) {
+        console.error('Error details:', error.details);
+      }
+      setError(`데이터 마이그레이션 중 오류가 발생했습니다: ${error.message}`);
+    }
+  };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        if (user.email !== ALLOWED_EMAIL) {
+          await auth.signOut();
+          setError('허용되지 않은 이메일입니다.');
+          setUser(null);
+        } else {
+          // 로그인 성공 시 데이터 마이그레이션 시도
+          if (!dataMigrated) {
+            await migrateData(user.uid);
+          }
+          setUser(user);
+        }
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [dataMigrated]);
+
+  // 로그인하지 않은 경우 로그인 화면 표시
+  if (!user) {
+    return (
+      <Box
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        minHeight="100vh"
+        gap={2}
+      >
+        <Typography variant="h5" gutterBottom>
+          HabitFlow
+        </Typography>
+        <Typography variant="body1" gutterBottom color="textSecondary">
+          로그인하여 습관을 기록하고 관리하세요.
+        </Typography>
+        <Button 
+          variant="contained" 
+          onClick={signInWithGoogle}
+          size="large"
+          sx={{ mt: 2 }}
+        >
+          Google로 로그인
+        </Button>
+        <Snackbar 
+          open={!!error} 
+          autoHideDuration={6000} 
+          onClose={handleCloseError}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%' }}>
+            {error}
+          </Alert>
+        </Snackbar>
+      </Box>
+    );
+  }
 
   // 로딩 중인 경우 로딩 화면 표시
   if (loading) {
@@ -233,51 +246,51 @@ const App: React.FC = () => {
 
   return (
     <Container maxWidth="lg">
-      {isOfflineMode && (
-        <Alert 
-          severity="warning" 
-          sx={{ mb: 2, mt: 2 }}
-          onClose={() => setError(null)}
-        >
-          오프라인 모드로 실행 중입니다. 데이터는 로컬에 저장됩니다.
-        </Alert>
-      )}
-    
       <Box sx={{ width: '100%', mb: 3 }}>
         <Tabs 
-          value={activeTab}
-          onChange={(_, newValue) => setActiveTab(newValue)}
-          textColor="primary"
-          indicatorColor="primary"
-          sx={{ mb: 2, mt: 2 }}
+          value={activeTab} 
+          onChange={(e, newValue) => setActiveTab(newValue)}
+          aria-label="habit tracker tabs"
+          variant="fullWidth"
         >
-          <Tab value="habits" label="습관 트래커" />
-          <Tab value="exercises" label="운동 기록" />
+          <Tab 
+            value="habits" 
+            label="습관 기록" 
+            id="habits-tab"
+            aria-controls="habits-panel"
+          />
+          <Tab 
+            value="exercise" 
+            label="운동 기록" 
+            id="exercise-tab"
+            aria-controls="exercise-panel"
+          />
         </Tabs>
       </Box>
 
-      {activeTab === 'habits' && (
-        <HabitTracker 
-          user={user}
-          saveHabitData={saveHabitData}
-          loadHabitData={loadHabitData}
-        />
-      )}
+      <Box role="tabpanel" hidden={activeTab !== 'habits'} id="habits-panel">
+        {activeTab === 'habits' && (
+          <HabitTracker user={user} saveHabitData={saveHabitData} loadHabitData={loadHabitData} />
+        )}
+      </Box>
 
-      {activeTab === 'exercises' && (
-        <ExerciseTracker user={user!} />
-      )}
+      <Box role="tabpanel" hidden={activeTab !== 'exercise'} id="exercise-panel">
+        {activeTab === 'exercise' && (
+          <ExerciseTracker user={user} />
+        )}
+      </Box>
 
-      <Fab
-        color="primary"
+      <Fab 
+        color="primary" 
         size="small"
         onClick={scrollTop}
-        sx={{
-          position: 'fixed',
-          bottom: 16,
-          right: 16,
-          display: showScroll ? 'flex' : 'none',
+        style={{ 
+          position: 'fixed', 
+          bottom: '20px', 
+          right: '20px',
+          display: showScroll ? 'flex' : 'none'
         }}
+        aria-label="scroll to top"
       >
         <KeyboardArrowUpIcon />
       </Fab>

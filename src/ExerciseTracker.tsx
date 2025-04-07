@@ -16,12 +16,17 @@ import {
   DialogActions,
   CircularProgress,
   Card,
-  CardContent
+  CardContent,
+  Tooltip as MuiTooltip,
+  Chip,
+  Divider
 } from '@mui/material';
 import TwitterIcon from '@mui/icons-material/Twitter';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import RecommendIcon from '@mui/icons-material/Recommend';
 import { User } from 'firebase/auth';
 import {
   collection,
@@ -106,6 +111,25 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [shareDate, setShareDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [openShareDialog, setOpenShareDialog] = useState(false);
+  const [openGuideDialog, setOpenGuideDialog] = useState(false);
+  const [selectedExerciseType, setSelectedExerciseType] = useState<string>('');
+  const [guideContent, setGuideContent] = useState<{
+    title: string;
+    description: string;
+    recommendations: string[];
+    goalDays: number;
+    targetPerDay: number;
+    currentTrend: number;
+    desiredTrend: number;
+  }>({
+    title: '',
+    description: '',
+    recommendations: [],
+    goalDays: 0,
+    targetPerDay: 0,
+    currentTrend: 0,
+    desiredTrend: 0
+  });
   const [formData, setFormData] = useState({
     pushups: '',
     pullups: '',
@@ -376,12 +400,14 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       const recent10Days = last30Days.slice(0, 10);
       const previous20Days = last30Days.slice(10, 30);
       
-      const recent10HasRecords = recent10Days.filter(date => 
-        exerciseData[date] && exerciseData[date][type] && exerciseData[date][type] > 0
-      );
-      const previous20HasRecords = previous20Days.filter(date => 
-        exerciseData[date] && exerciseData[date][type] && exerciseData[date][type] > 0
-      );
+      const recent10HasRecords = recent10Days.filter(date => {
+        const value = exerciseData[date]?.[type];
+        return typeof value === 'number' && value > 0;
+      });
+      const previous20HasRecords = previous20Days.filter(date => {
+        const value = exerciseData[date]?.[type];
+        return typeof value === 'number' && value > 0;
+      });
       
       const recent10Ratio = recent10HasRecords.length / recent10Days.length;
       const previous20Ratio = previous20HasRecords.length / previous20Days.length;
@@ -502,6 +528,122 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
     window.open(twitterUrl, '_blank');
     setOpenShareDialog(false);
+  };
+
+  // 개선 가이드 다이얼로그 열기 함수
+  const handleOpenGuide = (exerciseType: string) => {
+    setSelectedExerciseType(exerciseType);
+    
+    // 운동 타입별 기본 데이터 구성
+    const exerciseInfo = {
+      pushups: { name: '푸시업', unit: '회', defaultTarget: 15, increaseStep: 5 },
+      pullups: { name: '풀업', unit: '회', defaultTarget: 8, increaseStep: 2 },
+      dips: { name: '딥스', unit: '회', defaultTarget: 10, increaseStep: 3 },
+      steps: { name: '걷기', unit: '보', defaultTarget: 6000, increaseStep: 1000 },
+      running: { name: '달리기', unit: 'km', defaultTarget: 3, increaseStep: 0.5 }
+    };
+    
+    const info = exerciseInfo[exerciseType as keyof typeof exerciseInfo];
+    const score = consistencyScores[exerciseType as keyof typeof consistencyScores];
+    const currentTrend = score.trendChange;
+    
+    // 현재 일주일간 평균 계산
+    const today = new Date();
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      return date.toISOString().split('T')[0];
+    });
+    
+    const exerciseValues = last7Days
+      .map(date => {
+        const value = exerciseData[date]?.[exerciseType as keyof Exercise];
+        return typeof value === 'number' ? value : 0;
+      })
+      .filter(val => val > 0);
+    
+    const currentAvg = exerciseValues.length > 0 
+      ? Math.round((exerciseValues.reduce((a, b) => a + b, 0) / exerciseValues.length) * 10) / 10
+      : 0;
+    
+    // 목표 계산
+    let targetPerDay = 0;
+    let goalDays = 0;
+    let desiredTrend = 0;
+    let recommendations: string[] = [];
+    
+    if (currentTrend < 0) { // 하락 추세
+      // 하락 추세를 개선하기 위해 필요한 운동 횟수 계산
+      // 최소 +10% 추세로 전환하는 것을 목표
+      desiredTrend = 10;
+      goalDays = 7; // 향후 7일 동안 운동
+      
+      // 최근 10일간 운동 비율
+      const recent10Days = last7Days.concat(
+        Array.from({ length: 3 }, (_, i) => {
+          const date = new Date(today);
+          date.setDate(date.getDate() - (i + 7));
+          return date.toISOString().split('T')[0];
+        })
+      );
+      
+      const recent10HasRecords = recent10Days.filter(date => {
+        const value = exerciseData[date]?.[exerciseType as keyof Exercise];
+        return typeof value === 'number' && value > 0;
+      }).length;
+      
+      const recent10Ratio = recent10HasRecords / 10;
+      
+      // 목표: 10일 중 최소 6일은 운동해야 60% 비율
+      const targetRatio = Math.max(0.6, recent10Ratio + 0.2); // 최소 60% 또는 현재보다 20% 높게
+      const targetDays = Math.ceil(targetRatio * 10) - recent10HasRecords;
+      
+      // 목표 운동량 - 최근 평균 또는 기본값의 80%
+      targetPerDay = currentAvg > 0 
+        ? currentAvg 
+        : info.defaultTarget * 0.8;
+      
+      recommendations = [
+        `다음 ${goalDays}일 중 최소 ${Math.min(goalDays, targetDays)}일은 운동하세요`,
+        `매일 최소 ${Math.round(targetPerDay)}${info.unit} 이상 실천하세요`,
+        `가능하면 아침에 ${info.name}을(를) 습관화하세요`,
+        `휴대폰 알림을 설정하여 매일 같은 시간에 운동하세요`
+      ];
+    } else { // 개선 추세 또는 유지
+      desiredTrend = currentTrend + 5; // 현재보다 5% 더 개선
+      goalDays = 10; // 향후 10일 동안의 목표
+      
+      // 목표 운동량 - 최근 평균보다 10-20% 증가 또는 기본값
+      targetPerDay = currentAvg > 0 
+        ? Math.round((currentAvg * 1.15) * 10) / 10
+        : info.defaultTarget;
+      
+      // 추천 사항
+      recommendations = [
+        `다음 ${goalDays}일 동안 매일 ${Math.round(targetPerDay)}${info.unit} 이상 목표로 하세요`,
+        `일주일에 한 번은 목표보다 ${info.increaseStep}${info.unit} 더 높게 도전해보세요`,
+        `주말에도 최소 ${Math.round(targetPerDay * 0.7)}${info.unit}은 유지하세요`,
+        `운동 기록을 꾸준히 작성하여 모니터링하세요`
+      ];
+      
+      if (score.streakDays > 0) {
+        recommendations.push(`현재 ${score.streakDays}일 연속 기록 중입니다. ${score.streakDays + 5}일까지 이어보세요!`);
+      }
+    }
+    
+    setGuideContent({
+      title: `${info.name} 개선 가이드`,
+      description: currentTrend < 0 
+        ? `최근 ${info.name} 빈도가 감소하고 있습니다. 다시 향상시키기 위한 가이드입니다.`
+        : `현재 ${info.name} 습관이 개선되고 있습니다. 더 향상시키기 위한 가이드입니다.`,
+      recommendations,
+      goalDays,
+      targetPerDay,
+      currentTrend,
+      desiredTrend
+    });
+    
+    setOpenGuideDialog(true);
   };
 
   return (
@@ -751,9 +893,14 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
         <TabPanel value={tabValue} index={1}>
           {/* 일관성 점수 섹션 추가 */}
           <Box sx={{ mb: 4 }}>
-            <Typography variant="h6" gutterBottom>
-              일관성 점수
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                운동 일관성 점수
+              </Typography>
+              <MuiTooltip title="운동 일관성 점수란?">
+                <span><HelpOutlineIcon fontSize="small" sx={{ ml: 1, cursor: 'pointer', opacity: 0.7 }} /></span>
+              </MuiTooltip>
+            </Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               운동의 꾸준함을 측정하는 점수입니다. 규칙적으로 운동할수록 점수가 높아집니다.
             </Typography>
@@ -844,22 +991,55 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
                                  consistencyScores[type].trendChange < 0 ? 'error.main' : 'text.secondary'
                         }}>
                           {consistencyScores[type].trendChange > 0 ? (
-                            <TrendingUpIcon fontSize="small" sx={{ mr: 0.5 }} />
+                            <MuiTooltip title="향상된 추세">
+                              <span>
+                                <Box display="flex" alignItems="center">
+                                  <TrendingUpIcon sx={{ color: '#4caf50', mr: 0.5 }} />
+                                  <Typography variant="body2" color="#4caf50" fontWeight="bold">
+                                    +{consistencyScores[type].trendChange.toFixed(1)}%
+                                  </Typography>
+                                </Box>
+                              </span>
+                            </MuiTooltip>
                           ) : consistencyScores[type].trendChange < 0 ? (
-                            <TrendingDownIcon fontSize="small" sx={{ mr: 0.5 }} />
-                          ) : null}
-                          <Typography variant="body2">
-                            {consistencyScores[type].trendChange > 0 && '+'}
-                            {consistencyScores[type].trendChange}%
-                          </Typography>
+                            <MuiTooltip title="하락된 추세">
+                              <span>
+                                <Box display="flex" alignItems="center">
+                                  <TrendingDownIcon sx={{ color: '#f44336', mr: 0.5 }} />
+                                  <Typography variant="body2" color="#f44336" fontWeight="bold">
+                                    {consistencyScores[type].trendChange.toFixed(1)}%
+                                  </Typography>
+                                </Box>
+                              </span>
+                            </MuiTooltip>
+                          ) : (
+                            <MuiTooltip title="안정적인 추세">
+                              <span>
+                                <Box display="flex" alignItems="center">
+                                  <Typography variant="body2" color="#fff" fontWeight="bold">
+                                    변화 없음
+                                  </Typography>
+                                </Box>
+                              </span>
+                            </MuiTooltip>
+                          )}
                         </Box>
                         {consistencyScores[type].streakDays > 0 && (
-                          <Box sx={{ display: 'flex', alignItems: 'center', color: 'warning.main' }}>
-                            <LocalFireDepartmentIcon fontSize="small" sx={{ mr: 0.5 }} />
-                            <Typography variant="body2">
-                              {consistencyScores[type].streakDays}일
-                            </Typography>
-                          </Box>
+                          <MuiTooltip title={`연속 ${consistencyScores[type].streakDays}일 운동`}>
+                            <span>
+                              <Box display="flex" alignItems="center" ml={2}>
+                                <LocalFireDepartmentIcon
+                                  sx={{
+                                    color: consistencyScores[type].streakDays > 3 ? '#ff9800' : '#757575',
+                                    mr: 0.5
+                                  }}
+                                />
+                                <Typography variant="body2" fontWeight="bold">
+                                  {consistencyScores[type].streakDays}일
+                                </Typography>
+                              </Box>
+                            </span>
+                          </MuiTooltip>
                         )}
                       </Box>
 
@@ -872,11 +1052,31 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
                           height: '40px',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center'
+                          justifyContent: 'center',
+                          mb: 1
                         }}
                       >
                         {consistencyScores[type].message}
                       </Typography>
+
+                      {/* 가이드 버튼 추가 */}
+                      <Button
+                        size="small"
+                        startIcon={<RecommendIcon />}
+                        onClick={() => handleOpenGuide(type)}
+                        variant="outlined"
+                        sx={{ 
+                          fontSize: '0.75rem',
+                          borderColor: consistencyScores[type].color,
+                          color: consistencyScores[type].color,
+                          '&:hover': {
+                            borderColor: consistencyScores[type].color,
+                            backgroundColor: `${consistencyScores[type].color}10`
+                          }
+                        }}
+                      >
+                        개선 가이드
+                      </Button>
                     </CardContent>
                   </Card>
                 </Grid>
@@ -984,6 +1184,77 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
         <DialogActions>
           <Button onClick={() => setOpenShareDialog(false)}>Cancel</Button>
           <Button onClick={handleShare} variant="contained">Share</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 개선 가이드 다이얼로그 */}
+      <Dialog
+        open={openGuideDialog}
+        onClose={() => setOpenGuideDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ 
+          bgcolor: selectedExerciseType && consistencyScores[selectedExerciseType as keyof typeof consistencyScores]?.color,
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          {guideContent.title}
+          <MuiTooltip title="개선 가이드는 현재 추세를 기반으로 제공되는 맞춤형 조언입니다">
+            <span><HelpOutlineIcon fontSize="small" sx={{ color: 'white', opacity: 0.7 }} /></span>
+          </MuiTooltip>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Typography variant="body1" gutterBottom>
+            {guideContent.description}
+          </Typography>
+          
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 2 }}>
+            <Chip 
+              label={`현재 추세: ${guideContent.currentTrend > 0 ? '+' : ''}${guideContent.currentTrend}%`} 
+              color={guideContent.currentTrend >= 0 ? "success" : "error"}
+              size="small"
+              icon={guideContent.currentTrend >= 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
+            />
+            <Typography variant="h6" sx={{ color: 'text.secondary' }}>→</Typography>
+            <Chip 
+              label={`목표 추세: +${guideContent.desiredTrend}%`} 
+              color="primary"
+              variant="outlined"
+              size="small"
+              icon={<TrendingUpIcon />}
+            />
+          </Box>
+          
+          <Box sx={{ bgcolor: 'background.default', p: 2, borderRadius: 1, mb: 2 }}>
+            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
+              다음 {guideContent.goalDays}일간 목표
+            </Typography>
+            <Typography variant="body2" gutterBottom>
+              하루 평균 {guideContent.targetPerDay}{selectedExerciseType === 'steps' ? '보' : selectedExerciseType === 'running' ? 'km' : '회'} 이상
+            </Typography>
+          </Box>
+          
+          <Divider sx={{ my: 2 }} />
+          
+          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
+            추천 사항
+          </Typography>
+          
+          <ul style={{ paddingLeft: '1.5rem' }}>
+            {guideContent.recommendations.map((rec, idx) => (
+              <li key={idx}>
+                <Typography variant="body2" gutterBottom>
+                  {rec}
+                </Typography>
+              </li>
+            ))}
+          </ul>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenGuideDialog(false)}>닫기</Button>
         </DialogActions>
       </Dialog>
     </Box>

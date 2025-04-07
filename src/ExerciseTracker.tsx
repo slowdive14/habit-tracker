@@ -105,6 +105,50 @@ interface ConsistencyScore {
   trendChange: number; // 변화 추세 (양수: 개선, 음수: 하락)
 }
 
+// 운동 종류별 특성 정보 추가
+const exerciseCharacteristics = {
+  pushups: { 
+    optimalFrequency: 3, // 주당 최적 빈도
+    recoveryNeeded: true, // 회복 필요성
+    intensityType: "근력", // 운동 유형
+    recommendedRest: 1, // 권장 휴식일 (연속 운동일 사이)
+    progression: "reps", // 진행 유형 (횟수 증가)
+    maxRecommended: 40 // 일반적인 최대 권장량
+  },
+  pullups: { 
+    optimalFrequency: 3, 
+    recoveryNeeded: true,
+    intensityType: "근력",
+    recommendedRest: 1,
+    progression: "reps",
+    maxRecommended: 15
+  },
+  dips: { 
+    optimalFrequency: 3, 
+    recoveryNeeded: true,
+    intensityType: "근력",
+    recommendedRest: 1,
+    progression: "reps",
+    maxRecommended: 25
+  },
+  steps: { 
+    optimalFrequency: 7, // 매일 권장
+    recoveryNeeded: false, // 회복 불필요
+    intensityType: "유산소 저강도",
+    recommendedRest: 0,
+    progression: "consistency", // 진행 유형 (일관성)
+    maxRecommended: 10000
+  },
+  running: { 
+    optimalFrequency: 3, 
+    recoveryNeeded: true,
+    intensityType: "유산소 중강도",
+    recommendedRest: 1,
+    progression: "distance_time", // 진행 유형 (거리/시간)
+    maxRecommended: 5
+  }
+};
+
 const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   const [tabValue, setTabValue] = useState(1);  // 1: 월간 통계
   const [exerciseData, setExerciseData] = useState<ExerciseData>({});
@@ -546,17 +590,66 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
     const info = exerciseInfo[exerciseType as keyof typeof exerciseInfo];
     const score = consistencyScores[exerciseType as keyof typeof consistencyScores];
     const currentTrend = score.trendChange;
+    const characteristics = exerciseCharacteristics[exerciseType as keyof typeof exerciseCharacteristics];
     
-    // 현재 일주일간 평균 계산
+    // 1. 사용자 패턴 분석 - 최근 운동 데이터 수집
     const today = new Date();
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
+    
+    // 최근 28일(4주) 데이터 수집
+    const last28Days = Array.from({ length: 28 }, (_, i) => {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
       return date.toISOString().split('T')[0];
     });
     
-    // 최근 7일간 운동한 날의 평균
-    const exerciseValues = last7Days
+    // 주별 데이터 분리 (4주)
+    const weeklyData = [
+      last28Days.slice(0, 7),    // 최근 1주
+      last28Days.slice(7, 14),   // 최근 2주
+      last28Days.slice(14, 21),  // 최근 3주
+      last28Days.slice(21, 28)   // 최근 4주
+    ];
+    
+    // 각 주별 운동 횟수 계산
+    const weeklyFrequencies = weeklyData.map(week => 
+      week.filter(date => {
+        const value = exerciseData[date]?.[exerciseType as keyof Exercise];
+        return typeof value === 'number' && value > 0;
+      }).length
+    );
+    
+    // 평균 주간 운동 빈도
+    const avgWeeklyFrequency = weeklyFrequencies.reduce((sum, freq) => sum + freq, 0) / 
+      weeklyFrequencies.length;
+    
+    // 선호 운동 요일 분석
+    const dayPreferences = [0, 0, 0, 0, 0, 0, 0]; // 일~토요일
+    
+    last28Days.forEach(dateStr => {
+      const value = exerciseData[dateStr]?.[exerciseType as keyof Exercise];
+      if (typeof value === 'number' && value > 0) {
+        const date = new Date(dateStr);
+        const dayOfWeek = date.getDay(); // 0: 일요일, 6: 토요일
+        dayPreferences[dayOfWeek]++;
+      }
+    });
+    
+    // 가장 선호하는 요일 (상위 2개)
+    const preferredDays = dayPreferences
+      .map((count, index) => ({ count, day: index }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 2)
+      .filter(item => item.count > 0)
+      .map(item => {
+        const days = ['일', '월', '화', '수', '목', '금', '토'];
+        return days[item.day];
+      });
+    
+    // 현재 연속 일수
+    const currentStreakDays = score.streakDays;
+    
+    // 최근 7일간 운동한 날의 평균값
+    const exerciseValues = last28Days.slice(0, 7)
       .map(date => {
         const value = exerciseData[date]?.[exerciseType as keyof Exercise];
         return typeof value === 'number' ? value : 0;
@@ -567,216 +660,169 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       ? Math.round((exerciseValues.reduce((a, b) => a + b, 0) / exerciseValues.length) * 10) / 10
       : 0;
       
-    // 최근 30일 데이터도 계산하여 더 안정적인 평균 구하기
+    // 최근 30일 데이터 계산
     const last30Days = Array.from({ length: 30 }, (_, i) => {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
       return date.toISOString().split('T')[0];
     });
     
-    // 최근 30일간 모든 날(0인 날 포함)의 평균
-    const exerciseValues30Days = last30Days.map(date => {
-      const value = exerciseData[date]?.[exerciseType as keyof Exercise];
-      return typeof value === 'number' ? value : 0;
-    });
+    // 모든 날의 평균 (0 포함)
+    const dailyAvg30Days = last30Days
+      .map(date => {
+        const value = exerciseData[date]?.[exerciseType as keyof Exercise];
+        return typeof value === 'number' ? value : 0;
+      })
+      .reduce((sum, val) => sum + val, 0) / 30;
     
-    // 총합 및 운동한 날 수
-    const totalValue = exerciseValues30Days.reduce((sum, val) => sum + val, 0);
-    const daysWithExercise = exerciseValues30Days.filter(val => val > 0).length;
+    // 실제 운동한 날만의 평균
+    const exerciseValues30Days = last30Days
+      .map(date => {
+        const value = exerciseData[date]?.[exerciseType as keyof Exercise];
+        return typeof value === 'number' ? value : 0;
+      })
+      .filter(val => val > 0);
     
-    // 30일 평균(일일) 및 운동한 날의 평균
-    const dailyAvg30Days = Math.round((totalValue / 30) * 10) / 10;
-    const exerciseDayAvg30Days = daysWithExercise > 0 
-      ? Math.round((totalValue / daysWithExercise) * 10) / 10
+    const exerciseDayAvg30Days = exerciseValues30Days.length > 0
+      ? exerciseValues30Days.reduce((sum, val) => sum + val, 0) / exerciseValues30Days.length
       : 0;
     
-    // 전체 일일 평균 (averageStats에서 가져옴)
-    const longTermDailyAvg = 
-      exerciseType === 'pushups' ? averageStats.pushups :
-      exerciseType === 'pullups' ? averageStats.pullups :
-      exerciseType === 'dips' ? averageStats.dips :
-      exerciseType === 'steps' ? averageStats.steps :
-      exerciseType === 'running' ? averageStats.running : 0;
-      
+    // 전체 기간 평균 (averageStats에서)
+    const longTermDailyAvg = exerciseType === 'pushups' ? averageStats.pushups : 
+                           exerciseType === 'pullups' ? averageStats.pullups :
+                           exerciseType === 'dips' ? averageStats.dips :
+                           exerciseType === 'steps' ? averageStats.steps :
+                           exerciseType === 'running' ? averageStats.running : 0;
+    
     // 실제 운동일만 고려한 평균 (달리기의 경우)
     const activeExerciseDayAvg = 
       exerciseType === 'running' && averageStats.runningDaysCount > 0 
         ? averageStats.runningDaysAvg 
         : 0;
     
+    // 콘솔에 계산값 출력 (디버깅용)
     console.log(`${exerciseType} 목표 계산:`, {
-      최근7일평균: currentAvg,
-      최근30일일일평균: dailyAvg30Days,
-      최근30일운동일평균: exerciseDayAvg30Days,
+      운동일평균: activeExerciseDayAvg,
       전체일일평균: longTermDailyAvg,
-      운동일평균: activeExerciseDayAvg
+      최근7일평균: currentAvg,
+      최근30일운동일평균: exerciseDayAvg30Days,
+      최근30일일일평균: dailyAvg30Days,
+      주간운동빈도: avgWeeklyFrequency
     });
     
-    // 목표 계산
+    // 2. 점진적 목표 계산
+    
+    // 현재 운동 빈도 수준에 따른 권장 빈도 계산
+    let recommendedFrequency = characteristics.optimalFrequency;
+    
+    if (avgWeeklyFrequency < 1) {
+      // 거의 운동하지 않는 경우 주 1-2회부터 시작
+      recommendedFrequency = Math.min(2, characteristics.optimalFrequency);
+    } else if (avgWeeklyFrequency < characteristics.optimalFrequency) {
+      // 현재보다 1회 증가 (최적 빈도까지 점진적 증가)
+      recommendedFrequency = Math.min(Math.ceil(avgWeeklyFrequency) + 1, characteristics.optimalFrequency);
+    }
+    
+    // 목표 기간
+    let goalDays = 7; // 기본 1주일
+    
+    // 목표 운동량 계산
     let targetPerDay = 0;
-    let goalDays = 0;
     let desiredTrend = 0;
     let recommendations: string[] = [];
     
-    if (currentTrend < 0) { // 하락 추세
-      // 하락 추세를 개선하기 위해 필요한 운동 횟수 계산
-      // 최소 +10% 추세로 전환하는 것을 목표
-      desiredTrend = 10;
-      goalDays = 7; // 향후 7일 동안 운동
-      
-      // 최근 10일간 운동 비율
-      const recent10Days = last7Days.concat(
-        Array.from({ length: 3 }, (_, i) => {
-          const date = new Date(today);
-          date.setDate(date.getDate() - (i + 7));
-          return date.toISOString().split('T')[0];
-        })
-      );
-      
-      const recent10HasRecords = recent10Days.filter(date => {
-        const value = exerciseData[date]?.[exerciseType as keyof Exercise];
-        return typeof value === 'number' && value > 0;
-      }).length;
-      
-      const recent10Ratio = recent10HasRecords / 10;
-      
-      // 목표: 10일 중 최소 6일은 운동해야 60% 비율
-      const targetRatio = Math.max(0.6, recent10Ratio + 0.2); // 최소 60% 또는 현재보다 20% 높게
-      const targetDays = Math.ceil(targetRatio * 10) - recent10HasRecords;
-      
-      // 목표 운동량 계산 - 여러 평균을 고려하여 가장 적절한 값 선택
-      let suggestedTarget = 0;
-      
-      // 장기 평균이 있으면 최우선으로 고려
-      if (longTermDailyAvg > 0) {
-        // 일일 평균의 90-110% 사이를 목표로 설정 (하락 상태에서 부담스럽지 않게)
-        suggestedTarget = longTermDailyAvg * 0.9;
-      } else if (currentAvg > 0) {
-        // 최근 7일 운동한 날의 평균이 있으면 사용
-        suggestedTarget = currentAvg;
-      } else if (exerciseDayAvg30Days > 0) {
-        // 30일간 운동한 날의 평균 사용 (약간 낮게 조정)
-        suggestedTarget = exerciseDayAvg30Days * 0.9;
-      } else {
-        // 기본값의 80%
-        suggestedTarget = info.defaultTarget * 0.8;
-      }
-      
-      // 운동 종류별 특수 조정
-      if (exerciseType === 'running' && activeExerciseDayAvg > 0) {
-        // 달리기의 경우 실제 운동일 평균을 우선 고려
-        suggestedTarget = activeExerciseDayAvg * 0.9;
-      }
-      
-      // 합리적인 최대값 설정 (기본값의 3배를 넘지 않도록)
-      const reasonableMax = info.defaultTarget * 3;
-      
-      // 최종 목표 설정 - 반올림하여 깔끔한 숫자로 표시
-      targetPerDay = Math.min(
-        suggestedTarget, 
-        reasonableMax,
-        exerciseType === 'steps' ? 10000 : // 걸음 수 최대 1만보
-        exerciseType === 'running' ? 5 : // 달리기 최대 5km
-        exerciseType === 'pushups' ? 40 : // 푸시업 최대 40개
-        exerciseType === 'pullups' ? 15 : // 풀업 최대 15개
-        exerciseType === 'dips' ? 25 : 100 // 딥스 최대 25개, 기타 100
-      );
-      
-      // 반올림하여 더 깔끔한 숫자로 표시
-      targetPerDay = Math.round(targetPerDay);
-      
-      // 걸음 수인 경우 500 단위로 반올림
-      if (exerciseType === 'steps') {
-        targetPerDay = Math.round(targetPerDay / 500) * 500;
-      }
-      
-      // 달리기인 경우 소수점 첫째 자리까지만 표시
-      if (exerciseType === 'running') {
-        targetPerDay = Math.round(targetPerDay * 10) / 10;
-      }
-      
-      recommendations = [
-        `다음 ${goalDays}일 중 최소 ${Math.min(goalDays, targetDays)}일은 운동하세요`,
-        `매일 최소 ${targetPerDay}${info.unit} 이상 실천하세요`,
-        `가능하면 아침에 ${info.name}을(를) 습관화하세요`,
-        `휴대폰 알림을 설정하여 매일 같은 시간에 운동하세요`
-      ];
-    } else { // 개선 추세 또는 유지
-      desiredTrend = currentTrend + 5; // 현재보다 5% 더 개선
-      goalDays = 10; // 향후 10일 동안의 목표
-      
-      // 목표 운동량 계산 - 여러 평균 고려
-      let suggestedTarget = 0;
-      
-      // 장기 평균이 있으면 최우선으로 고려
-      if (longTermDailyAvg > 0) {
-        // 일일 평균보다 10-30% 증가를 목표로 설정
-        suggestedTarget = longTermDailyAvg * 1.2;
-      } else if (currentAvg > 0) {
-        // 최근 7일 운동한 날의 평균에서 15% 증가
-        suggestedTarget = currentAvg * 1.15;
-      } else if (exerciseDayAvg30Days > 0) {
-        // 30일간 운동한 날의 평균에서 20% 증가
-        suggestedTarget = exerciseDayAvg30Days * 1.2;
-      } else {
-        // 기본값 사용
-        suggestedTarget = info.defaultTarget;
-      }
-      
-      // 운동 종류별 특수 조정
-      if (exerciseType === 'running' && activeExerciseDayAvg > 0) {
-        // 달리기의 경우 실제 운동일 평균을 우선 고려
-        suggestedTarget = activeExerciseDayAvg * 1.1;
-      }
-      
-      // 합리적인 최대값 설정 (기본값의 3배 또는 30일 평균의 2배 중 큰 값 이하)
-      const reasonableMax = Math.max(
-        info.defaultTarget * 3,
-        longTermDailyAvg > 0 ? longTermDailyAvg * 2 : 0
-      );
-      
-      // 최종 목표 설정
-      targetPerDay = Math.min(
-        suggestedTarget, 
-        reasonableMax,
-        exerciseType === 'steps' ? 15000 : // 걸음 수 최대 1.5만보
-        exerciseType === 'running' ? 7 : // 달리기 최대 7km
-        exerciseType === 'pushups' ? 50 : // 푸시업 최대 50개
-        exerciseType === 'pullups' ? 20 : // 풀업 최대 20개
-        exerciseType === 'dips' ? 30 : 150 // 딥스 최대 30개, 기타 150
-      );
-      
-      // 반올림하여 더 깔끔한 숫자로 표시
-      targetPerDay = Math.round(targetPerDay);
-      
-      // 걸음 수인 경우 500 단위로 반올림
-      if (exerciseType === 'steps') {
-        targetPerDay = Math.round(targetPerDay / 500) * 500;
-      }
-      
-      // 달리기인 경우 소수점 첫째 자리까지만 표시
-      if (exerciseType === 'running') {
-        targetPerDay = Math.round(targetPerDay * 10) / 10;
-      }
-      
-      // 추천 사항
-      recommendations = [
-        `다음 ${goalDays}일 동안 매일 ${targetPerDay}${info.unit} 이상 목표로 하세요`,
-        `일주일에 한 번은 목표보다 ${info.increaseStep}${info.unit} 더 높게 도전해보세요`,
-        `주말에도 최소 ${Math.round(targetPerDay * 0.7)}${info.unit}은 유지하세요`,
-        `운동 기록을 꾸준히 작성하여 모니터링하세요`
-      ];
-      
-      if (score.streakDays > 0) {
-        recommendations.push(`현재 ${score.streakDays}일 연속 기록 중입니다. ${score.streakDays + 5}일까지 이어보세요!`);
-      }
+    // 운동 목표량 설정 - 다양한 평균값 고려하여 가장 적절한 값 선택
+    if (longTermDailyAvg > 0) {
+      // 전체 기간 평균이 있으면 최우선 고려
+      targetPerDay = currentTrend < 0 
+        ? longTermDailyAvg * 0.9  // 하락 추세면 조금 낮게 (90%)
+        : longTermDailyAvg * 1.1; // 상승 추세면 조금 높게 (110%)
+    } else if (currentAvg > 0) {
+      // 최근 7일 평균 사용
+      targetPerDay = currentTrend < 0
+        ? currentAvg * 0.95
+        : currentAvg * 1.1;
+    } else if (exerciseDayAvg30Days > 0) {
+      // 30일 운동일 평균 사용
+      targetPerDay = currentTrend < 0
+        ? exerciseDayAvg30Days * 0.9
+        : exerciseDayAvg30Days * 1.15;
+    } else {
+      // 기본값 사용
+      targetPerDay = info.defaultTarget;
     }
     
+    // 운동 종류별 특수 조정
+    if (exerciseType === 'running' && activeExerciseDayAvg > 0) {
+      // 달리기의 경우 실제 운동일 평균을 우선 고려
+      targetPerDay = currentTrend < 0
+        ? activeExerciseDayAvg * 0.9
+        : activeExerciseDayAvg * 1.05; // 달리기는 증가율을 낮게 설정
+    }
+    
+    // 합리적인 최대치 설정
+    targetPerDay = Math.min(
+      targetPerDay, 
+      characteristics.maxRecommended
+    );
+    
+    // 반올림하여 깔끔한 숫자로 표시
+    if (exerciseType === 'steps') {
+      // 걸음 수는 500 단위로 반올림
+      targetPerDay = Math.round(targetPerDay / 500) * 500;
+    } else if (exerciseType === 'running') {
+      // 달리기는 소수점 첫째 자리까지 표시
+      targetPerDay = Math.round(targetPerDay * 10) / 10;
+    } else {
+      // 기타 운동은 정수로 반올림
+      targetPerDay = Math.round(targetPerDay);
+    }
+    
+    // 3. 과학적 근거 기반 추천사항 생성
+    const targetDays = Math.min(goalDays, Math.ceil(recommendedFrequency));
+    desiredTrend = currentTrend < 0 ? 10 : currentTrend + 5; // 목표 개선율
+    
+    // 요일별 운동 권장사항
+    const dayRecommendation = preferredDays.length > 0
+      ? `선호하는 ${preferredDays.join(', ')}요일에 운동 일정을 잡으세요` 
+      : characteristics.recoveryNeeded
+        ? `월수금 또는 화목토와 같이 하루 간격으로 운동하세요`
+        : `가능하면 매일 꾸준히 운동하세요`;
+    
+    if (currentTrend < 0) { // 하락 추세
+      recommendations = [
+        `일주일에 ${recommendedFrequency}회 운동하세요 (과학적 최적 빈도: 주 ${characteristics.optimalFrequency}회)`,
+        `${dayRecommendation}`,
+        `매 운동마다 최소 ${targetPerDay}${info.unit} 이상을 목표로 하세요`,
+        characteristics.recoveryNeeded 
+          ? `${characteristics.intensityType} 운동은 근육 회복을 위해 운동일 사이에 최소 ${characteristics.recommendedRest}일의 휴식이 필요합니다` 
+          : `꾸준한 습관이 중요합니다. 매일 조금씩이라도 실천해보세요`
+      ];
+    } else { // 개선 추세 또는 유지
+      recommendations = [
+        `현재 페이스를 유지하며 주 ${recommendedFrequency}회 운동하세요`,
+        `${dayRecommendation}`,
+        `매 운동마다 ${targetPerDay}${info.unit} 이상을 목표로 하세요`,
+        `일주일에 한 번은 목표보다 ${info.increaseStep}${info.unit} 더 높게 도전해보세요`
+      ];
+    }
+    
+    // 현재 연속 기록 중인 경우 추가 격려 메시지
+    if (score.streakDays > 0) {
+      const nextMilestone = score.streakDays < 5 ? 5 : 
+                          score.streakDays < 10 ? 10 : 
+                          score.streakDays < 30 ? 30 : 
+                          score.streakDays + 10;
+                          
+      recommendations.push(`현재 ${score.streakDays}일 연속 기록 중입니다. ${nextMilestone}일 연속을 목표로 해보세요!`);
+    }
+    
+    // 4. 다이얼로그 내용 설정
     setGuideContent({
       title: `${info.name} 개선 가이드`,
       description: currentTrend < 0 
-        ? `최근 ${info.name} 빈도가 감소하고 있습니다. 다시 향상시키기 위한 가이드입니다.`
-        : `현재 ${info.name} 습관이 개선되고 있습니다. 더 향상시키기 위한 가이드입니다.`,
+        ? `최근 ${info.name} 빈도가 감소했습니다. 다시 시작하기 위한 과학적 가이드입니다.`
+        : `현재 ${info.name} 습관이 잘 형성되고 있습니다. 더 향상시키기 위한 가이드입니다.`,
       recommendations,
       goalDays,
       targetPerDay,

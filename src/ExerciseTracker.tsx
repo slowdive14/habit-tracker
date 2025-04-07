@@ -13,9 +13,15 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  CircularProgress,
+  Card,
+  CardContent
 } from '@mui/material';
 import TwitterIcon from '@mui/icons-material/Twitter';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import { User } from 'firebase/auth';
 import {
   collection,
@@ -83,6 +89,17 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
+// 일관성 점수 인터페이스
+interface ConsistencyScore {
+  score: number; // 0-100 점수
+  grade: string; // 등급 (A+, A, B+, ...)
+  label: string; // 등급 설명
+  color: string; // 등급 색상
+  message: string; // 동기부여 메시지
+  streakDays: number; // 연속 일수
+  trendChange: number; // 변화 추세 (양수: 개선, 음수: 하락)
+}
+
 const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   const [tabValue, setTabValue] = useState(1);  // 1: 월간 통계
   const [exerciseData, setExerciseData] = useState<ExerciseData>({});
@@ -113,6 +130,19 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     runningDaysCount: 0
   });
   const [error, setError] = useState<string | null>(null);
+  const [consistencyScores, setConsistencyScores] = useState<{
+    pushups: ConsistencyScore;
+    pullups: ConsistencyScore;
+    dips: ConsistencyScore;
+    steps: ConsistencyScore;
+    running: ConsistencyScore;
+  }>({
+    pushups: { score: 0, grade: 'F', label: '시작하기', color: '#B71C1C', message: '규칙적인 운동 습관을 만들어보세요!', streakDays: 0, trendChange: 0 },
+    pullups: { score: 0, grade: 'F', label: '시작하기', color: '#B71C1C', message: '규칙적인 운동 습관을 만들어보세요!', streakDays: 0, trendChange: 0 },
+    dips: { score: 0, grade: 'F', label: '시작하기', color: '#B71C1C', message: '규칙적인 운동 습관을 만들어보세요!', streakDays: 0, trendChange: 0 },
+    steps: { score: 0, grade: 'F', label: '시작하기', color: '#B71C1C', message: '매일 걷는 습관을 만들어보세요!', streakDays: 0, trendChange: 0 },
+    running: { score: 0, grade: 'F', label: '시작하기', color: '#B71C1C', message: '운동을 시작해보세요!', streakDays: 0, trendChange: 0 }
+  });
 
   // 데이터 로드
   useEffect(() => {
@@ -125,6 +155,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   useEffect(() => {
     calculateWeeklyData();
     calculateMonthlyData();
+    calculateConsistencyScores();
   }, [exerciseData]);
 
   // 선택된 날짜가 변경될 때 해당 날짜의 데이터 로드
@@ -320,6 +351,132 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       daysCountedExercises: daysFromStart,
       runningDaysCount: totalStats.runningDays
     });
+  };
+
+  const calculateConsistencyScores = () => {
+    // 운동별 일관성 점수 계산
+    const exerciseTypes = ['pushups', 'pullups', 'dips', 'steps', 'running'] as const;
+    const newScores = { ...consistencyScores };
+
+    exerciseTypes.forEach((type) => {
+      // 1. 데이터 수집 - 최근 30일
+      const today = new Date();
+      const last30Days = Array.from({ length: 30 }, (_, i) => {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        return date.toISOString().split('T')[0];
+      });
+
+      // 운동 기록 존재 여부
+      const hasRecordDays = last30Days.filter(date => 
+        exerciseData[date] && exerciseData[date][type] && exerciseData[date][type] > 0
+      );
+
+      // 2. 최근 10일의 기록과 그 이전 20일의 기록 비교 (추세 계산)
+      const recent10Days = last30Days.slice(0, 10);
+      const previous20Days = last30Days.slice(10, 30);
+      
+      const recent10HasRecords = recent10Days.filter(date => 
+        exerciseData[date] && exerciseData[date][type] && exerciseData[date][type] > 0
+      );
+      const previous20HasRecords = previous20Days.filter(date => 
+        exerciseData[date] && exerciseData[date][type] && exerciseData[date][type] > 0
+      );
+      
+      const recent10Ratio = recent10HasRecords.length / recent10Days.length;
+      const previous20Ratio = previous20HasRecords.length / previous20Days.length;
+      
+      // 3. 꾸준함 점수 계산
+      // a. 기록 빈도 (60% 가중치)
+      const frequencyScore = (hasRecordDays.length / 30) * 100 * 0.6;
+      
+      // b. 최근 개선도 (20% 가중치)
+      const improvementFactor = recent10Ratio > 0 && previous20Ratio > 0
+        ? (recent10Ratio - previous20Ratio) / previous20Ratio
+        : 0;
+      const trendScore = Math.min(100, Math.max(0, 50 + (improvementFactor * 100))) * 0.2;
+      
+      // c. 연속 일수 (20% 가중치)
+      let maxConsecutiveDays = 0;
+      let currentConsecutiveDays = 0;
+      let currentStreakDays = 0;
+      let isCurrentStreak = true;
+
+      // 연속일 계산
+      for (const date of last30Days) {
+        if (exerciseData[date] && exerciseData[date][type] && exerciseData[date][type] > 0) {
+          if (isCurrentStreak) {
+            currentStreakDays++;
+          }
+          currentConsecutiveDays++;
+          maxConsecutiveDays = Math.max(maxConsecutiveDays, currentConsecutiveDays);
+        } else {
+          isCurrentStreak = false;
+          currentConsecutiveDays = 0;
+        }
+      }
+
+      // 최대 30일까지 고려
+      const streakScore = (maxConsecutiveDays / 30) * 100 * 0.2;
+      
+      // 4. 총 일관성 점수 계산 (0-100)
+      const totalScore = Math.min(100, Math.round(frequencyScore + trendScore + streakScore));
+      
+      // 5. 등급 결정
+      const { grade, label, color } = getGradeInfo(totalScore);
+
+      // 6. 동기부여 메시지 생성
+      const message = getMotivationalMessage(type, totalScore, currentStreakDays);
+
+      // 일관성 점수 저장
+      newScores[type] = {
+        score: totalScore,
+        grade,
+        label,
+        color,
+        message,
+        streakDays: currentStreakDays,
+        trendChange: Math.round((recent10Ratio - previous20Ratio) * 100)
+      };
+    });
+
+    setConsistencyScores(newScores);
+  };
+
+  // 점수 등급 정보 반환 함수
+  const getGradeInfo = (score: number) => {
+    if (score >= 90) return { grade: 'A+', label: '탁월함', color: '#2E7D32' };
+    if (score >= 80) return { grade: 'A', label: '우수함', color: '#558B2F' };
+    if (score >= 70) return { grade: 'B+', label: '매우 좋음', color: '#689F38' };
+    if (score >= 60) return { grade: 'B', label: '좋음', color: '#9E9D24' };
+    if (score >= 50) return { grade: 'C+', label: '보통 이상', color: '#F9A825' };
+    if (score >= 40) return { grade: 'C', label: '보통', color: '#FF8F00' };
+    if (score >= 30) return { grade: 'D+', label: '노력 필요', color: '#EF6C00' };
+    if (score >= 20) return { grade: 'D', label: '개선 필요', color: '#D84315' };
+    return { grade: 'F', label: '시작하기', color: '#B71C1C' };
+  };
+
+  // 동기부여 메시지 생성 함수
+  const getMotivationalMessage = (exerciseType: string, score: number, streakDays: number) => {
+    const exerciseNames = {
+      pushups: '푸시업',
+      pullups: '풀업',
+      dips: '딥스',
+      steps: '걷기',
+      running: '달리기'
+    };
+    const name = exerciseNames[exerciseType as keyof typeof exerciseNames];
+
+    if (score >= 90) return `훌륭합니다! ${name} 습관이 완벽하게 자리잡았어요!`;
+    if (score >= 80) return `멋져요! ${name}을(를) 꾸준히 실천하고 계시네요!`;
+    if (score >= 70) return `좋은 습관이 형성되고 있어요! 계속 ${name}을(를) 유지하세요.`;
+    if (score >= 60) return `${name} 습관이 자리잡고 있어요. 꾸준함이 중요합니다!`;
+    if (score >= 50) return `절반의 성공! ${name}을(를) 조금 더 자주 실천해보세요.`;
+    if (score >= 40) return `${name}을(를) 꾸준히 하면 큰 변화가 있을 거예요!`;
+    if (score >= 30) return `좋은 시작입니다! ${name}을(를) 더 자주 실천해보세요.`;
+    if (score >= 20) return `${name}을(를) 더 규칙적으로 실천해보는 건 어떨까요?`;
+    if (streakDays > 0) return `${streakDays}일째 ${name} 중이네요! 계속 이어가세요!`;
+    return `${name} 습관을 만들어보세요. 작은 시작이 중요합니다!`;
   };
 
   const handleShare = () => {
@@ -592,6 +749,141 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>
+          {/* 일관성 점수 섹션 추가 */}
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h6" gutterBottom>
+              일관성 점수
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              운동의 꾸준함을 측정하는 점수입니다. 규칙적으로 운동할수록 점수가 높아집니다.
+            </Typography>
+            <Grid container spacing={2}>
+              {(['pushups', 'pullups', 'dips', 'steps', 'running'] as const).map((type) => (
+                <Grid item xs={12} sm={6} md={4} key={type}>
+                  <Card 
+                    sx={{ 
+                      position: 'relative', 
+                      overflow: 'visible',
+                      boxShadow: 2,
+                      transition: 'transform 0.3s',
+                      '&:hover': {
+                        transform: 'translateY(-5px)',
+                        boxShadow: 4
+                      }
+                    }}
+                  >
+                    <CardContent sx={{ textAlign: 'center' }}>
+                      {/* 운동 유형 이름 */}
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontWeight: 'bold', 
+                          color: consistencyScores[type].color,
+                          mb: 2
+                        }}
+                      >
+                        {type === 'pushups' && '푸시업'}
+                        {type === 'pullups' && '풀업'}
+                        {type === 'dips' && '딥스'}
+                        {type === 'steps' && '걷기'}
+                        {type === 'running' && '달리기'}
+                      </Typography>
+
+                      {/* 점수 원형 프로그레스 */}
+                      <Box sx={{ position: 'relative', display: 'inline-flex', mb: 2 }}>
+                        <CircularProgress
+                          variant="determinate"
+                          value={consistencyScores[type].score}
+                          size={80}
+                          thickness={8}
+                          sx={{ color: consistencyScores[type].color }}
+                        />
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            bottom: 0,
+                            right: 0,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Typography variant="h6" component="div" sx={{ lineHeight: 1 }}>
+                            {consistencyScores[type].score}
+                          </Typography>
+                          <Typography variant="caption" component="div" sx={{ 
+                            color: 'text.secondary',
+                            fontWeight: 'bold' 
+                          }}>
+                            {consistencyScores[type].grade}
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      {/* 등급 라벨 */}
+                      <Typography 
+                        variant="subtitle1" 
+                        sx={{ 
+                          fontWeight: 'medium',
+                          mb: 1.5,
+                          color: consistencyScores[type].color
+                        }}
+                      >
+                        {consistencyScores[type].label}
+                      </Typography>
+
+                      {/* 추세 및 연속일 */}
+                      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 1.5 }}>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center',
+                          color: consistencyScores[type].trendChange > 0 ? 'success.main' : 
+                                 consistencyScores[type].trendChange < 0 ? 'error.main' : 'text.secondary'
+                        }}>
+                          {consistencyScores[type].trendChange > 0 ? (
+                            <TrendingUpIcon fontSize="small" sx={{ mr: 0.5 }} />
+                          ) : consistencyScores[type].trendChange < 0 ? (
+                            <TrendingDownIcon fontSize="small" sx={{ mr: 0.5 }} />
+                          ) : null}
+                          <Typography variant="body2">
+                            {consistencyScores[type].trendChange > 0 && '+'}
+                            {consistencyScores[type].trendChange}%
+                          </Typography>
+                        </Box>
+                        {consistencyScores[type].streakDays > 0 && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', color: 'warning.main' }}>
+                            <LocalFireDepartmentIcon fontSize="small" sx={{ mr: 0.5 }} />
+                            <Typography variant="body2">
+                              {consistencyScores[type].streakDays}일
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+
+                      {/* 동기부여 메시지 */}
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary"
+                        sx={{ 
+                          fontStyle: 'italic',
+                          height: '40px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        {consistencyScores[type].message}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+
           {/* 운동 차트 (푸시업, 풀업, 딥스) */}
           <Typography variant="h6" gutterBottom>
             운동 기록

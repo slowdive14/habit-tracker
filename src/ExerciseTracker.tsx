@@ -555,6 +555,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       return date.toISOString().split('T')[0];
     });
     
+    // 최근 7일간 운동한 날의 평균
     const exerciseValues = last7Days
       .map(date => {
         const value = exerciseData[date]?.[exerciseType as keyof Exercise];
@@ -564,6 +565,29 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
     
     const currentAvg = exerciseValues.length > 0 
       ? Math.round((exerciseValues.reduce((a, b) => a + b, 0) / exerciseValues.length) * 10) / 10
+      : 0;
+      
+    // 최근 30일 데이터도 계산하여 더 안정적인 평균 구하기
+    const last30Days = Array.from({ length: 30 }, (_, i) => {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      return date.toISOString().split('T')[0];
+    });
+    
+    // 최근 30일간 모든 날(0인 날 포함)의 평균
+    const exerciseValues30Days = last30Days.map(date => {
+      const value = exerciseData[date]?.[exerciseType as keyof Exercise];
+      return typeof value === 'number' ? value : 0;
+    });
+    
+    // 총합 및 운동한 날 수
+    const totalValue = exerciseValues30Days.reduce((sum, val) => sum + val, 0);
+    const daysWithExercise = exerciseValues30Days.filter(val => val > 0).length;
+    
+    // 30일 평균(일일) 및 운동한 날의 평균
+    const dailyAvg30Days = Math.round((totalValue / 30) * 10) / 10;
+    const exerciseDayAvg30Days = daysWithExercise > 0 
+      ? Math.round((totalValue / daysWithExercise) * 10) / 10
       : 0;
     
     // 목표 계산
@@ -598,10 +622,33 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       const targetRatio = Math.max(0.6, recent10Ratio + 0.2); // 최소 60% 또는 현재보다 20% 높게
       const targetDays = Math.ceil(targetRatio * 10) - recent10HasRecords;
       
-      // 목표 운동량 - 최근 평균 또는 기본값의 80%
-      targetPerDay = currentAvg > 0 
-        ? currentAvg 
-        : info.defaultTarget * 0.8;
+      // 목표 운동량 계산 - 여러 평균을 고려하여 가장 적절한 값 선택
+      let suggestedTarget = 0;
+      
+      if (currentAvg > 0) {
+        // 최근 7일 운동한 날의 평균이 있으면 사용
+        suggestedTarget = currentAvg;
+      } else if (exerciseDayAvg30Days > 0) {
+        // 30일간 운동한 날의 평균 사용 (약간 낮게 조정)
+        suggestedTarget = exerciseDayAvg30Days * 0.9;
+      } else {
+        // 기본값의 80%
+        suggestedTarget = info.defaultTarget * 0.8;
+      }
+      
+      // 합리적인 최대값 설정 (기본값의 3배를 넘지 않도록)
+      const reasonableMax = info.defaultTarget * 3;
+      
+      // 최종 목표 설정
+      targetPerDay = Math.min(
+        suggestedTarget, 
+        reasonableMax,
+        exerciseType === 'steps' ? 10000 : // 걸음 수 최대 1만보
+        exerciseType === 'running' ? 10 : // 달리기 최대 10km
+        exerciseType === 'pushups' ? 50 : // 푸시업 최대 50개
+        exerciseType === 'pullups' ? 20 : // 풀업 최대 20개
+        exerciseType === 'dips' ? 30 : 100 // 딥스 최대 30개, 기타 100
+      );
       
       recommendations = [
         `다음 ${goalDays}일 중 최소 ${Math.min(goalDays, targetDays)}일은 운동하세요`,
@@ -613,10 +660,36 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       desiredTrend = currentTrend + 5; // 현재보다 5% 더 개선
       goalDays = 10; // 향후 10일 동안의 목표
       
-      // 목표 운동량 - 최근 평균보다 10-20% 증가 또는 기본값
-      targetPerDay = currentAvg > 0 
-        ? Math.round((currentAvg * 1.15) * 10) / 10
-        : info.defaultTarget;
+      // 목표 운동량 계산 - 여러 평균 고려
+      let suggestedTarget = 0;
+      
+      if (currentAvg > 0) {
+        // 최근 7일 운동한 날의 평균에서 15% 증가
+        suggestedTarget = currentAvg * 1.15;
+      } else if (exerciseDayAvg30Days > 0) {
+        // 30일간 운동한 날의 평균에서 20% 증가
+        suggestedTarget = exerciseDayAvg30Days * 1.2;
+      } else {
+        // 기본값 사용
+        suggestedTarget = info.defaultTarget;
+      }
+      
+      // 합리적인 최대값 설정 (기본값의 3배 또는 30일 평균의 2배 중 큰 값 이하)
+      const reasonableMax = Math.max(
+        info.defaultTarget * 3,
+        exerciseDayAvg30Days > 0 ? exerciseDayAvg30Days * 2 : 0
+      );
+      
+      // 최종 목표 설정
+      targetPerDay = Math.min(
+        suggestedTarget, 
+        reasonableMax,
+        exerciseType === 'steps' ? 15000 : // 걸음 수 최대 1.5만보
+        exerciseType === 'running' ? 15 : // 달리기 최대 15km
+        exerciseType === 'pushups' ? 60 : // 푸시업 최대 60개
+        exerciseType === 'pullups' ? 25 : // 풀업 최대 25개
+        exerciseType === 'dips' ? 40 : 150 // 딥스 최대 40개, 기타 150
+      );
       
       // 추천 사항
       recommendations = [

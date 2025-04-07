@@ -622,28 +622,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
     const avgWeeklyFrequency = weeklyFrequencies.reduce((sum, freq) => sum + freq, 0) / 
       weeklyFrequencies.length;
     
-    // 선호 운동 요일 분석
-    const dayPreferences = [0, 0, 0, 0, 0, 0, 0]; // 일~토요일
-    
-    last28Days.forEach(dateStr => {
-      const value = exerciseData[dateStr]?.[exerciseType as keyof Exercise];
-      if (typeof value === 'number' && value > 0) {
-        const date = new Date(dateStr);
-        const dayOfWeek = date.getDay(); // 0: 일요일, 6: 토요일
-        dayPreferences[dayOfWeek]++;
-      }
-    });
-    
-    // 가장 선호하는 요일 (상위 2개)
-    const preferredDays = dayPreferences
-      .map((count, index) => ({ count, day: index }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 2)
-      .filter(item => item.count > 0)
-      .map(item => {
-        const days = ['일', '월', '화', '수', '목', '금', '토'];
-        return days[item.day];
-      });
+    // 선호 요일 분석 코드 제거 (요일 추천 없앰)
     
     // 현재 연속 일수
     const currentStreakDays = score.streakDays;
@@ -782,28 +761,23 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
     const targetDays = Math.min(goalDays, Math.ceil(recommendedFrequency));
     desiredTrend = currentTrend < 0 ? 10 : currentTrend + 5; // 목표 개선율
     
-    // 요일별 운동 권장사항
-    const dayRecommendation = preferredDays.length > 0
-      ? `선호하는 ${preferredDays.join(', ')}요일에 운동 일정을 잡으세요` 
-      : characteristics.recoveryNeeded
-        ? `월수금 또는 화목토와 같이 하루 간격으로 운동하세요`
-        : `가능하면 매일 꾸준히 운동하세요`;
+    // 요일별 운동 권장사항 제거 (dayRecommendation)
     
     if (currentTrend < 0) { // 하락 추세
       recommendations = [
         `일주일에 ${recommendedFrequency}회 운동하세요 (과학적 최적 빈도: 주 ${characteristics.optimalFrequency}회)`,
-        `${dayRecommendation}`,
         `매 운동마다 최소 ${targetPerDay}${info.unit} 이상을 목표로 하세요`,
         characteristics.recoveryNeeded 
           ? `${characteristics.intensityType} 운동은 근육 회복을 위해 운동일 사이에 최소 ${characteristics.recommendedRest}일의 휴식이 필요합니다` 
-          : `꾸준한 습관이 중요합니다. 매일 조금씩이라도 실천해보세요`
+          : `꾸준한 습관이 중요합니다. 매일 조금씩이라도 실천해보세요`,
+        `목표를 주간 단위로 설정하면 유연하게 실천할 수 있습니다 (주 ${recommendedFrequency}회, 총 ${targetPerDay * recommendedFrequency}${info.unit})`
       ];
     } else { // 개선 추세 또는 유지
       recommendations = [
         `현재 페이스를 유지하며 주 ${recommendedFrequency}회 운동하세요`,
-        `${dayRecommendation}`,
         `매 운동마다 ${targetPerDay}${info.unit} 이상을 목표로 하세요`,
-        `일주일에 한 번은 목표보다 ${info.increaseStep}${info.unit} 더 높게 도전해보세요`
+        `일주일에 한 번은 목표보다 ${info.increaseStep}${info.unit} 더 높게 도전해보세요`,
+        `주간 목표: ${targetPerDay * recommendedFrequency}${info.unit} 이상 (${recommendedFrequency}회 분산)`
       ];
     }
     

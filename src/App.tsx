@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Container, Box, Fab, Button, Typography, CircularProgress, Alert, Snackbar, Tabs, Tab } from '@mui/material';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import { onAuthStateChanged, User, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { db } from './firebase';
 import HabitTracker from './HabitTracker';
 import ExerciseTracker from './ExerciseTracker';
 
@@ -21,29 +21,46 @@ interface HabitData {
   };
 }
 
-const ALLOWED_EMAIL = 'spacekatb@gmail.com'; // 여기에 허용할 이메일 주소를 입력하세요
-const OLD_USER_ID = 'sIOyGOi27KPY9794P20Z8dsq4Ap2';  // 이전 계정의 USER_ID
+// 자동 로그인을 위한 기본 사용자 ID
+const AUTO_USER_ID = 'auto-user-123456';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [showScroll, setShowScroll] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dataMigrated, setDataMigrated] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('habits');
 
+  // 자동 로그인 처리
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user && user.email !== ALLOWED_EMAIL) {
-        await auth.signOut();
-        setError('허용되지 않은 이메일입니다.');
-        setUser(null);
-      } else {
-        setUser(user);
-      }
-      setLoading(false);
-    });
-    return () => unsubscribe();
+    // 가상 사용자 객체 생성
+    const mockUser = {
+      uid: AUTO_USER_ID,
+      email: 'auto@example.com',
+      displayName: 'Auto User',
+      // User 인터페이스에 필요한 다른 속성들
+      emailVerified: true,
+      isAnonymous: false,
+      metadata: {},
+      providerData: [],
+      refreshToken: '',
+      tenantId: null,
+      delete: async () => {},
+      getIdToken: async () => '',
+      getIdTokenResult: async () => ({
+        token: '',
+        signInProvider: '',
+        claims: {},
+        expirationTime: '',
+        issuedAtTime: '',
+        authTime: ''
+      }),
+      reload: async () => {},
+      toJSON: () => ({})
+    } as unknown as User;
+
+    setUser(mockUser);
+    setLoading(false);
   }, []);
 
   const checkScrollTop = () => {
@@ -63,52 +80,14 @@ const App: React.FC = () => {
     return () => window.removeEventListener('scroll', checkScrollTop);
   }, [showScroll]);
 
-  const signInWithGoogle = async () => {
-    try {
-      setError(null);
-      const provider = new GoogleAuthProvider();
-      // 팝업 옵션 추가
-      provider.setCustomParameters({
-        prompt: 'select_account'
-      });
-      
-      // 로그인 시도
-      const result = await signInWithPopup(auth, provider).catch((error) => {
-        console.error('Popup error:', error);
-        if (error.code === 'auth/popup-closed-by-user') {
-          setError('로그인이 취소되었습니다.');
-        } else {
-          setError('로그인 중 오류가 발생했습니다: ' + error.message);
-        }
-        throw error;
-      });
-
-      // 이메일 확인
-      if (result?.user?.email !== ALLOWED_EMAIL) {
-        console.log('Unauthorized email:', result?.user?.email);
-        await auth.signOut();
-        setError('허용되지 않은 이메일입니다.');
-        return;
-      }
-
-      console.log('Login successful:', result.user.email);
-    } catch (error: any) {
-      console.error('Login error:', error);
-      if (!error.code?.includes('auth/popup-closed-by-user')) {
-        setError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
-      }
-    }
-  };
-
   const handleCloseError = () => {
     setError(null);
   };
 
   const saveHabitData = async (data: HabitData) => {
-    if (!user) return;
     try {
-      console.log('Saving data for user:', user.uid);
-      const userDoc = doc(db, 'users', user.uid);
+      console.log('Saving data for auto user');
+      const userDoc = doc(db, 'users', AUTO_USER_ID);
       await setDoc(userDoc, { habitData: data }, { merge: true });
       console.log('Data saved successfully');
     } catch (error) {
@@ -118,10 +97,9 @@ const App: React.FC = () => {
   };
 
   const loadHabitData = async (): Promise<HabitData | null> => {
-    if (!user) return null;
     try {
-      console.log('Loading data for user:', user.uid);
-      const userDoc = doc(db, 'users', user.uid);
+      console.log('Loading data for auto user');
+      const userDoc = doc(db, 'users', AUTO_USER_ID);
       const docSnap = await getDoc(userDoc);
       
       if (docSnap.exists()) {
@@ -136,99 +114,6 @@ const App: React.FC = () => {
       return null;
     }
   };
-
-  // 데이터 마이그레이션 함수
-  const migrateData = async (newUserId: string) => {
-    try {
-      console.log('Starting data migration from', OLD_USER_ID, 'to', newUserId);
-      
-      // 이전 데이터 가져오기
-      const oldUserDoc = doc(db, 'users', OLD_USER_ID);
-      const oldDocSnap = await getDoc(oldUserDoc);
-      
-      if (oldDocSnap.exists()) {
-        const oldData = oldDocSnap.data();
-        console.log('Found old data:', oldData);
-        
-        // 새 계정으로 데이터 복사
-        const newUserDoc = doc(db, 'users', newUserId);
-        await setDoc(newUserDoc, oldData, { merge: true });
-        console.log('Data migrated successfully');
-        setDataMigrated(true);
-      } else {
-        console.log('No old data found for ID:', OLD_USER_ID);
-      }
-    } catch (error: any) {
-      console.error('Error migrating data:', error);
-      console.error('Error code:', error.code);
-      console.error('Error message:', error.message);
-      if (error.details) {
-        console.error('Error details:', error.details);
-      }
-      setError(`데이터 마이그레이션 중 오류가 발생했습니다: ${error.message}`);
-    }
-  };
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        if (user.email !== ALLOWED_EMAIL) {
-          await auth.signOut();
-          setError('허용되지 않은 이메일입니다.');
-          setUser(null);
-        } else {
-          // 로그인 성공 시 데이터 마이그레이션 시도
-          if (!dataMigrated) {
-            await migrateData(user.uid);
-          }
-          setUser(user);
-        }
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, [dataMigrated]);
-
-  // 로그인하지 않은 경우 로그인 화면 표시
-  if (!user) {
-    return (
-      <Box
-        display="flex"
-        flexDirection="column"
-        alignItems="center"
-        justifyContent="center"
-        minHeight="100vh"
-        gap={2}
-      >
-        <Typography variant="h5" gutterBottom>
-          HabitFlow
-        </Typography>
-        <Typography variant="body1" gutterBottom color="textSecondary">
-          로그인하여 습관을 기록하고 관리하세요.
-        </Typography>
-        <Button 
-          variant="contained" 
-          onClick={signInWithGoogle}
-          size="large"
-          sx={{ mt: 2 }}
-        >
-          Google로 로그인
-        </Button>
-        <Snackbar 
-          open={!!error} 
-          autoHideDuration={6000} 
-          onClose={handleCloseError}
-          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        >
-          <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%' }}>
-            {error}
-          </Alert>
-        </Snackbar>
-      </Box>
-    );
-  }
 
   // 로딩 중인 경우 로딩 화면 표시
   if (loading) {
@@ -248,49 +133,39 @@ const App: React.FC = () => {
     <Container maxWidth="lg">
       <Box sx={{ width: '100%', mb: 3 }}>
         <Tabs 
-          value={activeTab} 
-          onChange={(e, newValue) => setActiveTab(newValue)}
-          aria-label="habit tracker tabs"
-          variant="fullWidth"
+          value={activeTab}
+          onChange={(_, newValue) => setActiveTab(newValue)}
+          textColor="primary"
+          indicatorColor="primary"
+          sx={{ mb: 2, mt: 2 }}
         >
-          <Tab 
-            value="habits" 
-            label="습관 기록" 
-            id="habits-tab"
-            aria-controls="habits-panel"
-          />
-          <Tab 
-            value="exercise" 
-            label="운동 기록" 
-            id="exercise-tab"
-            aria-controls="exercise-panel"
-          />
+          <Tab value="habits" label="습관 트래커" />
+          <Tab value="exercises" label="운동 기록" />
         </Tabs>
       </Box>
 
-      <Box role="tabpanel" hidden={activeTab !== 'habits'} id="habits-panel">
-        {activeTab === 'habits' && (
-          <HabitTracker user={user} saveHabitData={saveHabitData} loadHabitData={loadHabitData} />
-        )}
-      </Box>
+      {activeTab === 'habits' && (
+        <HabitTracker 
+          user={user}
+          saveHabitData={saveHabitData}
+          loadHabitData={loadHabitData}
+        />
+      )}
 
-      <Box role="tabpanel" hidden={activeTab !== 'exercise'} id="exercise-panel">
-        {activeTab === 'exercise' && (
-          <ExerciseTracker user={user} />
-        )}
-      </Box>
+      {activeTab === 'exercises' && (
+        <ExerciseTracker user={user!} />
+      )}
 
-      <Fab 
-        color="primary" 
+      <Fab
+        color="primary"
         size="small"
         onClick={scrollTop}
-        style={{ 
-          position: 'fixed', 
-          bottom: '20px', 
-          right: '20px',
-          display: showScroll ? 'flex' : 'none'
+        sx={{
+          position: 'fixed',
+          bottom: 16,
+          right: 16,
+          display: showScroll ? 'flex' : 'none',
         }}
-        aria-label="scroll to top"
       >
         <KeyboardArrowUpIcon />
       </Fab>

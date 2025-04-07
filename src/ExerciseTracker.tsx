@@ -590,6 +590,28 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       ? Math.round((totalValue / daysWithExercise) * 10) / 10
       : 0;
     
+    // 전체 일일 평균 (averageStats에서 가져옴)
+    const longTermDailyAvg = 
+      exerciseType === 'pushups' ? averageStats.pushups :
+      exerciseType === 'pullups' ? averageStats.pullups :
+      exerciseType === 'dips' ? averageStats.dips :
+      exerciseType === 'steps' ? averageStats.steps :
+      exerciseType === 'running' ? averageStats.running : 0;
+      
+    // 실제 운동일만 고려한 평균 (달리기의 경우)
+    const activeExerciseDayAvg = 
+      exerciseType === 'running' && averageStats.runningDaysCount > 0 
+        ? averageStats.runningDaysAvg 
+        : 0;
+    
+    console.log(`${exerciseType} 목표 계산:`, {
+      최근7일평균: currentAvg,
+      최근30일일일평균: dailyAvg30Days,
+      최근30일운동일평균: exerciseDayAvg30Days,
+      전체일일평균: longTermDailyAvg,
+      운동일평균: activeExerciseDayAvg
+    });
+    
     // 목표 계산
     let targetPerDay = 0;
     let goalDays = 0;
@@ -625,7 +647,11 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       // 목표 운동량 계산 - 여러 평균을 고려하여 가장 적절한 값 선택
       let suggestedTarget = 0;
       
-      if (currentAvg > 0) {
+      // 장기 평균이 있으면 최우선으로 고려
+      if (longTermDailyAvg > 0) {
+        // 일일 평균의 90-110% 사이를 목표로 설정 (하락 상태에서 부담스럽지 않게)
+        suggestedTarget = longTermDailyAvg * 0.9;
+      } else if (currentAvg > 0) {
         // 최근 7일 운동한 날의 평균이 있으면 사용
         suggestedTarget = currentAvg;
       } else if (exerciseDayAvg30Days > 0) {
@@ -636,23 +662,42 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
         suggestedTarget = info.defaultTarget * 0.8;
       }
       
+      // 운동 종류별 특수 조정
+      if (exerciseType === 'running' && activeExerciseDayAvg > 0) {
+        // 달리기의 경우 실제 운동일 평균을 우선 고려
+        suggestedTarget = activeExerciseDayAvg * 0.9;
+      }
+      
       // 합리적인 최대값 설정 (기본값의 3배를 넘지 않도록)
       const reasonableMax = info.defaultTarget * 3;
       
-      // 최종 목표 설정
+      // 최종 목표 설정 - 반올림하여 깔끔한 숫자로 표시
       targetPerDay = Math.min(
         suggestedTarget, 
         reasonableMax,
         exerciseType === 'steps' ? 10000 : // 걸음 수 최대 1만보
-        exerciseType === 'running' ? 10 : // 달리기 최대 10km
-        exerciseType === 'pushups' ? 50 : // 푸시업 최대 50개
-        exerciseType === 'pullups' ? 20 : // 풀업 최대 20개
-        exerciseType === 'dips' ? 30 : 100 // 딥스 최대 30개, 기타 100
+        exerciseType === 'running' ? 5 : // 달리기 최대 5km
+        exerciseType === 'pushups' ? 40 : // 푸시업 최대 40개
+        exerciseType === 'pullups' ? 15 : // 풀업 최대 15개
+        exerciseType === 'dips' ? 25 : 100 // 딥스 최대 25개, 기타 100
       );
+      
+      // 반올림하여 더 깔끔한 숫자로 표시
+      targetPerDay = Math.round(targetPerDay);
+      
+      // 걸음 수인 경우 500 단위로 반올림
+      if (exerciseType === 'steps') {
+        targetPerDay = Math.round(targetPerDay / 500) * 500;
+      }
+      
+      // 달리기인 경우 소수점 첫째 자리까지만 표시
+      if (exerciseType === 'running') {
+        targetPerDay = Math.round(targetPerDay * 10) / 10;
+      }
       
       recommendations = [
         `다음 ${goalDays}일 중 최소 ${Math.min(goalDays, targetDays)}일은 운동하세요`,
-        `매일 최소 ${Math.round(targetPerDay)}${info.unit} 이상 실천하세요`,
+        `매일 최소 ${targetPerDay}${info.unit} 이상 실천하세요`,
         `가능하면 아침에 ${info.name}을(를) 습관화하세요`,
         `휴대폰 알림을 설정하여 매일 같은 시간에 운동하세요`
       ];
@@ -663,7 +708,11 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       // 목표 운동량 계산 - 여러 평균 고려
       let suggestedTarget = 0;
       
-      if (currentAvg > 0) {
+      // 장기 평균이 있으면 최우선으로 고려
+      if (longTermDailyAvg > 0) {
+        // 일일 평균보다 10-30% 증가를 목표로 설정
+        suggestedTarget = longTermDailyAvg * 1.2;
+      } else if (currentAvg > 0) {
         // 최근 7일 운동한 날의 평균에서 15% 증가
         suggestedTarget = currentAvg * 1.15;
       } else if (exerciseDayAvg30Days > 0) {
@@ -674,10 +723,16 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
         suggestedTarget = info.defaultTarget;
       }
       
+      // 운동 종류별 특수 조정
+      if (exerciseType === 'running' && activeExerciseDayAvg > 0) {
+        // 달리기의 경우 실제 운동일 평균을 우선 고려
+        suggestedTarget = activeExerciseDayAvg * 1.1;
+      }
+      
       // 합리적인 최대값 설정 (기본값의 3배 또는 30일 평균의 2배 중 큰 값 이하)
       const reasonableMax = Math.max(
         info.defaultTarget * 3,
-        exerciseDayAvg30Days > 0 ? exerciseDayAvg30Days * 2 : 0
+        longTermDailyAvg > 0 ? longTermDailyAvg * 2 : 0
       );
       
       // 최종 목표 설정
@@ -685,15 +740,28 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
         suggestedTarget, 
         reasonableMax,
         exerciseType === 'steps' ? 15000 : // 걸음 수 최대 1.5만보
-        exerciseType === 'running' ? 15 : // 달리기 최대 15km
-        exerciseType === 'pushups' ? 60 : // 푸시업 최대 60개
-        exerciseType === 'pullups' ? 25 : // 풀업 최대 25개
-        exerciseType === 'dips' ? 40 : 150 // 딥스 최대 40개, 기타 150
+        exerciseType === 'running' ? 7 : // 달리기 최대 7km
+        exerciseType === 'pushups' ? 50 : // 푸시업 최대 50개
+        exerciseType === 'pullups' ? 20 : // 풀업 최대 20개
+        exerciseType === 'dips' ? 30 : 150 // 딥스 최대 30개, 기타 150
       );
+      
+      // 반올림하여 더 깔끔한 숫자로 표시
+      targetPerDay = Math.round(targetPerDay);
+      
+      // 걸음 수인 경우 500 단위로 반올림
+      if (exerciseType === 'steps') {
+        targetPerDay = Math.round(targetPerDay / 500) * 500;
+      }
+      
+      // 달리기인 경우 소수점 첫째 자리까지만 표시
+      if (exerciseType === 'running') {
+        targetPerDay = Math.round(targetPerDay * 10) / 10;
+      }
       
       // 추천 사항
       recommendations = [
-        `다음 ${goalDays}일 동안 매일 ${Math.round(targetPerDay)}${info.unit} 이상 목표로 하세요`,
+        `다음 ${goalDays}일 동안 매일 ${targetPerDay}${info.unit} 이상 목표로 하세요`,
         `일주일에 한 번은 목표보다 ${info.increaseStep}${info.unit} 더 높게 도전해보세요`,
         `주말에도 최소 ${Math.round(targetPerDay * 0.7)}${info.unit}은 유지하세요`,
         `운동 기록을 꾸준히 작성하여 모니터링하세요`

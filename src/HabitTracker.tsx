@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Box, 
   Grid, 
@@ -191,6 +191,8 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
   });
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [selectedHabit, setSelectedHabit] = useState<string>('All');
   const [activeHabit, setActiveHabit] = useState<HabitBase | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -666,7 +668,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
       .filter(habit => ['back-pain', 'esophagitis'].includes(habit.id))
       .map(habit => {
         const index = HABITS.findIndex(h => h.id === habit.id);
-        const score = transformedData[today.getFullYear().toString()]?.[MONTHS[today.getMonth()]]?.[index]?.days?.[today.getDate() - 1] || 0;
+        const score = transformedData[selectedYear]?.[MONTHS[selectedMonth]]?.[index]?.days?.[selectedDate.getDate() - 1] || 0;
         return {
           name: habit.title,
           score: score
@@ -675,7 +677,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     
     const parts: string[] = [];
     
-    parts.push(`📊 ${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')} 습관 기록\n`);
+    parts.push(`📊 ${selectedYear}.${String(selectedMonth + 1).padStart(2, '0')}.${String(selectedDate.getDate()).padStart(2, '0')} 습관 기록\n`);
     parts.push(`✨ 오늘의 총점: ${todayScore}/9\n`);
     
     if (streakData.length > 0) {
@@ -1074,22 +1076,57 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
 
       {/* 월간 습관 기록 */}
       <Box sx={{ mb: 6 }}>
-        <Typography variant="h6" sx={{ mb: 3, fontWeight: 500, color: 'text.primary' }}>
-          월간 습관 기록
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h6" sx={{ fontWeight: 500, color: 'text.primary' }}>
+            월간 습관 기록
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <FormControl size="small" sx={{ minWidth: 100 }}>
+              <InputLabel>연도</InputLabel>
+              <Select
+                value={selectedYear}
+                label="연도"
+                onChange={(e) => {
+                  const year = Number(e.target.value);
+                  setSelectedYear(year);
+                  setSelectedDate(new Date(year, selectedMonth, 1));
+                }}
+              >
+                {Array.from({ length: 2 }, (_, i) => 2025 - i).map((year) => (
+                  <MenuItem key={year} value={year}>{year}년</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 100 }}>
+              <InputLabel>월</InputLabel>
+              <Select
+                value={selectedMonth}
+                label="월"
+                onChange={(e) => {
+                  const month = Number(e.target.value);
+                  setSelectedMonth(month);
+                  setSelectedDate(new Date(selectedYear, month, 1));
+                }}
+              >
+                {Array.from({ length: 12 }, (_, i) => i).map((month) => (
+                  <MenuItem key={month} value={month}>{month + 1}월</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        </Box>
         <Grid container spacing={3}>
           {HABITS.map((habit, index) => {
             // 해당 월의 첫 날과 마지막 날 계산
-            const firstDay = new Date(Number(selectedDate.getFullYear()), selectedDate.getMonth(), 1);
-            const lastDay = new Date(Number(selectedDate.getFullYear()), selectedDate.getMonth() + 1, 0);
+            const firstDay = new Date(selectedYear, selectedMonth, 1);
+            const lastDay = new Date(selectedYear, selectedMonth + 1, 0);
             const totalDays = lastDay.getDate();
 
             // 6x7 그리드 초기화
             const grid: number[][] = Array(6).fill(0).map(() => Array(7).fill(-1));
 
             // 달력 채우기 로직 수정
-            const monthData = transformedData[selectedDate.getFullYear().toString()]?.[MONTHS[selectedDate.getMonth()]]?.[index]?.days || Array(31).fill(0);
-            console.log(`${habit.title} ${selectedDate.getFullYear()}년 ${selectedDate.getMonth() + 1}월 데이터:`, monthData);
+            const monthData = transformedData[selectedYear.toString()]?.[MONTHS[selectedMonth]]?.[index]?.days || Array(31).fill(0);
             
             let currentDay = 1;
             const firstDayOfMonth = firstDay.getDay(); // 해당 월의 1일의 요일 (0: 일요일, 6: 토요일)

@@ -37,6 +37,31 @@ const WeeklyTrend: React.FC<WeeklyTrendProps> = ({
     );
   }, [data]);
 
+  // 추세선 계산
+  const dataWithTrend = React.useMemo(() => {
+    if (validData.length < 2) return validData;
+
+    // 선형 회귀 계산
+    const n = validData.length;
+    const indices = validData.map((_, i) => i);
+    const values = validData.map(d => d.value);
+    
+    const sumX = indices.reduce((a, b) => a + b, 0);
+    const sumY = values.reduce((a, b) => a + b, 0);
+    const sumXY = indices.reduce((sum, x, i) => sum + x * values[i], 0);
+    const sumXX = indices.reduce((sum, x) => sum + x * x, 0);
+    
+    // 기울기와 절편 계산
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+    
+    // 추세값 추가
+    return validData.map((item, index) => ({
+      ...item,
+      trend: intercept + slope * index
+    }));
+  }, [validData]);
+
   // 데이터가 없는 경우 처리
   if (validData.length === 0) {
     return (
@@ -72,6 +97,15 @@ const WeeklyTrend: React.FC<WeeklyTrendProps> = ({
           }}>
             {habitName}: {payload[0].value}점
           </p>
+          {payload.length > 1 && (
+            <p style={{ 
+              color: `${color}80`, 
+              margin: '0',
+              fontStyle: 'italic'
+            }}>
+              추세: {payload[1].value.toFixed(1)}점
+            </p>
+          )}
         </div>
       );
     }
@@ -84,7 +118,7 @@ const WeeklyTrend: React.FC<WeeklyTrendProps> = ({
         {habitName} 주간 트렌드
       </h3>
       <ResponsiveContainer>
-        <LineChart data={validData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+        <LineChart data={dataWithTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis 
             dataKey="name"
@@ -110,6 +144,21 @@ const WeeklyTrend: React.FC<WeeklyTrendProps> = ({
             activeDot={{ r: 6 }}
             isAnimationActive={false}
           />
+          
+          {/* 추세선 추가 */}
+          {dataWithTrend.length > 1 && (
+            <Line
+              type="monotone"
+              dataKey="trend"
+              stroke={`${color}80`} // 반투명 색상
+              strokeWidth={2}
+              strokeDasharray="5 5"
+              dot={false}
+              activeDot={false}
+              isAnimationActive={false}
+              name="추세선"
+            />
+          )}
         </LineChart>
       </ResponsiveContainer>
     </div>

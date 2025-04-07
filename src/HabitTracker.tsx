@@ -335,10 +335,10 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
       const today = new Date();
       today.setHours(today.getHours() + 9); // 한국 시간으로 조정
       
-      // 5주 전의 월요일을 시작일로 설정
+      // 8주 전의 월요일을 시작일로 설정
       const startDate = new Date(today);
       const daysSinceMonday = (today.getDay() + 6) % 7; // 월요일부터 몇 일이 지났는지 계산
-      startDate.setDate(today.getDate() - daysSinceMonday - (4 * 7)); // 5주 전 월요일
+      startDate.setDate(today.getDate() - daysSinceMonday - (7 * 7)); // 8주 전 월요일
       startDate.setHours(0, 0, 0, 0);
 
       const weeklyData = new Map<number, {
@@ -382,7 +382,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
         currentDate.setDate(currentDate.getDate() + 1);
       }
 
-      // 정확히 5주의 데이터만 반환
+      // 정확히 8주의 데이터만 반환
       return Array.from(weeklyData.values())
         .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
         .map(week => {
@@ -1178,7 +1178,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
       {/* 최근 5주 트렌드 모음 */}
       <Box sx={{ mb: 6 }}>
         <Typography variant="h6" sx={{ mb: 3, color: '#333', fontWeight: 500 }}>
-          최근 5주 트렌드
+          최근 8주 트렌드
         </Typography>
         <Grid container spacing={3}>
           {HABITS.map((habit, index) => (

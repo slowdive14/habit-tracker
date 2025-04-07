@@ -3,54 +3,58 @@ import { getFirestore, enableIndexedDbPersistence, connectFirestoreEmulator } fr
 import { getAuth, connectAuthEmulator } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAarOk7ApcQ7LzIBqeS2lmFmIHJQhmb_Es",
-  authDomain: "habit-tracker-f9d25.firebaseapp.com",
-  databaseURL: "https://habit-tracker-f9d25-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "habit-tracker-f9d25",
-  storageBucket: "habit-tracker-f9d25.appspot.com",
-  messagingSenderId: "627010599884",
-  appId: "1:627010599884:web:4733f8522c3048fa4c7b69",
-  measurementId: "G-FBR61QG7GQ"
+  apiKey: "AIzaSyAs1xwGfhJgQcQgCGSjXCsqSW1I8mVz1bM",
+  authDomain: "habit-tracker-e8b2f.firebaseapp.com",
+  projectId: "habit-tracker-e8b2f",
+  storageBucket: "habit-tracker-e8b2f.appspot.com",
+  messagingSenderId: "991717023098",
+  appId: "1:991717023098:web:92b2d1e5c48b34fa0c8da1"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// 로컬 개발 모드에서는 인증 검사 우회 (프로덕션 모드에서는 주석 처리 필요)
-if (window.location.hostname === "localhost" || 
-    window.location.hostname.includes("gitpod.io") ||
-    window.location.hostname.includes("obsidian")) {
-  console.log("로컬 개발 모드: Firebase 에뮬레이터 모드 활성화");
+// 개발 환경에서 에뮬레이터 연결 (필요 시 주석 해제)
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  console.log('로컬 개발 환경 감지, Firestore 오프라인 지원 활성화');
   
-  // Firestore 로컬 에뮬레이터 연결 시도 (8080 포트는 일반적인 Firestore 에뮬레이터 포트)
-  try {
-    // 에뮬레이터가 실행 중이면 연결, 아니면 패스
-    // connectFirestoreEmulator(db, "localhost", 8080);
-    console.log("Firestore 에뮬레이터 모드 - 인증 없이 직접 접근");
-  } catch (error) {
-    console.warn("Firestore 에뮬레이터 연결 실패:", error);
-  }
+  // 필요한 경우 에뮬레이터 연결
+  // connectFirestoreEmulator(db, '127.0.0.1', 8080);
+  // connectAuthEmulator(auth, 'http://127.0.0.1:9099');
 }
 
-const initializeFirestore = async () => {
-  try {
-    await enableIndexedDbPersistence(db, {
-      cacheSizeBytes: 50 * 1024 * 1024, // 50MB
-      synchronizeTabs: true
-    });
-    console.log("Firestore 오프라인 캐싱 활성화");
-  } catch (err) {
+// 오프라인 지원 활성화
+enableIndexedDbPersistence(db)
+  .then(() => {
+    console.log('오프라인 지원이 성공적으로 활성화되었습니다.');
+  })
+  .catch((err) => {
     if (err.code === 'failed-precondition') {
-      console.log('Persistence failed: Multiple tabs open');
+      console.warn('여러 탭이 열려있어 오프라인 지원을 활성화할 수 없습니다.');
     } else if (err.code === 'unimplemented') {
-      console.log('Persistence not supported by browser');
+      console.warn('현재 브라우저는 오프라인 기능을 지원하지 않습니다.');
+    } else {
+      console.error('오프라인 지원 활성화 중 오류 발생:', err);
     }
-  }
+  });
+
+// 오프라인 데이터베이스 초기화 시도
+const initializeOfflineDb = () => {
+  console.log('오프라인 데이터베이스 초기화 시도...');
+  
+  // 여기에 필요한 초기화 코드 추가
 };
 
-// 오프라인 지원 초기화
-initializeFirestore();
+// 네트워크 이벤트 모니터링
+window.addEventListener('online', () => {
+  console.log('온라인 상태로 전환되었습니다.');
+});
+
+window.addEventListener('offline', () => {
+  console.log('오프라인 상태로 전환되었습니다.');
+  initializeOfflineDb();
+});
 
 // 디버깅을 위한 전역 객체 노출
 window.db = db;

@@ -39,12 +39,15 @@ const WeeklyTrend: React.FC<WeeklyTrendProps> = ({
 
   // 추세선 계산
   const dataWithTrend = React.useMemo(() => {
-    if (validData.length < 2) return validData;
+    if (validData.length < 3) return validData; // 최소 3개 이상의 데이터 필요
 
+    // 마지막 주차(현재 주)를 제외한 데이터로 추세선 계산
+    const pastData = validData.slice(0, -1);
+    
     // 선형 회귀 계산
-    const n = validData.length;
-    const indices = validData.map((_, i) => i);
-    const values = validData.map(d => d.value);
+    const n = pastData.length;
+    const indices = pastData.map((_, i) => i);
+    const values = pastData.map(d => d.value);
     
     const sumX = indices.reduce((a, b) => a + b, 0);
     const sumY = values.reduce((a, b) => a + b, 0);
@@ -55,11 +58,16 @@ const WeeklyTrend: React.FC<WeeklyTrendProps> = ({
     const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
     const intercept = (sumY - slope * sumX) / n;
     
-    // 추세값 추가
-    return validData.map((item, index) => ({
-      ...item,
-      trend: intercept + slope * index
-    }));
+    // 전체 데이터에 대해 추세값 계산
+    return validData.map((item, index) => {
+      // 현재 주차인 경우 추세선 값을 null로 설정
+      const isCurrentWeek = index === validData.length - 1;
+      
+      return {
+        ...item,
+        trend: isCurrentWeek ? null : intercept + slope * index
+      };
+    });
   }, [validData]);
 
   // 데이터가 없는 경우 처리
@@ -97,7 +105,7 @@ const WeeklyTrend: React.FC<WeeklyTrendProps> = ({
           }}>
             {habitName}: {payload[0].value}점
           </p>
-          {payload.length > 1 && (
+          {payload.length > 1 && payload[1].value !== null && (
             <p style={{ 
               color: `${color}80`, 
               margin: '0',

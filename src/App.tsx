@@ -246,6 +246,8 @@ const App: React.FC = () => {
     );
   }
 
+  console.log(window.location.origin);
+
   return (
     <Container maxWidth="lg">
       <Box sx={{ width: '100%', mb: 3 }}>

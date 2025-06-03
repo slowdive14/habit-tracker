@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Container, Box, Fab, Button, Typography, CircularProgress, Alert, Snackbar, Tabs, Tab } from '@mui/material';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import { onAuthStateChanged, User, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { onAuthStateChanged, User, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import HabitTracker from './HabitTracker';
@@ -23,6 +23,11 @@ interface HabitData {
 
 const ALLOWED_EMAIL = 'spacekatb@gmail.com'; // 여기에 허용할 이메일 주소를 입력하세요
 const OLD_USER_ID = 'sIOyGOi27KPY9794P20Z8dsq4Ap2';  // 이전 계정의 USER_ID
+
+// Obsidian 환경 감지 함수
+const isObsidianWebview = () => {
+  return navigator.userAgent.toLowerCase().includes('obsidian');
+};
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -67,31 +72,33 @@ const App: React.FC = () => {
     try {
       setError(null);
       const provider = new GoogleAuthProvider();
-      // 팝업 옵션 추가
-      provider.setCustomParameters({
-        prompt: 'select_account'
-      });
-      
-      // 로그인 시도
-      const result = await signInWithPopup(auth, provider).catch((error) => {
-        console.error('Popup error:', error);
-        if (error.code === 'auth/popup-closed-by-user') {
-          setError('로그인이 취소되었습니다.');
-        } else {
-          setError('로그인 중 오류가 발생했습니다: ' + error.message);
+      provider.setCustomParameters({ prompt: 'select_account' });
+
+      if (isObsidianWebview()) {
+        // Obsidian 브라우저에서는 리다이렉트 방식 사용
+        await signInWithRedirect(auth, provider);
+      } else {
+        // 일반 브라우저에서는 팝업 방식 사용
+        const result = await signInWithPopup(auth, provider).catch((error) => {
+          console.error('Popup error:', error);
+          if (error.code === 'auth/popup-closed-by-user') {
+            setError('로그인이 취소되었습니다.');
+          } else {
+            setError('로그인 중 오류가 발생했습니다: ' + error.message);
+          }
+          throw error;
+        });
+
+        // 이메일 확인
+        if (result?.user?.email !== ALLOWED_EMAIL) {
+          console.log('Unauthorized email:', result?.user?.email);
+          await auth.signOut();
+          setError('허용되지 않은 이메일입니다.');
+          return;
         }
-        throw error;
-      });
 
-      // 이메일 확인
-      if (result?.user?.email !== ALLOWED_EMAIL) {
-        console.log('Unauthorized email:', result?.user?.email);
-        await auth.signOut();
-        setError('허용되지 않은 이메일입니다.');
-        return;
+        console.log('Login successful:', result.user.email);
       }
-
-      console.log('Login successful:', result.user.email);
     } catch (error: any) {
       console.error('Login error:', error);
       if (!error.code?.includes('auth/popup-closed-by-user')) {
@@ -99,6 +106,27 @@ const App: React.FC = () => {
       }
     }
   };
+
+  // Obsidian 환경에서 리다이렉트 결과 처리
+  useEffect(() => {
+    if (isObsidianWebview()) {
+      getRedirectResult(auth)
+        .then((result) => {
+          if (result?.user) {
+            if (result.user.email !== ALLOWED_EMAIL) {
+              auth.signOut();
+              setError('허용되지 않은 이메일입니다.');
+              setUser(null);
+            } else {
+              setUser(result.user);
+            }
+          }
+        })
+        .catch((error) => {
+          setError('로그인 중 오류가 발생했습니다: ' + error.message);
+        });
+    }
+  }, []);
 
   const handleCloseError = () => {
     setError(null);

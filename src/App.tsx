@@ -74,36 +74,10 @@ const App: React.FC = () => {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
 
-      if (isObsidianWebview()) {
-        // Obsidian 브라우저에서는 리다이렉트 방식 사용
-        await signInWithRedirect(auth, provider);
-      } else {
-        // 일반 브라우저에서는 팝업 방식 사용
-        const result = await signInWithPopup(auth, provider).catch((error) => {
-          console.error('Popup error:', error);
-          if (error.code === 'auth/popup-closed-by-user') {
-            setError('로그인이 취소되었습니다.');
-          } else {
-            setError('로그인 중 오류가 발생했습니다: ' + error.message);
-          }
-          throw error;
-        });
-
-        // 이메일 확인
-        if (result?.user?.email !== ALLOWED_EMAIL) {
-          console.log('Unauthorized email:', result?.user?.email);
-          await auth.signOut();
-          setError('허용되지 않은 이메일입니다.');
-          return;
-        }
-
-        console.log('Login successful:', result.user.email);
-      }
+      // 임시로 무조건 리다이렉트 방식 사용
+      await signInWithRedirect(auth, provider);
     } catch (error: any) {
-      console.error('Login error:', error);
-      if (!error.code?.includes('auth/popup-closed-by-user')) {
-        setError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
-      }
+      setError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
     }
   };
 

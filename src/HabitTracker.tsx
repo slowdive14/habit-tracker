@@ -425,12 +425,17 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     return dayOfWeek === 0 ? 7 : dayOfWeek; // 일요일이면 7, 아니면 1-6 반환
   };
 
-  // 이번 주 현재까지의 점수 계산
+  // 이번 주 현재까지의 점수 계산 (월요일 시작)
   const getCurrentWeekScore = (habitIndex: number): number => {
     const today = new Date();
     today.setHours(today.getHours() + 9); // UTC+9 (한국 시간)
     const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay()); // 일요일로 설정
+    
+    // 월요일을 주의 시작으로 설정
+    const dayOfWeek = today.getDay();
+    const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 일요일이면 6일 전, 아니면 (요일-1)일 전이 월요일
+    startOfWeek.setDate(today.getDate() - diff);
+    startOfWeek.setHours(0, 0, 0, 0);
 
     let score = 0;
     
@@ -1065,14 +1070,15 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
                   <div style={{ marginTop: '8px', marginBottom: '6px' }}>
                     <strong>🎯 월간 목표</strong>
                   </div>
-                  <div>• 목표: {monthlyTarget}점 (이번 달 {currentDay}일 × 3점)</div>
+                  <div>• 목표: {monthlyTarget}점 (이번 달 총 일수 × 3점)</div>
                   <div>• 현재: {monthlyCurrentScore}점</div>
                   <div style={{ 
                     color: monthlyCurrentScore >= (monthlyTarget * currentDay / new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()) 
                       ? '#4caf50' : habit.color, 
                     fontWeight: 'bold' 
                   }}>
-                    • 진행률: {Math.round((monthlyCurrentScore / monthlyTarget) * 100)}%
+                    • 진행률: {monthlyCurrentScore}점 / {Math.round(monthlyTarget * currentDay / new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate())}점 
+                    ({Math.round((monthlyCurrentScore / (monthlyTarget * currentDay / new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate())) * 100)}%)
                   </div>
                 </Box>
               </Paper>
@@ -1231,6 +1237,9 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
                   <Box>
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                       현재 연속
+                    </Typography>
+                    <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary', mb: 1, display: 'block' }}>
+                      (최대 2일까지 빠져도 연속 유지)
                     </Typography>
                     <Stack direction="row" alignItems="center" spacing={0.5}>
                       <Typography variant="h4" sx={{ fontWeight: 600 }}>

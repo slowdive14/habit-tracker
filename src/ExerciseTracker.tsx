@@ -435,10 +435,16 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         return date.toISOString().split('T')[0];
       });
 
-      // 운동 기록 존재 여부
-      const hasRecordDays = last30Days.filter(date => 
+      // 운동 기록 존재 여부 (관대한 계산 - 건너뛰기 고려)
+      let hasRecordDays = last30Days.filter(date => 
         exerciseData[date] && exerciseData[date][type] && exerciseData[date][type] > 0
       );
+      
+      // 동기부여를 위한 보너스: 실제 운동일에 건너뛰기 일수도 부분적으로 인정
+      const actualExerciseDays = hasRecordDays.length;
+      const maxPossibleSkipDays = Math.floor(actualExerciseDays / 3); // 실제 운동일의 1/3까지 건너뛰기 보너스
+      const adjustedRecordDays = Math.min(30, actualExerciseDays + maxPossibleSkipDays);
+      hasRecordDays = { length: adjustedRecordDays }; // 배열 형태로 맞춤
 
       // 2. 최근 10일의 기록과 그 이전 20일의 기록 비교 (추세 계산)
       const recent10Days = last30Days.slice(0, 10);
@@ -472,17 +478,41 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       let currentStreakDays = 0;
       let isCurrentStreak = true;
 
-      // 연속일 계산
+      // 연속일 계산 (개선된 관대한 버전 - 최대 2일까지 건너뛰기 허용)
+      let allowedSkips = 2;
+      let skipsUsed = 0;
+      let currentStreakSkips = 0;
+      
       for (const date of last30Days) {
         if (exerciseData[date] && exerciseData[date][type] && exerciseData[date][type] > 0) {
+          // 운동한 날: 연속 기록 증가, 건너뛰기 카운터 리셋
           if (isCurrentStreak) {
             currentStreakDays++;
+            currentStreakSkips = 0; // 운동하면 현재 연속 기록의 건너뛰기 리셋
           }
           currentConsecutiveDays++;
           maxConsecutiveDays = Math.max(maxConsecutiveDays, currentConsecutiveDays);
+          skipsUsed = 0; // 전체 건너뛰기 카운터 리셋
         } else {
-          isCurrentStreak = false;
-          currentConsecutiveDays = 0;
+          // 운동 안 한 날
+          if (isCurrentStreak && currentStreakSkips < allowedSkips) {
+            // 현재 연속 기록 중이고 건너뛰기 기회가 남아있으면
+            currentStreakSkips++;
+            currentStreakDays++; // 건너뛰기로 처리하여 연속 기록 유지
+            currentConsecutiveDays++;
+            maxConsecutiveDays = Math.max(maxConsecutiveDays, currentConsecutiveDays);
+          } else if (skipsUsed < allowedSkips && currentConsecutiveDays > 0) {
+            // 일반 연속 기록에서 건너뛰기 기회가 남아있으면
+            skipsUsed++;
+            currentConsecutiveDays++;
+            maxConsecutiveDays = Math.max(maxConsecutiveDays, currentConsecutiveDays);
+          } else {
+            // 건너뛰기 기회를 모두 사용했으면 연속 기록 중단
+            isCurrentStreak = false;
+            currentConsecutiveDays = 0;
+            skipsUsed = 0;
+            currentStreakSkips = 0;
+          }
         }
       }
 
@@ -513,20 +543,20 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     setConsistencyScores(newScores);
   };
 
-  // 점수 등급 정보 반환 함수
+  // 점수 등급 정보 반환 함수 (더 관대한 기준)
   const getGradeInfo = (score: number) => {
-    if (score >= 90) return { grade: 'A+', label: '탁월함', color: '#2E7D32' };
-    if (score >= 80) return { grade: 'A', label: '우수함', color: '#558B2F' };
-    if (score >= 70) return { grade: 'B+', label: '매우 좋음', color: '#689F38' };
-    if (score >= 60) return { grade: 'B', label: '좋음', color: '#9E9D24' };
-    if (score >= 50) return { grade: 'C+', label: '보통 이상', color: '#F9A825' };
-    if (score >= 40) return { grade: 'C', label: '보통', color: '#FF8F00' };
-    if (score >= 30) return { grade: 'D+', label: '노력 필요', color: '#EF6C00' };
-    if (score >= 20) return { grade: 'D', label: '개선 필요', color: '#D84315' };
+    if (score >= 85) return { grade: 'A+', label: '탁월함', color: '#2E7D32' };
+    if (score >= 70) return { grade: 'A', label: '우수함', color: '#558B2F' };
+    if (score >= 60) return { grade: 'B+', label: '매우 좋음', color: '#689F38' };
+    if (score >= 50) return { grade: 'B', label: '좋음', color: '#9E9D24' };
+    if (score >= 40) return { grade: 'C+', label: '보통 이상', color: '#F9A825' };
+    if (score >= 30) return { grade: 'C', label: '보통', color: '#FF8F00' };
+    if (score >= 25) return { grade: 'D+', label: '노력 필요', color: '#EF6C00' };
+    if (score >= 15) return { grade: 'D', label: '개선 필요', color: '#D84315' };
     return { grade: 'F', label: '시작하기', color: '#B71C1C' };
   };
 
-  // 동기부여 메시지 생성 함수
+  // 동기부여 메시지 생성 함수 (더 긍정적이고 격려적인 메시지)
   const getMotivationalMessage = (exerciseType: string, score: number, streakDays: number) => {
     const exerciseNames = {
       pushups: '푸시업',
@@ -537,16 +567,16 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     };
     const name = exerciseNames[exerciseType as keyof typeof exerciseNames];
 
-    if (score >= 90) return `훌륭합니다! ${name} 습관이 완벽하게 자리잡았어요!`;
-    if (score >= 80) return `멋져요! ${name}을(를) 꾸준히 실천하고 계시네요!`;
-    if (score >= 70) return `좋은 습관이 형성되고 있어요! 계속 ${name}을(를) 유지하세요.`;
-    if (score >= 60) return `${name} 습관이 자리잡고 있어요. 꾸준함이 중요합니다!`;
-    if (score >= 50) return `절반의 성공! ${name}을(를) 조금 더 자주 실천해보세요.`;
-    if (score >= 40) return `${name}을(를) 꾸준히 하면 큰 변화가 있을 거예요!`;
-    if (score >= 30) return `좋은 시작입니다! ${name}을(를) 더 자주 실천해보세요.`;
-    if (score >= 20) return `${name}을(를) 더 규칙적으로 실천해보는 건 어떨까요?`;
-    if (streakDays > 0) return `${streakDays}일째 ${name} 중이네요! 계속 이어가세요!`;
-    return `${name} 습관을 만들어보세요. 작은 시작이 중요합니다!`;
+    if (score >= 85) return `🏆 완벽해요! ${name} 마스터가 되셨네요!`;
+    if (score >= 70) return `🎉 훌륭합니다! ${name}을(를) 꾸준히 실천하고 계시네요!`;
+    if (score >= 60) return `👍 좋은 페이스입니다! ${name} 습관이 잘 자리잡고 있어요.`;
+    if (score >= 50) return `💪 잘하고 있어요! ${name}으로 건강해지고 있습니다.`;
+    if (score >= 40) return `🌱 성장하고 있어요! ${name} 습관이 서서히 만들어지고 있습니다.`;
+    if (score >= 30) return `⭐ 좋은 시작이에요! ${name}을(를) 조금씩 늘려가고 있네요.`;
+    if (score >= 25) return `🚀 시작이 반이에요! ${name}으로 건강한 변화를 만들어가세요.`;
+    if (score >= 15) return `🌟 첫걸음을 떼셨네요! ${name}으로 새로운 도전을 시작하세요.`;
+    if (streakDays > 0) return `🔥 ${streakDays}일째 ${name} 도전 중! 멋진 연속 기록이에요!`;
+    return `✨ ${name}으로 건강한 하루를 시작해보세요! 작은 변화가 큰 차이를 만듭니다.`;
   };
 
   const handleShare = () => {
@@ -710,40 +740,47 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
     let desiredTrend = 0;
     let recommendations: string[] = [];
     
-    // 운동 목표량 설정 - 다양한 평균값 고려하여 가장 적절한 값 선택
+    // 운동 목표량 설정 - 더 현실적이고 달성 가능한 목표로 개선
+    let baseTarget = info.defaultTarget;
+    
     if (longTermDailyAvg > 0) {
-      // 전체 기간 평균이 있으면 최우선 고려
-      targetPerDay = currentTrend < 0 
-        ? longTermDailyAvg * 0.9  // 하락 추세면 조금 낮게 (90%)
-        : longTermDailyAvg * 1.1; // 상승 추세면 조금 높게 (110%)
+      // 전체 기간 평균이 있으면 기본값과 평균 중 더 현실적인 값 선택
+      baseTarget = Math.max(info.defaultTarget * 0.7, longTermDailyAvg);
     } else if (currentAvg > 0) {
-      // 최근 7일 평균 사용
-      targetPerDay = currentTrend < 0
-        ? currentAvg * 0.95
-        : currentAvg * 1.1;
+      // 최근 7일 평균이 있으면 활용
+      baseTarget = Math.max(info.defaultTarget * 0.5, currentAvg);
     } else if (exerciseDayAvg30Days > 0) {
-      // 30일 운동일 평균 사용
-      targetPerDay = currentTrend < 0
-        ? exerciseDayAvg30Days * 0.9
-        : exerciseDayAvg30Days * 1.15;
+      // 30일 운동일 평균이 있으면 활용
+      baseTarget = Math.max(info.defaultTarget * 0.3, exerciseDayAvg30Days);
+    }
+    
+    // 추세에 따른 목표 조정 (더 관대하게)
+    if (currentTrend < -10) {
+      // 크게 하락한 경우: 현재 수준 유지가 목표
+      targetPerDay = baseTarget * 0.8;
+    } else if (currentTrend < 0) {
+      // 약간 하락한 경우: 소폭 개선 목표
+      targetPerDay = baseTarget * 0.9;
+    } else if (currentTrend > 10) {
+      // 크게 상승한 경우: 적당한 증가 목표
+      targetPerDay = baseTarget * 1.1;
     } else {
-      // 기본값 사용
-      targetPerDay = info.defaultTarget;
+      // 안정적인 경우: 현재 수준 유지
+      targetPerDay = baseTarget;
     }
     
-    // 운동 종류별 특수 조정
-    if (exerciseType === 'running' && activeExerciseDayAvg > 0) {
-      // 달리기의 경우 실제 운동일 평균을 우선 고려
-      targetPerDay = currentTrend < 0
-        ? activeExerciseDayAvg * 0.9
-        : activeExerciseDayAvg * 1.05; // 달리기는 증가율을 낮게 설정
-    }
+    // 최소값 보장 (너무 낮은 목표 방지)
+    const minimumTargets = {
+      pushups: 5,
+      pullups: 2,
+      dips: 3,
+      steps: 3000,
+      running: 1
+    };
+    targetPerDay = Math.max(targetPerDay, minimumTargets[exerciseType as keyof typeof minimumTargets] || info.defaultTarget * 0.3);
     
-    // 합리적인 최대치 설정
-    targetPerDay = Math.min(
-      targetPerDay, 
-      characteristics.maxRecommended
-    );
+    // 합리적인 최대치 설정 (더 관대하게)
+    targetPerDay = Math.min(targetPerDay, characteristics.maxRecommended * 0.8);
     
     // 반올림하여 깔끔한 숫자로 표시
     if (exerciseType === 'steps') {
@@ -757,46 +794,57 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       targetPerDay = Math.round(targetPerDay);
     }
     
-    // 3. 과학적 근거 기반 추천사항 생성
+    // 3. 현실적이고 동기부여되는 추천사항 생성
     const targetDays = Math.min(goalDays, Math.ceil(recommendedFrequency));
-    desiredTrend = currentTrend < 0 ? 10 : currentTrend + 5; // 목표 개선율
+    desiredTrend = currentTrend < -10 ? 5 : currentTrend < 0 ? 10 : currentTrend + 5; // 목표 개선율
     
-    // 요일별 운동 권장사항 제거 (dayRecommendation)
-    
-    if (currentTrend < 0) { // 하락 추세
+    if (currentTrend < -10) { // 크게 하락한 추세
       recommendations = [
-        `일주일에 ${recommendedFrequency}회 운동하세요 (과학적 최적 빈도: 주 ${characteristics.optimalFrequency}회)`,
-        `매 운동마다 최소 ${targetPerDay}${info.unit} 이상을 목표로 하세요`,
+        `💪 다시 시작하는 것만으로도 대단해요! 일주일에 ${Math.min(2, recommendedFrequency)}회부터 천천히 시작하세요`,
+        `🎯 처음엔 ${targetPerDay}${info.unit}를 목표로 하되, 할 수 있는 만큼만 해도 충분합니다`,
+        `⭐ 완벽하지 않아도 괜찮아요. 꾸준함이 완벽함보다 중요합니다`,
+        `🔥 작은 성공을 쌓아가며 자신감을 회복해보세요`
+      ];
+    } else if (currentTrend < 0) { // 약간 하락한 추세
+      recommendations = [
+        `🚀 일주일에 ${recommendedFrequency}회 운동으로 리듬을 되찾아보세요`,
+        `🎯 매 운동마다 ${targetPerDay}${info.unit}를 목표로 하되, 무리하지 마세요`,
         characteristics.recoveryNeeded 
-          ? `${characteristics.intensityType} 운동은 근육 회복을 위해 운동일 사이에 최소 ${characteristics.recommendedRest}일의 휴식이 필요합니다` 
-          : `꾸준한 습관이 중요합니다. 매일 조금씩이라도 실천해보세요`,
-        `목표를 주간 단위로 설정하면 유연하게 실천할 수 있습니다 (주 ${recommendedFrequency}회, 총 ${targetPerDay * recommendedFrequency}${info.unit})`
+          ? `💤 ${characteristics.intensityType} 운동 후엔 충분한 휴식을 취하세요` 
+          : `🌱 조금씩이라도 꾸준히 하는 것이 가장 중요해요`,
+        `📅 주간 목표: ${Math.round(targetPerDay * recommendedFrequency)}${info.unit} (${recommendedFrequency}회로 나눠서)`
       ];
     } else { // 개선 추세 또는 유지
       recommendations = [
-        `현재 페이스를 유지하며 주 ${recommendedFrequency}회 운동하세요`,
-        `매 운동마다 ${targetPerDay}${info.unit} 이상을 목표로 하세요`,
-        `일주일에 한 번은 목표보다 ${info.increaseStep}${info.unit} 더 높게 도전해보세요`,
-        `주간 목표: ${targetPerDay * recommendedFrequency}${info.unit} 이상 (${recommendedFrequency}회 분산)`
+        `🎉 현재 페이스가 훌륭해요! 주 ${recommendedFrequency}회 리듬을 유지하세요`,
+        `⚡ 매 운동마다 ${targetPerDay}${info.unit}를 기본으로, 컨디션 좋은 날엔 더 도전해보세요`,
+        `🏆 가끔은 목표보다 ${info.increaseStep}${info.unit} 더 높게 도전해서 성취감을 느껴보세요`,
+        `🔥 주간 목표: ${Math.round(targetPerDay * recommendedFrequency)}${info.unit} 이상 (${recommendedFrequency}회 분산)`
       ];
     }
     
     // 현재 연속 기록 중인 경우 추가 격려 메시지
     if (score.streakDays > 0) {
-      const nextMilestone = score.streakDays < 5 ? 5 : 
-                          score.streakDays < 10 ? 10 : 
+      const nextMilestone = score.streakDays < 3 ? 3 : 
+                          score.streakDays < 7 ? 7 : 
+                          score.streakDays < 14 ? 14 : 
                           score.streakDays < 30 ? 30 : 
-                          score.streakDays + 10;
+                          score.streakDays + 7;
                           
-      recommendations.push(`현재 ${score.streakDays}일 연속 기록 중입니다. ${nextMilestone}일 연속을 목표로 해보세요!`);
+      recommendations.push(`🔥 현재 ${score.streakDays}일 연속 기록 중! ${nextMilestone}일 연속 달성까지 화이팅!`);
+    } else {
+      // 연속 기록이 없을 때 격려
+      recommendations.push(`🌟 새로운 연속 기록을 시작해보세요. 3일 연속이 첫 목표입니다!`);
     }
     
     // 4. 다이얼로그 내용 설정
     setGuideContent({
-      title: `${info.name} 개선 가이드`,
-      description: currentTrend < 0 
-        ? `최근 ${info.name} 빈도가 감소했습니다. 다시 시작하기 위한 과학적 가이드입니다.`
-        : `현재 ${info.name} 습관이 잘 형성되고 있습니다. 더 향상시키기 위한 가이드입니다.`,
+      title: `${info.name} 맞춤 가이드`,
+      description: currentTrend < -10 
+        ? `${info.name} 습관을 다시 시작하는 당신을 응원합니다! 천천히 함께 만들어가요.`
+        : currentTrend < 0 
+        ? `${info.name} 리듬을 되찾을 수 있는 현실적인 방법을 제안드려요.`
+        : `${info.name} 습관이 훌륭하게 자리잡고 있어요! 지속가능한 발전 방향을 알려드릴게요.`,
       recommendations,
       goalDays,
       targetPerDay,

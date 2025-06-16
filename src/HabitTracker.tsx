@@ -530,7 +530,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     return habitData?.days?.[day - 1] || 0;
   };
 
-  // 연속 달성일 계산 함수
+  // 연속 달성일 계산 함수 (개선된 관대한 버전)
   const calculateStreak = (habitIndex: number): number => {
     const today = getKoreanDate();
     today.setHours(0, 0, 0, 0);  // 시간 부분을 0으로 설정
@@ -540,6 +540,8 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     console.log('시작 날짜:', today.toISOString());
     
     let streak = 0;
+    let allowedSkips = 2; // 연속 기록 중 최대 2일까지 건너뛸 수 있음
+    let skipsUsed = 0;
     let currentDate = new Date(today);
     currentDate.setDate(currentDate.getDate() - 1);  // 어제부터 시작
     
@@ -573,10 +575,23 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
       
       console.log('해당 일자 점수:', score);
       
-      // 점수가 없거나 0 이하면 중단
+      // 점수가 없거나 0 이하일 때
       if (typeof score !== 'number' || score <= 0) {
-        console.log('연속 기록 중단 - 점수 없음 또는 0점');
-        break;
+        if (skipsUsed < allowedSkips) {
+          // 아직 건너뛸 기회가 남아있으면 건너뜀
+          skipsUsed++;
+          console.log(`연속 기록 유지 - 건너뛰기 사용 (${skipsUsed}/${allowedSkips})`);
+        } else {
+          // 건너뛸 기회를 모두 사용했으면 중단
+          console.log('연속 기록 중단 - 건너뛰기 기회 모두 사용');
+          break;
+        }
+      } else {
+        // 점수가 있으면 건너뛰기 카운터 리셋
+        if (skipsUsed > 0) {
+          console.log('점수 획득으로 건너뛰기 카운터 리셋');
+          skipsUsed = 0;
+        }
       }
       
       streak++;
@@ -592,7 +607,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
       }
     }
     
-    // 오늘의 점수가 있으면 연속 기록에 추가
+    // 오늘의 점수 확인
     const todayYear = today.getFullYear().toString();
     const todayMonth = MONTHS[today.getMonth()];
     const todayDay = today.getDate();
@@ -601,19 +616,25 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     if (typeof todayScore === 'number' && todayScore > 0) {
       console.log('오늘의 점수가 있어 연속 기록에 추가:', todayScore);
       streak++;
+    } else if (streak > 0) {
+      // 오늘 점수가 없어도 연속 기록이 있으면 건너뛰기로 처리
+      console.log('오늘 점수 없음 - 연속 기록 유지 중');
+      streak++;
     }
     
     console.log('=== 최종 연속 달성일:', streak, '===');
     return streak;
   };
 
-  // 최고 연속 달성일 계산 함수
+  // 최고 연속 달성일 계산 함수 (개선된 관대한 버전)
   const calculateBestStreak = (habitIndex: number): number => {
     const today = getKoreanDate();
     today.setHours(0, 0, 0, 0);
     
     let bestStreak = 0;
     let currentStreak = 0;
+    let skipsUsed = 0;
+    let allowedSkips = 2; // 연속 기록 중 최대 2일까지 건너뛸 수 있음
     let currentDate = new Date(today);
     
     // 2025년 2월 1일부터 오늘까지의 모든 데이터 확인
@@ -629,10 +650,24 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
       const score = monthData?.[habitIndex]?.days?.[day - 1];
       
       if (typeof score === 'number' && score > 0) {
+        // 점수가 있으면 연속 기록 증가 및 건너뛰기 카운터 리셋
         currentStreak++;
+        if (skipsUsed > 0) {
+          skipsUsed = 0;
+        }
         bestStreak = Math.max(bestStreak, currentStreak);
       } else {
-        currentStreak = 0;
+        // 점수가 없을 때
+        if (skipsUsed < allowedSkips && currentStreak > 0) {
+          // 건너뛸 기회가 있고 현재 연속 기록이 있으면 건너뜀
+          skipsUsed++;
+          currentStreak++;
+          bestStreak = Math.max(bestStreak, currentStreak);
+        } else {
+          // 건너뛸 기회가 없거나 연속 기록이 없으면 리셋
+          currentStreak = 0;
+          skipsUsed = 0;
+        }
       }
       
       currentDate.setDate(currentDate.getDate() - 1);
@@ -780,6 +815,47 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
   };
 
   // 평가 기준 정보
+  const getHabitScoreInfo = (id: string) => {
+    if (id === 'exercise') {
+      return [
+        { score: 0, title: '운동 안함', desc: '오늘 운동하지 않음' },
+        { score: 1, title: '가벼운 운동', desc: '스트레칭, 짧은 산책 (10-15분)' },
+        { score: 2, title: '보통 운동', desc: '중강도 운동 20-30분 또는 가벼운 운동 30-45분' },
+        { score: 3, title: '충분한 운동', desc: '고강도 운동 20분 이상 또는 중강도 운동 45분 이상' }
+      ];
+    } else if (id === 'english-reading') {
+      return [
+        { score: 0, title: '읽지 않음', desc: '오늘 원서를 읽지 않음' },
+        { score: 1, title: '조금 읽음', desc: '10-20분 정도 읽음' },
+        { score: 2, title: '적당히 읽음', desc: '30-45분 정도 읽음' },
+        { score: 3, title: '충분히 읽음', desc: '1시간 이상 읽음' }
+      ];
+    } else if (id === 'reading') {
+      return [
+        { score: 0, title: '읽지 않음', desc: '오늘 독서하지 않음' },
+        { score: 1, title: '조금 읽음', desc: '10-20분 정도 읽음' },
+        { score: 2, title: '적당히 읽음', desc: '30-45분 정도 읽음' },
+        { score: 3, title: '충분히 읽음', desc: '1시간 이상 읽음' }
+      ];
+    } else if (id === 'english-kids') {
+      return [
+        { score: 0, title: '하지 않음', desc: '오늘 아이들과 영어 활동하지 않음' },
+        { score: 1, title: '조금 함', desc: '10-15분 정도 영어 대화나 활동' },
+        { score: 2, title: '적당히 함', desc: '20-30분 정도 영어 활동' },
+        { score: 3, title: '충분히 함', desc: '40분 이상 다양한 영어 활동' }
+      ];
+    } else if (id === 'massage') {
+      return [
+        { score: 0, title: '하지 않음', desc: '오늘 마사지하지 않음' },
+        { score: 1, title: '간단히 함', desc: '5-10분 정도 간단한 마사지' },
+        { score: 2, title: '적당히 함', desc: '15-20분 정도 마사지' },
+        { score: 3, title: '충분히 함', desc: '30분 이상 정성스럽게 마사지' }
+      ];
+    }
+    return [];
+  };
+
+  // 건강 상태 평가 기준 정보
   const getHealthStatusInfo = (id: string) => {
     if (id === 'back-pain') {
       return [
@@ -853,6 +929,42 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
                   >
                 <Typography variant="h6" sx={{ color: habit.color, mb: 2 }}>
                   {habit.title}
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
+                      (0: 안함 ~ 3: 충분히 함)
+                    </Typography>
+                    <Box sx={{ 
+                      fontSize: '0.75rem', 
+                      color: 'text.secondary',
+                      p: 1,
+                      bgcolor: 'rgba(0,0,0,0.02)',
+                      borderRadius: 1,
+                      border: '1px solid rgba(0,0,0,0.05)'
+                    }}>
+                      {getHabitScoreInfo(habit.id).map((info) => (
+                        <Box key={info.score} sx={{ mb: 0.5, '&:last-child': { mb: 0 } }}>
+                          <Box component="span" sx={{ 
+                            display: 'inline-block',
+                            width: 20,
+                            height: 20,
+                            lineHeight: '20px',
+                            textAlign: 'center',
+                            borderRadius: '50%',
+                            bgcolor: `${habit.color}${20 + info.score * 20}`,
+                            color: info.score > 1 ? 'white' : 'inherit',
+                            mr: 1,
+                            fontSize: '0.7rem'
+                          }}>
+                            {info.score}
+                          </Box>
+                          <Box component="span" sx={{ fontWeight: 'bold' }}>{info.title}</Box>
+                          <Box component="span" sx={{ ml: 1, color: 'text.secondary' }}>
+                            - {info.desc}
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
                   {[0, 1, 2, 3].map((score) => {

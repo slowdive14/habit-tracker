@@ -819,39 +819,40 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     if (id === 'exercise') {
       return [
         { score: 0, title: '운동 안함', desc: '오늘 운동하지 않음' },
-        { score: 1, title: '가벼운 운동', desc: '스트레칭, 짧은 산책 (10-15분)' },
-        { score: 2, title: '보통 운동', desc: '중강도 운동 20-30분 또는 가벼운 운동 30-45분' },
-        { score: 3, title: '충분한 운동', desc: '고강도 운동 20분 이상 또는 중강도 운동 45분 이상' }
+        { score: 1, title: '가벼운 운동', desc: '맨몸운동 10개' },
+        { score: 2, title: '보통 운동', desc: '맨몸운동 50개 혹은 8천보' },
+        { score: 3, title: '충분한 운동', desc: '맨몸운동 100개 혹은 만보 or 3km 이상 달리기' }
       ];
     } else if (id === 'english-reading') {
       return [
         { score: 0, title: '읽지 않음', desc: '오늘 원서를 읽지 않음' },
-        { score: 1, title: '조금 읽음', desc: '10-20분 정도 읽음' },
-        { score: 2, title: '적당히 읽음', desc: '30-45분 정도 읽음' },
-        { score: 3, title: '충분히 읽음', desc: '1시간 이상 읽음' }
+        { score: 1, title: '조금 읽음', desc: '5분' },
+        { score: 2, title: '적당히 읽음', desc: '10분' },
+        { score: 3, title: '충분히 읽음', desc: '15분' }
       ];
     } else if (id === 'reading') {
       return [
         { score: 0, title: '읽지 않음', desc: '오늘 독서하지 않음' },
-        { score: 1, title: '조금 읽음', desc: '10-20분 정도 읽음' },
-        { score: 2, title: '적당히 읽음', desc: '30-45분 정도 읽음' },
-        { score: 3, title: '충분히 읽음', desc: '1시간 이상 읽음' }
+        { score: 1, title: '조금 읽음', desc: '1쪽' },
+        { score: 2, title: '적당히 읽음', desc: '10쪽 or 10분' },
+        { score: 3, title: '충분히 읽음', desc: '20쪽 or 20분 이상' }
       ];
     } else if (id === 'english-kids') {
       return [
         { score: 0, title: '하지 않음', desc: '오늘 아이들과 영어 활동하지 않음' },
-        { score: 1, title: '조금 함', desc: '10-15분 정도 영어 대화나 활동' },
-        { score: 2, title: '적당히 함', desc: '20-30분 정도 영어 활동' },
-        { score: 3, title: '충분히 함', desc: '40분 이상 다양한 영어 활동' }
+        { score: 1, title: '조금 함', desc: '리딩게이트 5점' },
+        { score: 2, title: '적당히 함', desc: '리딩게이트 10점' },
+        { score: 3, title: '충분히 함', desc: '리딩게이트 15점' }
       ];
     } else if (id === 'massage') {
       return [
         { score: 0, title: '하지 않음', desc: '오늘 마사지하지 않음' },
-        { score: 1, title: '간단히 함', desc: '5-10분 정도 간단한 마사지' },
-        { score: 2, title: '적당히 함', desc: '15-20분 정도 마사지' },
-        { score: 3, title: '충분히 함', desc: '30분 이상 정성스럽게 마사지' }
+        { score: 1, title: '간단히 함', desc: '1분' },
+        { score: 2, title: '적당히 함', desc: '3분' },
+        { score: 3, title: '충분히 함', desc: '5분' }
       ];
     }
+    
     return [];
   };
 
@@ -915,6 +916,23 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
           const currentWeekScore = getCurrentWeekScore(index);
           const remainingScore = Math.max(0, weeklyAverage - currentWeekScore);
           
+          // 월간 목표 계산
+          const monthlyTarget = getPreviousMonthTotal(index);
+          const today = getKoreanDate();
+          const currentYear = today.getFullYear().toString();
+          const currentMonth = MONTHS[today.getMonth()];
+          const currentDay = today.getDate();
+          
+          // 이번 달 현재까지 누적 점수
+          let monthlyCurrentScore = 0;
+          for (let day = 1; day <= currentDay; day++) {
+            const habitData = transformedData[currentYear]?.[currentMonth]?.[index];
+            if (habitData?.days) {
+              const dayScore = habitData.days[day - 1] || 0;
+              monthlyCurrentScore += dayScore;
+            }
+          }
+          
           return (
             <Grid item xs={12} sm={6} md={4} key={habit.id}>
                   <Paper 
@@ -941,28 +959,64 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
                       borderRadius: 1,
                       border: '1px solid rgba(0,0,0,0.05)'
                     }}>
-                      {getHabitScoreInfo(habit.id).map((info) => (
-                        <Box key={info.score} sx={{ mb: 0.5, '&:last-child': { mb: 0 } }}>
-                          <Box component="span" sx={{ 
-                            display: 'inline-block',
-                            width: 20,
-                            height: 20,
-                            lineHeight: '20px',
-                            textAlign: 'center',
-                            borderRadius: '50%',
-                            bgcolor: `${habit.color}${20 + info.score * 20}`,
-                            color: info.score > 1 ? 'white' : 'inherit',
-                            mr: 1,
-                            fontSize: '0.7rem'
-                          }}>
-                            {info.score}
+                      {(() => {
+                        const scoreInfo = getHabitScoreInfo(habit.id);
+                        console.log(`Rendering ${habit.id}, scoreInfo length:`, scoreInfo.length);
+                        
+                        // 기본 점수 기준이 없으면 일반적인 기준 표시
+                        if (scoreInfo.length === 0) {
+                          return [
+                            { score: 0, title: '안함', desc: '오늘 실행하지 않음' },
+                            { score: 1, title: '조금', desc: '짧은 시간 실행' },
+                            { score: 2, title: '적당히', desc: '적당한 시간 실행' },
+                            { score: 3, title: '충분히', desc: '충분한 시간 실행' }
+                          ].map((info) => (
+                            <Box key={info.score} sx={{ mb: 0.5, '&:last-child': { mb: 0 } }}>
+                              <Box component="span" sx={{ 
+                                display: 'inline-block',
+                                width: 20,
+                                height: 20,
+                                lineHeight: '20px',
+                                textAlign: 'center',
+                                borderRadius: '50%',
+                                bgcolor: `${habit.color}${20 + info.score * 20}`,
+                                color: info.score > 1 ? 'white' : 'inherit',
+                                mr: 1,
+                                fontSize: '0.7rem'
+                              }}>
+                                {info.score}
+                              </Box>
+                              <Box component="span" sx={{ fontWeight: 'bold' }}>{info.title}</Box>
+                              <Box component="span" sx={{ ml: 1, color: 'text.secondary' }}>
+                                - {info.desc}
+                              </Box>
+                            </Box>
+                          ));
+                        }
+                        
+                        return scoreInfo.map((info) => (
+                          <Box key={info.score} sx={{ mb: 0.5, '&:last-child': { mb: 0 } }}>
+                            <Box component="span" sx={{ 
+                              display: 'inline-block',
+                              width: 20,
+                              height: 20,
+                              lineHeight: '20px',
+                              textAlign: 'center',
+                              borderRadius: '50%',
+                              bgcolor: `${habit.color}${20 + info.score * 20}`,
+                              color: info.score > 1 ? 'white' : 'inherit',
+                              mr: 1,
+                              fontSize: '0.7rem'
+                            }}>
+                              {info.score}
+                            </Box>
+                            <Box component="span" sx={{ fontWeight: 'bold' }}>{info.title}</Box>
+                            <Box component="span" sx={{ ml: 1, color: 'text.secondary' }}>
+                              - {info.desc}
+                            </Box>
                           </Box>
-                          <Box component="span" sx={{ fontWeight: 'bold' }}>{info.title}</Box>
-                          <Box component="span" sx={{ ml: 1, color: 'text.secondary' }}>
-                            - {info.desc}
-                          </Box>
-                        </Box>
-                      ))}
+                        ));
+                      })()}
                     </Box>
                   </Box>
                 </Typography>
@@ -995,15 +1049,31 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
                   p: 1, 
                   bgcolor: 'rgba(0,0,0,0.03)', 
                   borderRadius: 1,
-                  fontSize: '0.9rem'
+                  fontSize: '0.85rem'
                 }}>
-                      <div>지난 5주 평균: {weeklyAverage}점</div>
-                  <div>이번 주 현재: {currentWeekScore}점</div>
+                  <div style={{ marginBottom: '6px' }}>
+                    <strong>📊 주간 통계</strong>
+                  </div>
+                  <div>• 지난 8주 평균: {weeklyAverage}점</div>
+                  <div>• 이번 주 현재: {currentWeekScore}점</div>
                   {remainingScore > 0 && (
                     <div style={{ color: habit.color, fontWeight: 'bold', marginTop: '4px' }}>
-                      평균 달성까지 {remainingScore}점 남음
+                      • 평균 달성까지 {remainingScore}점 남음
                     </div>
                   )}
+                  
+                  <div style={{ marginTop: '8px', marginBottom: '6px' }}>
+                    <strong>🎯 월간 목표</strong>
+                  </div>
+                  <div>• 목표: {monthlyTarget}점 (이번 달 {currentDay}일 × 3점)</div>
+                  <div>• 현재: {monthlyCurrentScore}점</div>
+                  <div style={{ 
+                    color: monthlyCurrentScore >= (monthlyTarget * currentDay / new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()) 
+                      ? '#4caf50' : habit.color, 
+                    fontWeight: 'bold' 
+                  }}>
+                    • 진행률: {Math.round((monthlyCurrentScore / monthlyTarget) * 100)}%
+                  </div>
                 </Box>
               </Paper>
             </Grid>

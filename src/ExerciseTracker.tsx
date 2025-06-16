@@ -436,17 +436,19 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       });
 
       // 운동 기록 존재 여부 (관대한 계산 - 건너뛰기 고려)
-      let hasRecordDays = last30Days.filter(date => 
+      const actualRecordDays = last30Days.filter(date => 
         exerciseData[date] && exerciseData[date][type] && exerciseData[date][type] > 0
       );
       
       // 동기부여를 위한 보너스: 실제 운동일에 건너뛰기 일수도 부분적으로 인정
-      const actualExerciseDays = hasRecordDays.length;
+      const actualExerciseDays = actualRecordDays.length;
       const maxPossibleSkipDays = Math.floor(actualExerciseDays / 3); // 실제 운동일의 1/3까지 건너뛰기 보너스
-      const adjustedRecordDays = Math.min(30, actualExerciseDays + maxPossibleSkipDays);
-      hasRecordDays = { length: adjustedRecordDays }; // 배열 형태로 맞춤
+      const adjustedRecordDaysCount = Math.min(30, actualExerciseDays + maxPossibleSkipDays);
+      
+      // 가상의 hasRecordDays 객체 생성 (배열의 length 속성만 필요)
+      const hasRecordDays = { length: adjustedRecordDaysCount };
 
-      // 2. 최근 10일의 기록과 그 이전 20일의 기록 비교 (추세 계산)
+      // 2. 최근 10일의 기록과 그 이전 20일의 기록 비교 (추세 계산 - 관대하게)
       const recent10Days = last30Days.slice(0, 10);
       const previous20Days = last30Days.slice(10, 30);
       
@@ -459,8 +461,12 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         return typeof value === 'number' && value > 0;
       });
       
-      const recent10Ratio = recent10HasRecords.length / recent10Days.length;
-      const previous20Ratio = previous20HasRecords.length / previous20Days.length;
+      // 관대한 추세 계산: 건너뛰기 보너스 적용
+      const recent10BonusDays = Math.floor(recent10HasRecords.length / 3);
+      const previous20BonusDays = Math.floor(previous20HasRecords.length / 3);
+      
+      const recent10Ratio = Math.min(1, (recent10HasRecords.length + recent10BonusDays) / recent10Days.length);
+      const previous20Ratio = Math.min(1, (previous20HasRecords.length + previous20BonusDays) / previous20Days.length);
       
       // 3. 꾸준함 점수 계산
       // a. 기록 빈도 (60% 가중치)

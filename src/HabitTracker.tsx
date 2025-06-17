@@ -1238,9 +1238,6 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                       현재 연속
                     </Typography>
-                    <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary', mb: 1, display: 'block' }}>
-                      (최대 2일까지 빠져도 연속 유지)
-                    </Typography>
                     <Stack direction="row" alignItems="center" spacing={0.5}>
                       <Typography variant="h4" sx={{ fontWeight: 600 }}>
                         {calculateStreak(index)}

@@ -476,10 +476,13 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     const thisMonthTotal = thisMonthData.reduce((sum, val) => sum + val, 0);
     const lastMonthTotal = lastMonthData.reduce((sum, val) => sum + val, 0);
     
-    // 이번 달 평균 (현재까지)
-    const thisMonthAverage = thisMonthData.length > 0 ? thisMonthTotal / thisMonthData.length : 0;
-    // 지난 달 평균
-    const lastMonthAverage = lastMonthData.length > 0 ? lastMonthTotal / lastMonthData.length : 0;
+    // 이번 달 평균 (실제 경과 날수로 계산)
+    const daysPassedThisMonth = today.getDate(); // 1일부터 오늘까지의 날 수
+    const thisMonthAverage = daysPassedThisMonth > 0 ? thisMonthTotal / daysPassedThisMonth : 0;
+    
+    // 지난 달 평균 (지난 달 전체 날수로 계산)
+    const daysInLastMonth = lastMonthEnd.getDate(); // 지난 달 총 일수
+    const lastMonthAverage = daysInLastMonth > 0 ? lastMonthTotal / daysInLastMonth : 0;
 
     // 최고 기록
     const allValues = Object.values(exerciseData).map(day => day[exerciseType] || 0);

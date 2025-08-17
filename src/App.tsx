@@ -74,32 +74,50 @@ const App: React.FC = () => {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
 
-      // 임시로 무조건 리다이렉트 방식 사용
-      await signInWithRedirect(auth, provider);
+      // 모바일 환경이나 PWA에서는 리다이렉트, 데스크톱에서는 팝업 시도
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+      
+      if (isMobile || isPWA || isObsidianWebview()) {
+        await signInWithRedirect(auth, provider);
+      } else {
+        // 데스크톱에서는 팝업 시도, 실패시 리다이렉트로 폴백
+        try {
+          await signInWithPopup(auth, provider);
+        } catch (popupError: any) {
+          if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/popup-closed-by-user') {
+            await signInWithRedirect(auth, provider);
+          } else {
+            throw popupError;
+          }
+        }
+      }
     } catch (error: any) {
       setError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
     }
   };
 
-  // Obsidian 환경에서 리다이렉트 결과 처리
+  // 리다이렉트 결과 처리 (모든 환경에서)
   useEffect(() => {
-    if (isObsidianWebview()) {
-      getRedirectResult(auth)
-        .then((result) => {
-          if (result?.user) {
-            if (result.user.email !== ALLOWED_EMAIL) {
-              auth.signOut();
-              setError('허용되지 않은 이메일입니다.');
-              setUser(null);
-            } else {
-              setUser(result.user);
-            }
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          if (result.user.email !== ALLOWED_EMAIL) {
+            auth.signOut();
+            setError('허용되지 않은 이메일입니다.');
+            setUser(null);
+          } else {
+            setUser(result.user);
           }
-        })
-        .catch((error) => {
+        }
+      })
+      .catch((error) => {
+        // 리다이렉트 결과가 없는 경우는 정상적인 상황이므로 에러 처리하지 않음
+        if (error.code !== 'auth/no-current-user') {
+          console.error('Redirect result error:', error);
           setError('로그인 중 오류가 발생했습니다: ' + error.message);
-        });
-    }
+        }
+      });
   }, []);
 
   const handleCloseError = () => {

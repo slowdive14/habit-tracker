@@ -10,11 +10,14 @@ import {
   FormControl,
   InputLabel,
   SelectChangeEvent,
-  Stack
+  Stack,
+  Tooltip,
+  IconButton
 } from '@mui/material';
 import { User } from 'firebase/auth';
 import { HeatMapGrid } from 'react-grid-heatmap';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import WeeklyTrend from './components/WeeklyTrend';
 import HabitStats from './components/HabitStats';
 
@@ -48,6 +51,11 @@ const HABITS: HabitBase[] = [
   { id: 'back-pain', name: 'Back Pain', color: '#882255', title: '등 결림' },
   { id: 'esophagitis', name: 'Esophagitis', color: '#661188', title: '식도염' },
 ];
+
+// 습관 분류
+const PRIMARY_HABITS = ['exercise', 'english-reading', 'reading'];
+const SECONDARY_HABITS = ['english-kids', 'massage'];
+const HEALTH_STATUS_HABITS = ['back-pain', 'esophagitis'];
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -196,6 +204,8 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
   const [selectedHabit, setSelectedHabit] = useState<string>('All');
   const [activeHabit, setActiveHabit] = useState<HabitBase | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [showSecondaryHabits, setShowSecondaryHabits] = useState(false);
+  const [showHealthStatus, setShowHealthStatus] = useState(false);
 
   // 현재 날짜 정보
   const today = new Date();
@@ -912,11 +922,25 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {/* 일반 습관 섹션 */}
         <Grid item xs={12}>
-          <Typography variant="h6" sx={{ mb: 2, color: 'text.primary', fontWeight: 500 }}>
-            일상 습관
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6" sx={{ color: 'text.primary', fontWeight: 500 }}>
+              일상 습관
+            </Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setShowSecondaryHabits(!showSecondaryHabits)}
+              sx={{ fontSize: '0.75rem' }}
+            >
+              {showSecondaryHabits ? '기본만 보기' : '모든 습관 보기'}
+            </Button>
+          </Box>
           <Grid container spacing={3}>
-            {HABITS.filter(habit => !['back-pain', 'esophagitis'].includes(habit.id)).map((habit, index) => {
+            {HABITS.filter(habit => {
+              if (HEALTH_STATUS_HABITS.includes(habit.id)) return false;
+              if (SECONDARY_HABITS.includes(habit.id)) return showSecondaryHabits;
+              return PRIMARY_HABITS.includes(habit.id);
+            }).map((habit, index) => {
           const weeklyAverage = calculate8WeekAverage(index);
           const currentWeekScore = getCurrentWeekScore(index);
           const remainingScore = Math.max(0, weeklyAverage - currentWeekScore);
@@ -1098,11 +1122,22 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
               border: '1px solid rgba(0, 0, 0, 0.1)'
             }}
           >
-            <Typography variant="h6" sx={{ mb: 3, color: 'text.primary', fontWeight: 500 }}>
-              건강 상태 체크
-            </Typography>
-            <Grid container spacing={3}>
-              {HABITS.filter(habit => ['back-pain', 'esophagitis'].includes(habit.id)).map((habit, index) => {
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h6" sx={{ color: 'text.primary', fontWeight: 500 }}>
+                건강 상태 체크
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setShowHealthStatus(!showHealthStatus)}
+                sx={{ fontSize: '0.75rem' }}
+              >
+                {showHealthStatus ? '숨기기' : '보기'}
+              </Button>
+            </Box>
+            {showHealthStatus && (
+              <Grid container spacing={3}>
+                {HABITS.filter(habit => HEALTH_STATUS_HABITS.includes(habit.id)).map((habit, index) => {
                 const realIndex = HABITS.findIndex(h => h.id === habit.id);
                 const weeklyAverage = calculate8WeekAverage(realIndex);
                 const currentWeekScore = getCurrentWeekScore(realIndex);
@@ -1196,18 +1231,48 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
                   </Grid>
                 );
               })}
-            </Grid>
+              </Grid>
+            )}
           </Paper>
         </Grid>
       </Grid>
 
       {/* 주요 습관 현황 */}
       <Box sx={{ mb: 6 }}>
-        <Typography variant="h6" sx={{ mb: 3, fontWeight: 500, color: 'text.primary' }}>
-          주요 습관 현황
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 500, color: 'text.primary' }}>
+            주요 습관 현황
+          </Typography>
+          <Tooltip 
+            title={
+              <Box sx={{ p: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  연속 달성일 계산 방법 📊
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  • <strong>관대한 계산:</strong> 최대 2일까지 건너뛰기 허용
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  • <strong>점수 기준:</strong> 1점 이상 기록 시 달성으로 인정
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  • <strong>연속 유지:</strong> 가끔 쉬어도 연속 기록 유지 가능
+                </Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.75rem', fontStyle: 'italic', mt: 1 }}>
+                  예: 운동-휴식-휴식-운동 = 4일 연속 달성 ✅
+                </Typography>
+              </Box>
+            }
+            arrow
+            placement="top"
+          >
+            <IconButton size="small" sx={{ opacity: 0.7 }}>
+              <HelpOutlineIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
       <Grid container spacing={3}>
-          {HABITS.slice(0, 3).map((habit, index) => (
+          {HABITS.filter(habit => PRIMARY_HABITS.includes(habit.id)).map((habit, index) => (
             <Grid item xs={12} md={4} key={habit.id}>
               <Paper 
                 elevation={2}
@@ -1304,7 +1369,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
           </Box>
         </Box>
         <Grid container spacing={3}>
-          {HABITS.map((habit, index) => {
+          {HABITS.filter(habit => PRIMARY_HABITS.includes(habit.id)).map((habit, index) => {
             // 해당 월의 첫 날과 마지막 날 계산
             const firstDay = new Date(selectedYear, selectedMonth, 1);
             const lastDay = new Date(selectedYear, selectedMonth + 1, 0);
@@ -1406,7 +1471,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
           최근 8주 트렌드
         </Typography>
         <Grid container spacing={3}>
-          {HABITS.map((habit, index) => (
+          {HABITS.filter(habit => PRIMARY_HABITS.includes(habit.id)).map((habit, index) => (
             <Grid item xs={12} md={6} key={habit.id}>
               <Paper 
                 elevation={2}

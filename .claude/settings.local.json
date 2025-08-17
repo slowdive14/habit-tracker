@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm start)",
+      "Bash(set PORT=3001)",
+      "Bash(npx tsc:*)",
+      "Bash(git add:*)",
+      "Bash(rm:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

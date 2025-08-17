@@ -49,13 +49,14 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
+import ExerciseCard from './components/ExerciseCard';
+import MonthlyExerciseCard from './components/MonthlyExerciseCard';
 
 interface Exercise {
   timestamp: Timestamp;
   pushups: number;
   pullups: number;
   dips: number;
-  steps: number;
   running: number;
   avgPace: string;  // mm:ss format
 }
@@ -131,14 +132,6 @@ const exerciseCharacteristics = {
     progression: "reps",
     maxRecommended: 25
   },
-  steps: { 
-    optimalFrequency: 7, // 매일 권장
-    recoveryNeeded: false, // 회복 불필요
-    intensityType: "유산소 저강도",
-    recommendedRest: 0,
-    progression: "consistency", // 진행 유형 (일관성)
-    maxRecommended: 10000
-  },
   running: { 
     optimalFrequency: 3, 
     recoveryNeeded: true,
@@ -178,21 +171,18 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     pushups: '',
     pullups: '',
     dips: '',
-    steps: '',
     running: '',
     avgPace: ''
   });
   const [weeklyData, setWeeklyData] = useState<any[]>([]);
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
   const [averageStats, setAverageStats] = useState({
-    steps: 0,
     running: 0,
     runningDaysAvg: 0,
     pushups: 0,
     pullups: 0,
     dips: 0,
     avgPace: '',
-    daysCountedSteps: 0,
     daysCountedRunning: 0,
     daysCountedExercises: 0,
     runningDaysCount: 0
@@ -202,13 +192,11 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     pushups: ConsistencyScore;
     pullups: ConsistencyScore;
     dips: ConsistencyScore;
-    steps: ConsistencyScore;
     running: ConsistencyScore;
   }>({
     pushups: { score: 0, grade: 'F', label: '시작하기', color: '#B71C1C', message: '규칙적인 운동 습관을 만들어보세요!', streakDays: 0, trendChange: 0 },
     pullups: { score: 0, grade: 'F', label: '시작하기', color: '#B71C1C', message: '규칙적인 운동 습관을 만들어보세요!', streakDays: 0, trendChange: 0 },
     dips: { score: 0, grade: 'F', label: '시작하기', color: '#B71C1C', message: '규칙적인 운동 습관을 만들어보세요!', streakDays: 0, trendChange: 0 },
-    steps: { score: 0, grade: 'F', label: '시작하기', color: '#B71C1C', message: '매일 걷는 습관을 만들어보세요!', streakDays: 0, trendChange: 0 },
     running: { score: 0, grade: 'F', label: '시작하기', color: '#B71C1C', message: '운동을 시작해보세요!', streakDays: 0, trendChange: 0 }
   });
 
@@ -234,7 +222,6 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         pushups: String(existingData.pushups || ''),
         pullups: String(existingData.pullups || ''),
         dips: String(existingData.dips || ''),
-        steps: String(existingData.steps || ''),
         running: String(existingData.running || ''),
         avgPace: existingData.avgPace || ''
       });
@@ -243,7 +230,6 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         pushups: '',
         pullups: '',
         dips: '',
-        steps: '',
         running: '',
         avgPace: ''
       });
@@ -274,7 +260,6 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           pushups: data.pushups || 0,
           pullups: data.pullups || 0,
           dips: data.dips || 0,
-          steps: data.steps || 0,
           running: data.running || 0,
           avgPace: data.avgPace || ''
         };
@@ -311,7 +296,6 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         pushups: Number(formData.pushups) || 0,
         pullups: Number(formData.pullups) || 0,
         dips: Number(formData.dips) || 0,
-        steps: Number(formData.steps) || 0,
         running: Number(formData.running) || 0,
         avgPace: formData.avgPace
       };
@@ -338,7 +322,6 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       pushups: exerciseData[date]?.pushups || 0,
       pullups: exerciseData[date]?.pullups || 0,
       dips: exerciseData[date]?.dips || 0,
-      steps: exerciseData[date]?.steps || 0,
       running: exerciseData[date]?.running || 0
     }));
 
@@ -358,7 +341,6 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       pushups: exerciseData[date]?.pushups || 0,
       pullups: exerciseData[date]?.pullups || 0,
       dips: exerciseData[date]?.dips || 0,
-      steps: exerciseData[date]?.steps || 0,
       running: exerciseData[date]?.running || 0
     }));
 
@@ -377,7 +359,6 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     // 총합 계산
     const totalStats = Object.entries(exerciseData).reduce(
       (acc, [date, data]) => {
-        acc.steps += data.steps || 0;
         acc.pushups += data.pushups || 0;
         acc.pullups += data.pullups || 0;
         acc.dips += data.dips || 0;
@@ -392,7 +373,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         }
         return acc;
       },
-      { steps: 0, running: 0, pushups: 0, pullups: 0, dips: 0, runningDays: 0, totalPaceSeconds: 0 }
+      { running: 0, pushups: 0, pullups: 0, dips: 0, runningDays: 0, totalPaceSeconds: 0 }
     );
 
     // Calculate average pace
@@ -407,23 +388,126 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     }
 
     setAverageStats({
-      steps: Math.round((totalStats.steps / daysFromStart) * 10) / 10,
       running: Math.round((totalStats.running / daysFromRunningStart) * 100) / 100,
       runningDaysAvg: runningDaysAverage,
       pushups: Math.round((totalStats.pushups / daysFromStart) * 10) / 10,
       pullups: Math.round((totalStats.pullups / daysFromStart) * 10) / 10,
       dips: Math.round((totalStats.dips / daysFromStart) * 10) / 10,
       avgPace: averagePace,
-      daysCountedSteps: daysFromStart,
       daysCountedRunning: daysFromRunningStart,
       daysCountedExercises: daysFromStart,
       runningDaysCount: totalStats.runningDays
     });
   };
 
+  // 카드형 차트를 위한 데이터 준비
+  const prepareCardData = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      return date.toISOString().split('T')[0];
+    }).reverse();
+
+    const chartData = last7Days.map(date => ({
+      date,
+      value: exerciseData[date]?.[exerciseType] || 0
+    }));
+
+    const currentValue = exerciseData[selectedDate]?.[exerciseType] || 0;
+    const yesterdayDate = new Date();
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const previousValue = exerciseData[yesterdayDate.toISOString().split('T')[0]]?.[exerciseType] || 0;
+
+    // 이번 주 총합
+    const totalThisWeek = chartData.reduce((sum, day) => sum + day.value, 0);
+
+    // 최고 기록
+    const allValues = Object.values(exerciseData).map(day => day[exerciseType] || 0);
+    const bestRecord = Math.max(...allValues, 0);
+
+    // 평균값
+    const averageValue = averageStats[exerciseType] || 0;
+
+    // 주간 목표 (현재는 평균의 1.2배로 설정)
+    const weeklyGoal = Math.ceil(averageValue * 7 * 1.2);
+
+    return {
+      chartData,
+      currentValue,
+      previousValue,
+      totalThisWeek,
+      bestRecord,
+      averageValue,
+      weeklyGoal
+    };
+  };
+
+  // 월간 카드형 차트를 위한 데이터 준비
+  const prepareMonthlyCardData = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
+    const last30Days = Array.from({ length: 30 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      return date.toISOString().split('T')[0];
+    }).reverse();
+
+    const chartData = last30Days.map(date => ({
+      date,
+      value: exerciseData[date]?.[exerciseType] || 0
+    }));
+
+    const currentValue = exerciseData[selectedDate]?.[exerciseType] || 0;
+    
+    // 이번 달과 지난 달 비교
+    const today = new Date();
+    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+
+    // 이번 달 데이터
+    const thisMonthData = Object.entries(exerciseData)
+      .filter(([date]) => new Date(date) >= thisMonthStart && new Date(date) <= today)
+      .map(([, data]) => data[exerciseType] || 0);
+    
+    // 지난 달 데이터
+    const lastMonthData = Object.entries(exerciseData)
+      .filter(([date]) => new Date(date) >= lastMonthStart && new Date(date) <= lastMonthEnd)
+      .map(([, data]) => data[exerciseType] || 0);
+
+    const thisMonthTotal = thisMonthData.reduce((sum, val) => sum + val, 0);
+    const lastMonthTotal = lastMonthData.reduce((sum, val) => sum + val, 0);
+    
+    // 이번 달 평균 (현재까지)
+    const thisMonthAverage = thisMonthData.length > 0 ? thisMonthTotal / thisMonthData.length : 0;
+    // 지난 달 평균
+    const lastMonthAverage = lastMonthData.length > 0 ? lastMonthTotal / lastMonthData.length : 0;
+
+    // 최고 기록
+    const allValues = Object.values(exerciseData).map(day => day[exerciseType] || 0);
+    const bestRecord = Math.max(...allValues, 0);
+
+    // 전체 평균값
+    const averageValue = averageStats[exerciseType] || 0;
+
+    // 월간 목표 (주간 목표 × 4.3)
+    const weeklyGoal = Math.ceil(averageValue * 7 * 1.2);
+    const monthlyGoal = Math.ceil(weeklyGoal * 4.3);
+
+    return {
+      chartData,
+      currentValue,
+      previousValue: lastMonthAverage,
+      totalThisMonth: thisMonthTotal,
+      bestRecord,
+      averageValue,
+      monthlyGoal,
+      thisMonthAverage,
+      lastMonthAverage
+    };
+  };
+
   const calculateConsistencyScores = () => {
     // 운동별 일관성 점수 계산
-    const exerciseTypes = ['pushups', 'pullups', 'dips', 'steps', 'running'] as const;
+    const exerciseTypes = ['pushups', 'pullups', 'dips', 'running'] as const;
     const newScores = { ...consistencyScores };
 
     exerciseTypes.forEach((type) => {
@@ -568,7 +652,6 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       pushups: '푸시업',
       pullups: '풀업',
       dips: '딥스',
-      steps: '걷기',
       running: '달리기'
     };
     const name = exerciseNames[exerciseType as keyof typeof exerciseNames];
@@ -600,7 +683,6 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 Push-up: ${dayData.pushups}회 💪
 Pull-up: ${dayData.pullups}회 🏋️
 Dips: ${dayData.dips}회 🔥
-Steps: ${dayData.steps}보 🚶
 Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
 
 #내재역량 #저속노화 #감정조절 #인지기능개선`;
@@ -619,7 +701,6 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       pushups: { name: '푸시업', unit: '회', defaultTarget: 15, increaseStep: 5 },
       pullups: { name: '풀업', unit: '회', defaultTarget: 8, increaseStep: 2 },
       dips: { name: '딥스', unit: '회', defaultTarget: 10, increaseStep: 3 },
-      steps: { name: '걷기', unit: '보', defaultTarget: 6000, increaseStep: 1000 },
       running: { name: '달리기', unit: 'km', defaultTarget: 3, increaseStep: 0.5 }
     };
     
@@ -706,7 +787,6 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
     const longTermDailyAvg = exerciseType === 'pushups' ? averageStats.pushups : 
                            exerciseType === 'pullups' ? averageStats.pullups :
                            exerciseType === 'dips' ? averageStats.dips :
-                           exerciseType === 'steps' ? averageStats.steps :
                            exerciseType === 'running' ? averageStats.running : 0;
     
     // 실제 운동일만 고려한 평균 (달리기의 경우)
@@ -780,7 +860,6 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       pushups: 5,
       pullups: 2,
       dips: 3,
-      steps: 3000,
       running: 1
     };
     targetPerDay = Math.max(targetPerDay, minimumTargets[exerciseType as keyof typeof minimumTargets] || info.defaultTarget * 0.3);
@@ -789,10 +868,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
     targetPerDay = Math.min(targetPerDay, characteristics.maxRecommended * 0.8);
     
     // 반올림하여 깔끔한 숫자로 표시
-    if (exerciseType === 'steps') {
-      // 걸음 수는 500 단위로 반올림
-      targetPerDay = Math.round(targetPerDay / 500) * 500;
-    } else if (exerciseType === 'running') {
+    if (exerciseType === 'running') {
       // 달리기는 소수점 첫째 자리까지 표시
       targetPerDay = Math.round(targetPerDay * 10) / 10;
     } else {
@@ -928,16 +1004,6 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="걸음 수"
-                name="steps"
-                type="number"
-                value={formData.steps}
-                onChange={handleInputChange}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
                 label="달리기 (km)"
                 name="running"
                 type="number"
@@ -1032,81 +1098,75 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
         </Box>
 
         <TabPanel value={tabValue} index={0}>
-          {/* 운동 차트 (푸시업, 풀업, 딥스) */}
-          <Typography variant="h6" gutterBottom>
-            운동 기록
+          <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+            주간 운동 현황
           </Typography>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={weeklyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis domain={[0, 150]} />
-              <Tooltip />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="pushups"
-                stroke="#8884d8"
-                name="푸시업"
-              />
-              <Line
-                type="monotone"
-                dataKey="pullups"
-                stroke="#82ca9d"
-                name="풀업"
-              />
-              <Line
-                type="monotone"
-                dataKey="dips"
-                stroke="#ffc658"
-                name="딥스"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-
-          {/* 걸음 수 차트 */}
-          <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-            걸음 수
-          </Typography>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={weeklyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis domain={[0, 'auto']} />
-              <Tooltip />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="steps"
-                stroke="#ff7300"
-                name="걸음 수"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-
-          {/* 달리기 차트 */}
-          <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-            달리기 거리
-          </Typography>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={weeklyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis domain={[0, 'auto']} />
-              <Tooltip />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="running"
-                stroke="#e91e63"
-                name="달리기 (km)"
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <Grid container spacing={3}>
+            {(['pushups', 'pullups', 'dips', 'running'] as const).map((exerciseType) => {
+              const data = prepareCardData(exerciseType);
+              const exerciseInfo = {
+                pushups: { title: '푸시업', color: '#8884d8', unit: '회' },
+                pullups: { title: '풀업', color: '#82ca9d', unit: '회' },
+                dips: { title: '딥스', color: '#ffc658', unit: '회' },
+                running: { title: '달리기', color: '#e91e63', unit: 'km' }
+              };
+              
+              return (
+                <Grid item xs={12} sm={6} key={exerciseType}>
+                  <ExerciseCard
+                    title={exerciseInfo[exerciseType].title}
+                    color={exerciseInfo[exerciseType].color}
+                    data={data.chartData}
+                    currentValue={data.currentValue}
+                    previousValue={data.previousValue}
+                    weeklyGoal={data.weeklyGoal}
+                    totalThisWeek={data.totalThisWeek}
+                    unit={exerciseInfo[exerciseType].unit}
+                    bestRecord={data.bestRecord}
+                    averageValue={data.averageValue}
+                  />
+                </Grid>
+              );
+            })}
+          </Grid>
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>
-          {/* 일관성 점수 섹션 추가 */}
+          {/* 월간 운동 현황 */}
+          <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+            월간 운동 현황
+          </Typography>
+          <Grid container spacing={3} sx={{ mb: 6 }}>
+            {(['pushups', 'pullups', 'dips', 'running'] as const).map((exerciseType) => {
+              const data = prepareMonthlyCardData(exerciseType);
+              const exerciseInfo = {
+                pushups: { title: '푸시업', color: '#8884d8', unit: '회' },
+                pullups: { title: '풀업', color: '#82ca9d', unit: '회' },
+                dips: { title: '딥스', color: '#ffc658', unit: '회' },
+                running: { title: '달리기', color: '#e91e63', unit: 'km' }
+              };
+              
+              return (
+                <Grid item xs={12} sm={6} key={exerciseType}>
+                  <MonthlyExerciseCard
+                    title={exerciseInfo[exerciseType].title}
+                    color={exerciseInfo[exerciseType].color}
+                    data={data.chartData}
+                    currentValue={data.currentValue}
+                    lastMonthAverage={data.lastMonthAverage}
+                    thisMonthAverage={data.thisMonthAverage}
+                    monthlyGoal={data.monthlyGoal}
+                    totalThisMonth={data.totalThisMonth}
+                    unit={exerciseInfo[exerciseType].unit}
+                    bestRecord={data.bestRecord}
+                    averageValue={data.averageValue}
+                  />
+                </Grid>
+              );
+            })}
+          </Grid>
+
+          {/* 일관성 점수 섹션 */}
           <Box sx={{ mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
               <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
@@ -1120,7 +1180,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
               운동의 꾸준함을 측정하는 점수입니다. 규칙적으로 운동할수록 점수가 높아집니다.
             </Typography>
             <Grid container spacing={2}>
-              {(['pushups', 'pullups', 'dips', 'steps', 'running'] as const).map((type) => (
+              {(['pushups', 'pullups', 'dips', 'running'] as const).map((type) => (
                 <Grid item xs={12} sm={6} md={4} key={type}>
                   <Card 
                     sx={{ 
@@ -1147,7 +1207,6 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
                         {type === 'pushups' && '푸시업'}
                         {type === 'pullups' && '풀업'}
                         {type === 'dips' && '딥스'}
-                        {type === 'steps' && '걷기'}
                         {type === 'running' && '달리기'}
                       </Typography>
 
@@ -1298,90 +1357,6 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
               ))}
             </Grid>
           </Box>
-
-          {/* 운동 차트 (푸시업, 풀업, 딥스) */}
-          <Typography variant="h6" gutterBottom>
-            운동 기록
-          </Typography>
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            일일 평균: 푸시업 {averageStats.pushups}회, 풀업 {averageStats.pullups}회, 딥스 {averageStats.dips}회 (총 {averageStats.daysCountedExercises}일)
-          </Typography>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis domain={[0, 150]} />
-              <Tooltip />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="pushups"
-                stroke="#8884d8"
-                name="푸시업"
-              />
-              <Line
-                type="monotone"
-                dataKey="pullups"
-                stroke="#82ca9d"
-                name="풀업"
-              />
-              <Line
-                type="monotone"
-                dataKey="dips"
-                stroke="#ffc658"
-                name="딥스"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-
-          {/* 걸음 수 차트 */}
-          <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-            걸음 수
-          </Typography>
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            일일 평균: {averageStats.steps.toLocaleString()}보 (총 {averageStats.daysCountedSteps}일)
-          </Typography>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis domain={[0, 'auto']} />
-              <Tooltip />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="steps"
-                stroke="#ff7300"
-                name="걸음 수"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-
-          {/* 달리기 차트 */}
-          <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-            달리기 거리
-          </Typography>
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            전체 일일 평균: {averageStats.running}km
-            {averageStats.runningDaysCount > 0 && `, 달린 날 평균: ${averageStats.runningDaysAvg}km`}
-            {averageStats.avgPace && `, 평균 페이스: ${averageStats.avgPace}/km`} 
-            (총 {averageStats.daysCountedRunning}일)
-          </Typography>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis domain={[0, 'auto']} />
-              <Tooltip />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="running"
-                stroke="#e91e63"
-                name="달리기 (km)"
-              />
-            </LineChart>
-          </ResponsiveContainer>
         </TabPanel>
       </Paper>
 
@@ -1448,7 +1423,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
               다음 {guideContent.goalDays}일간 목표
             </Typography>
             <Typography variant="body2" gutterBottom>
-              하루 평균 {guideContent.targetPerDay}{selectedExerciseType === 'steps' ? '보' : selectedExerciseType === 'running' ? 'km' : '회'} 이상
+              하루 평균 {guideContent.targetPerDay}{selectedExerciseType === 'running' ? 'km' : '회'} 이상
             </Typography>
           </Box>
           

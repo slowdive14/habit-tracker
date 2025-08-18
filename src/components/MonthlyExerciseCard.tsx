@@ -114,6 +114,10 @@ const MonthlyExerciseCard: React.FC<MonthlyExerciseCardProps> = ({
             }
             arrow
             placement="top"
+            enterTouchDelay={0}
+            leaveTouchDelay={3000}
+            disableHoverListener={false}
+            disableTouchListener={false}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', color: getTrendColor(), cursor: 'help' }}>
               {getTrendIcon()}
@@ -179,6 +183,10 @@ const MonthlyExerciseCard: React.FC<MonthlyExerciseCardProps> = ({
                   }
                   arrow
                   placement="top"
+                  enterTouchDelay={0}
+                  leaveTouchDelay={3000}
+                  disableHoverListener={false}
+                  disableTouchListener={false}
                 >
                   <IconButton size="small" sx={{ p: 0, opacity: 0.6 }}>
                     <HelpOutlineIcon sx={{ fontSize: '0.9rem' }} />
@@ -210,12 +218,34 @@ const MonthlyExerciseCard: React.FC<MonthlyExerciseCardProps> = ({
             variant="outlined"
             sx={{ fontSize: '0.7rem' }}
           />
-          <Chip
-            label={`전체 평균 ${averageValue.toFixed(1)}${unit}`}
-            size="small"
-            variant="outlined"
-            sx={{ fontSize: '0.7rem' }}
-          />
+          <Tooltip 
+            title={
+              <Box sx={{ p: 0.5 }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                  전체 평균 계산 방식 📊
+                </Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                  전체 기간 총 운동량 ÷ 전체 경과 일수
+                </Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 0.5 }}>
+                  💡 운동하지 않은 날(0{unit})도 포함한 절대적 일일 평균
+                </Typography>
+              </Box>
+            }
+            arrow
+            placement="top"
+            enterTouchDelay={0}
+            leaveTouchDelay={3000}
+            disableHoverListener={false}
+            disableTouchListener={false}
+          >
+            <Chip
+              label={`전체 평균 ${averageValue.toFixed(1)}${unit}`}
+              size="small"
+              variant="outlined"
+              sx={{ fontSize: '0.7rem', cursor: 'help' }}
+            />
+          </Tooltip>
           <Chip
             label={`이번 달 총 ${totalThisMonth}${unit}`}
             size="small"

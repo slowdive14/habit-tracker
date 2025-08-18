@@ -26,7 +26,8 @@ interface ExerciseCardProps {
   color: string;
   data: Array<{ date: string; value: number }>;
   currentValue: number;
-  previousValue: number;
+  thisWeekAverage: number;
+  lastWeekAverage: number;
   weeklyGoal?: number;
   totalThisWeek: number;
   unit: string;
@@ -39,7 +40,8 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
   color,
   data,
   currentValue,
-  previousValue,
+  thisWeekAverage,
+  lastWeekAverage,
   weeklyGoal = 0,
   totalThisWeek,
   unit,
@@ -47,9 +49,9 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
   averageValue
 }) => {
   console.log('ExerciseCard rendered:', title);
-  // 추세 계산
-  const trend = currentValue - previousValue;
-  const trendPercentage = previousValue > 0 ? ((trend / previousValue) * 100) : 0;
+  // 주간 추세 계산 (이번 주 평균 vs 지난 주 평균)
+  const trend = thisWeekAverage - lastWeekAverage;
+  const trendPercentage = lastWeekAverage > 0 ? ((trend / lastWeekAverage) * 100) : 0;
   
   // 목표 진행률 계산
   const progressPercentage = weeklyGoal > 0 ? Math.min((totalThisWeek / weeklyGoal) * 100, 100) : 0;
@@ -100,18 +102,28 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
             title={
               <Box sx={{ p: 0.5 }}>
                 <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                  추세 계산 방식 📈
+                  주간 추세 계산 방식 📈
                 </Typography>
-                <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                  (오늘 - 어제) / 어제 × 100%
+                <Typography variant="body2" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
+                  (이번 주 일평균 - 지난 주 일평균) / 지난 주 일평균 × 100%
+                </Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.7rem', color: 'text.secondary', mb: 0.5 }}>
+                  • 이번 주 일평균: 월요일~현재까지 총합 ÷ 경과일수
+                </Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.7rem', color: 'text.secondary', mb: 0.5 }}>
+                  • 지난 주 일평균: 지난 주 월~일 총합 ÷ 7일
                 </Typography>
                 <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 0.5 }}>
-                  💡 전날 대비 운동량 변화율
+                  💡 지난 주 대비 이번 주 운동량 변화율 (더 안정적인 추세)
                 </Typography>
               </Box>
             }
             arrow
             placement="top"
+            enterTouchDelay={0}
+            leaveTouchDelay={3000}
+            disableHoverListener={false}
+            disableTouchListener={false}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', color: getTrendColor(), cursor: 'help' }}>
               {getTrendIcon()}
@@ -122,16 +134,16 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
           </Tooltip>
         </Box>
 
-        {/* 현재 값과 이전 값 */}
+        {/* 이번 주 평균과 지난 주 평균 */}
         <Box sx={{ mb: 2 }}>
           <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
-            {currentValue}
+            {thisWeekAverage.toFixed(1)}
             <Typography component="span" variant="body1" sx={{ ml: 0.5, color: 'text.secondary' }}>
-              {unit}
+              {unit}/일
             </Typography>
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            이전: {previousValue}{unit}
+            지난 주 평균: {lastWeekAverage.toFixed(1)}{unit}/일
           </Typography>
         </Box>
 
@@ -176,6 +188,10 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
                   }
                   arrow
                   placement="top"
+                  enterTouchDelay={0}
+                  leaveTouchDelay={3000}
+                  disableHoverListener={false}
+                  disableTouchListener={false}
                 >
                   <IconButton size="small" sx={{ p: 0, opacity: 0.6 }}>
                     <HelpOutlineIcon sx={{ fontSize: '0.9rem' }} />
@@ -207,12 +223,34 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
             variant="outlined"
             sx={{ fontSize: '0.7rem' }}
           />
-          <Chip
-            label={`평균 ${averageValue.toFixed(1)}${unit}`}
-            size="small"
-            variant="outlined"
-            sx={{ fontSize: '0.7rem' }}
-          />
+          <Tooltip 
+            title={
+              <Box sx={{ p: 0.5 }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                  일일 평균 계산 방식 📊
+                </Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                  전체 기간 총 운동량 ÷ 전체 경과 일수
+                </Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 0.5 }}>
+                  💡 운동하지 않은 날(0{unit})도 포함한 절대적 일일 평균
+                </Typography>
+              </Box>
+            }
+            arrow
+            placement="top"
+            enterTouchDelay={0}
+            leaveTouchDelay={3000}
+            disableHoverListener={false}
+            disableTouchListener={false}
+          >
+            <Chip
+              label={`평균 ${averageValue.toFixed(1)}${unit}`}
+              size="small"
+              variant="outlined"
+              sx={{ fontSize: '0.7rem', cursor: 'help' }}
+            />
+          </Tooltip>
         </Stack>
       </CardContent>
     </Card>

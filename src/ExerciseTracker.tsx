@@ -311,13 +311,22 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
   const calculateWeeklyData = () => {
     const today = new Date();
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
+    
+    // 이번 주 월요일 찾기 (한국 시간 기준)
+    const dayOfWeek = today.getDay(); // 0=일요일, 1=월요일, ..., 6=토요일
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 일요일인 경우 6, 그외는 요일-1
+    
+    const thisWeekMonday = new Date(today);
+    thisWeekMonday.setDate(today.getDate() - daysFromMonday);
+    
+    // 월요일부터 7일간의 날짜 생성
+    const weekDays = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(thisWeekMonday);
+      date.setDate(thisWeekMonday.getDate() + i);
       return date.toISOString().split('T')[0];
-    }).reverse();
+    });
 
-    const data = last7Days.map(date => ({
+    const data = weekDays.map(date => ({
       date,
       pushups: exerciseData[date]?.pushups || 0,
       pullups: exerciseData[date]?.pullups || 0,
@@ -330,13 +339,17 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
   const calculateMonthlyData = () => {
     const today = new Date();
-    const last30Days = Array.from({ length: 30 }, (_, i) => {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
+    // 이번 달 1일부터 오늘까지의 날짜 생성
+    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const daysInThisMonth = today.getDate(); // 1일부터 오늘까지의 날 수
+    
+    const thisMonthDays = Array.from({ length: daysInThisMonth }, (_, i) => {
+      const date = new Date(thisMonthStart);
+      date.setDate(thisMonthStart.getDate() + i);
       return date.toISOString().split('T')[0];
-    }).reverse();
+    });
 
-    const data = last30Days.map(date => ({
+    const data = thisMonthDays.map(date => ({
       date,
       pushups: exerciseData[date]?.pushups || 0,
       pullups: exerciseData[date]?.pullups || 0,
@@ -402,24 +415,51 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
   // 카드형 차트를 위한 데이터 준비
   const prepareCardData = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
+    const today = new Date();
+    
+    // 이번 주 월요일 찾기 (한국 시간 기준)
+    const dayOfWeek = today.getDay(); // 0=일요일, 1=월요일, ..., 6=토요일
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 일요일인 경우 6, 그외는 요일-1
+    
+    const thisWeekMonday = new Date(today);
+    thisWeekMonday.setDate(today.getDate() - daysFromMonday);
+    
+    // 월요일부터 7일간의 날짜 생성
+    const weekDays = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(thisWeekMonday);
+      date.setDate(thisWeekMonday.getDate() + i);
       return date.toISOString().split('T')[0];
-    }).reverse();
+    });
 
-    const chartData = last7Days.map(date => ({
+    const chartData = weekDays.map(date => ({
       date,
       value: exerciseData[date]?.[exerciseType] || 0
     }));
 
     const currentValue = exerciseData[selectedDate]?.[exerciseType] || 0;
-    const yesterdayDate = new Date();
-    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-    const previousValue = exerciseData[yesterdayDate.toISOString().split('T')[0]]?.[exerciseType] || 0;
-
-    // 이번 주 총합
+    
+    // 이번 주 총합 (월요일부터 현재까지)
     const totalThisWeek = chartData.reduce((sum, day) => sum + day.value, 0);
+    
+    // 이번 주 평균 계산 (실제 경과한 날수로 나누기)
+    const currentDayOfWeek = today.getDay() === 0 ? 7 : today.getDay(); // 일요일=7, 월요일=1
+    const thisWeekDaysCount = Math.min(currentDayOfWeek, 7);
+    const thisWeekAverage = thisWeekDaysCount > 0 ? totalThisWeek / thisWeekDaysCount : 0;
+    
+    // 지난 주 데이터 계산 (지난 주 월요일부터 일요일까지 7일)
+    const lastWeekMonday = new Date(thisWeekMonday);
+    lastWeekMonday.setDate(thisWeekMonday.getDate() - 7);
+    
+    const lastWeekDays = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(lastWeekMonday);
+      date.setDate(lastWeekMonday.getDate() + i);
+      return date.toISOString().split('T')[0];
+    });
+    
+    const lastWeekTotal = lastWeekDays.reduce((sum, date) => {
+      return sum + (exerciseData[date]?.[exerciseType] || 0);
+    }, 0);
+    const lastWeekAverage = lastWeekTotal / 7;
 
     // 최고 기록
     const allValues = Object.values(exerciseData).map(day => day[exerciseType] || 0);
@@ -434,7 +474,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     return {
       chartData,
       currentValue,
-      previousValue,
+      thisWeekAverage,
+      lastWeekAverage,
       totalThisWeek,
       bestRecord,
       averageValue,
@@ -444,22 +485,25 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
   // 월간 카드형 차트를 위한 데이터 준비
   const prepareMonthlyCardData = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
-    const last30Days = Array.from({ length: 30 }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
+    // 이번 달 1일부터 오늘까지의 날짜 생성
+    const today = new Date();
+    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const daysInThisMonth = today.getDate(); // 1일부터 오늘까지의 날 수
+    
+    const thisMonthDays = Array.from({ length: daysInThisMonth }, (_, i) => {
+      const date = new Date(thisMonthStart);
+      date.setDate(thisMonthStart.getDate() + i);
       return date.toISOString().split('T')[0];
-    }).reverse();
+    });
 
-    const chartData = last30Days.map(date => ({
+    const chartData = thisMonthDays.map(date => ({
       date,
       value: exerciseData[date]?.[exerciseType] || 0
     }));
 
     const currentValue = exerciseData[selectedDate]?.[exerciseType] || 0;
     
-    // 이번 달과 지난 달 비교
-    const today = new Date();
-    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    // 이번 달과 지난 달 비교 (today와 thisMonthStart는 위에서 이미 선언됨)
     const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
 
@@ -1121,7 +1165,8 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
                     color={exerciseInfo[exerciseType].color}
                     data={data.chartData}
                     currentValue={data.currentValue}
-                    previousValue={data.previousValue}
+                    thisWeekAverage={data.thisWeekAverage}
+                    lastWeekAverage={data.lastWeekAverage}
                     weeklyGoal={data.weeklyGoal}
                     totalThisWeek={data.totalThisWeek}
                     unit={exerciseInfo[exerciseType].unit}

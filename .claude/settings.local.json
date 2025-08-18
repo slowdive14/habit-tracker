@@ -5,7 +5,8 @@
       "Bash(set PORT=3001)",
       "Bash(npx tsc:*)",
       "Bash(git add:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

@@ -20,6 +20,7 @@ import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import WeeklyTrend from './components/WeeklyTrend';
 import HabitStats from './components/HabitStats';
+import './styles/HabitTracker.css';
 
 // Types
 interface HabitBase {

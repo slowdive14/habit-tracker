@@ -6,6 +6,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import HabitTracker from './HabitTracker';
 import ExerciseTracker from './ExerciseTracker';
+import './App.css';
 
 // Types
 interface HabitBase {
@@ -267,28 +268,54 @@ const App: React.FC = () => {
   console.log(window.location.origin);
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ width: '100%', mb: 3 }}>
-        <Tabs 
-          value={activeTab} 
-          onChange={(e, newValue) => setActiveTab(newValue)}
-          aria-label="habit tracker tabs"
-          variant="fullWidth"
-        >
-          <Tab 
-            value="habits" 
-            label="습관 기록" 
-            id="habits-tab"
-            aria-controls="habits-panel"
-          />
-          <Tab 
-            value="exercise" 
-            label="운동 기록" 
-            id="exercise-tab"
-            aria-controls="exercise-panel"
-          />
-        </Tabs>
-      </Box>
+    <div className="app-container">
+      <Container maxWidth="lg" className="main-content">
+        <Box className="app-header" sx={{ mb: 4 }}>
+          <Typography variant="h2" component="h1" sx={{ fontWeight: 800, mb: 1 }}>
+            HabitFlow ✨
+          </Typography>
+          <Typography variant="body1">
+            매일의 작은 습관이 만드는 큰 변화
+          </Typography>
+        </Box>
+        
+        <Box sx={{ width: '100%', mb: 3 }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={(e, newValue) => setActiveTab(newValue)}
+            aria-label="habit tracker tabs"
+            variant="fullWidth"
+            sx={{
+              '& .MuiTab-root': {
+                fontSize: '1rem',
+                fontWeight: 500,
+                textTransform: 'none',
+                transition: 'all 0.3s ease',
+              },
+              '& .Mui-selected': {
+                color: '#6366f1',
+                fontWeight: 600,
+              },
+              '& .MuiTabs-indicator': {
+                backgroundColor: '#6366f1',
+                height: '3px',
+              },
+            }}
+          >
+            <Tab 
+              value="habits" 
+              label="습관 기록" 
+              id="habits-tab"
+              aria-controls="habits-panel"
+            />
+            <Tab 
+              value="exercise" 
+              label="운동 기록" 
+              id="exercise-tab"
+              aria-controls="exercise-panel"
+            />
+          </Tabs>
+        </Box>
 
       <Box role="tabpanel" hidden={activeTab !== 'habits'} id="habits-panel">
         {activeTab === 'habits' && (
@@ -327,7 +354,8 @@ const App: React.FC = () => {
           {error}
         </Alert>
       </Snackbar>
-    </Container>
+      </Container>
+    </div>
   );
 };
 

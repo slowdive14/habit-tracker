@@ -51,6 +51,7 @@ import {
 } from 'recharts';
 import ExerciseCard from './components/ExerciseCard';
 import MonthlyExerciseCard from './components/MonthlyExerciseCard';
+import './styles/ExerciseTracker.css';
 
 interface Exercise {
   timestamp: Timestamp;

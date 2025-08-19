@@ -897,9 +897,37 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
   }
 
   return (
-    <Box sx={{ p: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
+    <Box
+      sx={{
+        p: 3,
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,250,252,0.9))',
+        borderRadius: 3,
+        minHeight: '100vh',
+      }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 4,
+          p: 3,
+          background: 'white',
+          borderRadius: 2,
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.07)',
+        }}
+      >
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{
+            fontWeight: 700,
+            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
           오늘의 습관
         </Typography>
       </Box>

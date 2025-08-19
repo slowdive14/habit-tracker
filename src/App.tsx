@@ -268,13 +268,53 @@ const App: React.FC = () => {
   console.log(window.location.origin);
 
   return (
-    <div className="app-container">
-      <Container maxWidth="lg" className="main-content">
-        <Box className="app-header" sx={{ mb: 4 }}>
-          <Typography variant="h2" component="h1" sx={{ fontWeight: 800, mb: 1 }}>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        position: 'relative',
+        paddingTop: 3,
+        paddingBottom: 3,
+      }}
+    >
+      <Container maxWidth="lg">
+        <Box
+          sx={{
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(20px)',
+            borderRadius: 4,
+            p: 4,
+            mb: 3,
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+            textAlign: 'center',
+            animation: 'fadeIn 0.6s ease-out',
+            '@keyframes fadeIn': {
+              from: { opacity: 0, transform: 'translateY(-20px)' },
+              to: { opacity: 1, transform: 'translateY(0)' },
+            },
+          }}
+        >
+          <Typography
+            variant="h2"
+            component="h1"
+            sx={{
+              fontWeight: 800,
+              mb: 1,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
             HabitFlow ✨
           </Typography>
-          <Typography variant="body1">
+          <Typography
+            variant="body1"
+            sx={{
+              color: 'text.secondary',
+              fontSize: '1.1rem',
+            }}
+          >
             매일의 작은 습관이 만드는 큰 변화
           </Typography>
         </Box>
@@ -355,7 +395,7 @@ const App: React.FC = () => {
         </Alert>
       </Snackbar>
       </Container>
-    </div>
+    </Box>
   );
 };
 

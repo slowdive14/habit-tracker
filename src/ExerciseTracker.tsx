@@ -986,7 +986,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
   };
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box sx={{ width: '100%' }}>
       {error && (
         <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
           {error}
@@ -994,11 +994,17 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       )}
       <Paper elevation={3} sx={{ 
         p: 3, 
-        maxWidth: '800px', 
-        margin: '0 auto',
-        borderRadius: 2
+        width: '100%',
+        borderRadius: 2,
+        background: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(20px)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
       }}>
-        <Typography variant="h5" gutterBottom>
+        <Typography variant="h5" gutterBottom sx={{
+          fontWeight: 600,
+          color: 'primary.main',
+          mb: 3
+        }}>
           운동 기록
         </Typography>
         <form onSubmit={(e) => {
@@ -1123,9 +1129,11 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       <Paper elevation={3} sx={{ 
         p: 3, 
         mt: 3, 
-        maxWidth: '800px', 
-        margin: '20px auto',
-        borderRadius: 2
+        width: '100%',
+        borderRadius: 2,
+        background: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(20px)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
       }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Tabs
@@ -1146,7 +1154,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
         </Box>
 
         <TabPanel value={tabValue} index={0}>
-          <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+          <Typography variant="h6" gutterBottom sx={{ mb: 3, fontWeight: 600, color: 'text.primary' }}>
             주간 운동 현황
           </Typography>
           <Grid container spacing={3}>
@@ -1182,7 +1190,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
 
         <TabPanel value={tabValue} index={1}>
           {/* 월간 운동 현황 */}
-          <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+          <Typography variant="h6" gutterBottom sx={{ mb: 3, fontWeight: 600, color: 'text.primary' }}>
             월간 운동 현황
           </Typography>
           <Grid container spacing={3} sx={{ mb: 6 }}>

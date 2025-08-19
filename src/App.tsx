@@ -319,7 +319,15 @@ const App: React.FC = () => {
           </Typography>
         </Box>
         
-        <Box sx={{ width: '100%', mb: 3 }}>
+        <Box sx={{ 
+          width: '100%', 
+          mb: 3,
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(20px)',
+          borderRadius: 2,
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+          overflow: 'hidden',
+        }}>
           <Tabs 
             value={activeTab} 
             onChange={(e, newValue) => setActiveTab(newValue)}
@@ -327,30 +335,37 @@ const App: React.FC = () => {
             variant="fullWidth"
             sx={{
               '& .MuiTab-root': {
-                fontSize: '1rem',
-                fontWeight: 500,
+                fontSize: '1.1rem',
+                fontWeight: 600,
                 textTransform: 'none',
                 transition: 'all 0.3s ease',
+                color: '#64748b',
+                minHeight: '56px',
+                '&:hover': {
+                  color: '#667eea',
+                  backgroundColor: 'rgba(102, 126, 234, 0.04)',
+                },
               },
               '& .Mui-selected': {
-                color: '#6366f1',
-                fontWeight: 600,
+                color: '#667eea !important',
+                fontWeight: 700,
               },
               '& .MuiTabs-indicator': {
-                backgroundColor: '#6366f1',
-                height: '3px',
+                backgroundColor: '#667eea',
+                height: '4px',
+                borderRadius: '4px 4px 0 0',
               },
             }}
           >
             <Tab 
               value="habits" 
-              label="습관 기록" 
+              label="🎯 습관 기록" 
               id="habits-tab"
               aria-controls="habits-panel"
             />
             <Tab 
               value="exercise" 
-              label="운동 기록" 
+              label="💪 운동 기록" 
               id="exercise-tab"
               aria-controls="exercise-panel"
             />

@@ -256,6 +256,12 @@ const theme = createTheme({
           fontSize: '0.875rem',
           padding: '8px 12px',
           backgroundColor: '#1e293b',
+          color: '#ffffff',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+        },
+        arrow: {
+          color: '#1e293b',
         },
       },
     },

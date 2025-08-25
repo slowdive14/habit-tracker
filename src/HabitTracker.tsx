@@ -970,12 +970,13 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
               if (SECONDARY_HABITS.includes(habit.id)) return showSecondaryHabits;
               return PRIMARY_HABITS.includes(habit.id);
             }).map((habit, index) => {
-          const weeklyAverage = calculate8WeekAverage(index);
-          const currentWeekScore = getCurrentWeekScore(index);
+          const realIndex = HABITS.findIndex(h => h.id === habit.id);
+          const weeklyAverage = calculate8WeekAverage(realIndex);
+          const currentWeekScore = getCurrentWeekScore(realIndex);
           const remainingScore = Math.max(0, weeklyAverage - currentWeekScore);
           
           // 월간 목표 계산
-          const monthlyTarget = getPreviousMonthTotal(index);
+          const monthlyTarget = getPreviousMonthTotal(realIndex);
           const today = getKoreanDate();
           const currentYear = today.getFullYear().toString();
           const currentMonth = MONTHS[today.getMonth()];
@@ -984,7 +985,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
           // 이번 달 현재까지 누적 점수
           let monthlyCurrentScore = 0;
           for (let day = 1; day <= currentDay; day++) {
-            const habitData = transformedData[currentYear]?.[currentMonth]?.[index];
+            const habitData = transformedData[currentYear]?.[currentMonth]?.[realIndex];
             if (habitData?.days) {
               const dayScore = habitData.days[day - 1] || 0;
               monthlyCurrentScore += dayScore;
@@ -1080,12 +1081,12 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
                   {[0, 1, 2, 3].map((score) => {
-                    const currentScore = transformedData[selectedDate.getFullYear().toString()]?.[MONTHS[selectedDate.getMonth()]]?.[index]?.days?.[selectedDate.getDate() - 1] || 0;
+                    const currentScore = transformedData[selectedDate.getFullYear().toString()]?.[MONTHS[selectedDate.getMonth()]]?.[realIndex]?.days?.[selectedDate.getDate() - 1] || 0;
                     return (
                       <Button
                         key={score}
                         variant={currentScore === score ? 'contained' : 'outlined'}
-                        onClick={() => handleScoreUpdate(index, score)}
+                        onClick={() => handleScoreUpdate(realIndex, score)}
                         sx={{
                           minWidth: '40px',
                           height: '40px',
@@ -1398,7 +1399,8 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
           </Box>
         </Box>
         <Grid container spacing={3}>
-          {HABITS.filter(habit => PRIMARY_HABITS.includes(habit.id)).map((habit, index) => {
+          {HABITS.filter(habit => PRIMARY_HABITS.includes(habit.id)).map((habit) => {
+            const realIndex = HABITS.findIndex(h => h.id === habit.id);
             // 해당 월의 첫 날과 마지막 날 계산
             const firstDay = new Date(selectedYear, selectedMonth, 1);
             const lastDay = new Date(selectedYear, selectedMonth + 1, 0);
@@ -1408,7 +1410,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
             const grid: number[][] = Array(6).fill(0).map(() => Array(7).fill(-1));
 
             // 달력 채우기 로직 수정
-            const monthData = transformedData[selectedYear.toString()]?.[MONTHS[selectedMonth]]?.[index]?.days || Array(31).fill(0);
+            const monthData = transformedData[selectedYear.toString()]?.[MONTHS[selectedMonth]]?.[realIndex]?.days || Array(31).fill(0);
             
             let currentDay = 1;
             const firstDayOfMonth = firstDay.getDay(); // 해당 월의 1일의 요일 (0: 일요일, 6: 토요일)
@@ -1488,7 +1490,7 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
                     />
                   </Box>
                 </Paper>
-        </Grid>
+              </Grid>
             );
           })}
       </Grid>
@@ -1500,7 +1502,9 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
           최근 8주 트렌드
         </Typography>
         <Grid container spacing={3}>
-          {HABITS.filter(habit => PRIMARY_HABITS.includes(habit.id)).map((habit, index) => (
+          {HABITS.filter(habit => PRIMARY_HABITS.includes(habit.id)).map((habit) => {
+            const realIndex = HABITS.findIndex(h => h.id === habit.id);
+            return (
             <Grid item xs={12} md={6} key={habit.id}>
               <Paper 
                 elevation={2}
@@ -1517,13 +1521,14 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
                   {habit.title}
                 </Typography>
                 <WeeklyTrend
-                  data={calculateLast8WeeksData(index)}
+                  data={calculateLast8WeeksData(realIndex)}
                   habitName={habit.title}
                   color={habit.color}
                 />
               </Paper>
             </Grid>
-          ))}
+            );
+          })}
         </Grid>
       </Box>
 

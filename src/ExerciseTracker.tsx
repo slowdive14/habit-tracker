@@ -144,7 +144,7 @@ const exerciseCharacteristics = {
 };
 
 const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
-  const [tabValue, setTabValue] = useState(1);  // 1: 월간 통계
+  const [tabValue, setTabValue] = useState(0);  // 0: 주간 통계
   const [exerciseData, setExerciseData] = useState<ExerciseData>({});
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [shareDate, setShareDate] = useState<string>(new Date().toISOString().split('T')[0]);

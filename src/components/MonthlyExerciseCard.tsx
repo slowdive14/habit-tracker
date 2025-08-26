@@ -240,7 +240,7 @@ const MonthlyExerciseCard: React.FC<MonthlyExerciseCardProps> = ({
             disableTouchListener={false}
           >
             <Chip
-              label={`전체 평균 ${title === '달리기' ? Math.round(averageValue) : averageValue.toFixed(1)}${unit}`}
+              label={`전체 평균 ${title === '달리기' ? averageValue.toFixed(2) : averageValue.toFixed(1)}${unit}`}
               size="small"
               variant="outlined"
               sx={{ fontSize: '0.7rem', cursor: 'help' }}

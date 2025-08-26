@@ -345,8 +345,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     const daysInThisMonth = today.getDate(); // 1일부터 오늘까지의 날 수
     
     const thisMonthDays = Array.from({ length: daysInThisMonth }, (_, i) => {
-      const date = new Date(thisMonthStart);
-      date.setDate(thisMonthStart.getDate() + i);
+      const date = new Date(thisMonthStart.getFullYear(), thisMonthStart.getMonth(), 1 + i);
       return date.toISOString().split('T')[0];
     });
 
@@ -360,23 +359,21 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
     setMonthlyData(data);
 
-    // 평균 계산
-    let startDate = new Date('2025-01-01'); // 달리기 시작일
-    let firstRecordDate = Object.keys(exerciseData).sort()[0]; // 전체 데이터 시작일
-
-    // 현재까지의 총 일수 계산
+    // 평균 계산 - 모든 운동을 2025-01-01부터 계산
+    const startDate = new Date('2025-01-01'); // 모든 운동 시작일 통일
+    
+    // 현재까지의 총 일수 계산 (2025-01-01부터)
     const msPerDay = 24 * 60 * 60 * 1000;
     const todayDate = new Date();
-    const daysFromStart = Math.floor((todayDate.getTime() - new Date(firstRecordDate).getTime()) / msPerDay) + 1;
-    const daysFromRunningStart = Math.floor((todayDate.getTime() - startDate.getTime()) / msPerDay) + 1;
+    const daysFromStart = Math.floor((todayDate.getTime() - startDate.getTime()) / msPerDay) + 1;
 
-    // 총합 계산
+    // 총합 계산 - 모든 운동을 2025-01-01부터만 계산
     const totalStats = Object.entries(exerciseData).reduce(
       (acc, [date, data]) => {
-        acc.pushups += data.pushups || 0;
-        acc.pullups += data.pullups || 0;
-        acc.dips += data.dips || 0;
         if (date >= '2025-01-01') {
+          acc.pushups += data.pushups || 0;
+          acc.pullups += data.pullups || 0;
+          acc.dips += data.dips || 0;
           acc.running += data.running || 0;
           if (data.running && data.avgPace) {
             acc.runningDays++;
@@ -401,14 +398,39 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       runningDaysAverage = Math.round((totalStats.running / totalStats.runningDays) * 100) / 100;
     }
 
+    // 모든 운동의 전체 평균 계산 (2025-01-01부터 통일)
+    const runningTotalAverage = totalStats.running / daysFromStart;
+    const pushupsTotalAverage = totalStats.pushups / daysFromStart;
+    const pullupsTotalAverage = totalStats.pullups / daysFromStart;
+    const dipsTotalAverage = totalStats.dips / daysFromStart;
+    
+    // 디버깅: 전체 평균 계산
+    console.log('전체 평균 계산 (2025-01-01 통일):', {
+      시작일: '2025-01-01',
+      오늘날짜: todayDate.toISOString().split('T')[0],
+      경과일수: daysFromStart,
+      총운동량: {
+        달리기: totalStats.running,
+        푸시업: totalStats.pushups,
+        풀업: totalStats.pullups,
+        딥스: totalStats.dips
+      },
+      계산된평균: {
+        달리기: runningTotalAverage,
+        푸시업: pushupsTotalAverage,
+        풀업: pullupsTotalAverage,
+        딥스: dipsTotalAverage
+      }
+    });
+
     setAverageStats({
-      running: Math.round((totalStats.running / daysFromRunningStart) * 100) / 100,
+      running: Math.round(runningTotalAverage * 100) / 100,
       runningDaysAvg: runningDaysAverage,
-      pushups: Math.round((totalStats.pushups / daysFromStart) * 10) / 10,
-      pullups: Math.round((totalStats.pullups / daysFromStart) * 10) / 10,
-      dips: Math.round((totalStats.dips / daysFromStart) * 10) / 10,
+      pushups: Math.round(pushupsTotalAverage * 10) / 10,
+      pullups: Math.round(pullupsTotalAverage * 10) / 10,
+      dips: Math.round(dipsTotalAverage * 10) / 10,
       avgPace: averagePace,
-      daysCountedRunning: daysFromRunningStart,
+      daysCountedRunning: daysFromStart,
       daysCountedExercises: daysFromStart,
       runningDaysCount: totalStats.runningDays
     });
@@ -492,8 +514,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     const daysInThisMonth = today.getDate(); // 1일부터 오늘까지의 날 수
     
     const thisMonthDays = Array.from({ length: daysInThisMonth }, (_, i) => {
-      const date = new Date(thisMonthStart);
-      date.setDate(thisMonthStart.getDate() + i);
+      const date = new Date(thisMonthStart.getFullYear(), thisMonthStart.getMonth(), 1 + i);
       return date.toISOString().split('T')[0];
     });
 
@@ -524,6 +545,24 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     // 이번 달 평균 (실제 경과 날수로 계산)
     const daysPassedThisMonth = today.getDate(); // 1일부터 오늘까지의 날 수
     const thisMonthAverage = daysPassedThisMonth > 0 ? thisMonthTotal / daysPassedThisMonth : 0;
+    
+    // 디버깅 정보 (달리기일 때만)
+    if (exerciseType === 'running') {
+      const originalThisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      console.log(`달리기 월간 계산 (${exerciseType}):`, {
+        오늘날짜: today.toISOString().split('T')[0],
+        오늘getDate: today.getDate(),
+        올바른이번달시작: originalThisMonthStart.toISOString().split('T')[0],
+        경과일수: daysPassedThisMonth,
+        이번달데이터개수: thisMonthData.length,
+        이번달총거리: thisMonthTotal,
+        이번달평균: thisMonthAverage,
+        이번달실제데이터: thisMonthData,
+        thisMonthDays길이: thisMonthDays.length,
+        thisMonthDays첫번째: thisMonthDays[0],
+        thisMonthDays마지막: thisMonthDays[thisMonthDays.length - 1]
+      });
+    }
     
     // 지난 달 평균 (지난 달 전체 날수로 계산)
     const daysInLastMonth = lastMonthEnd.getDate(); // 지난 달 총 일수

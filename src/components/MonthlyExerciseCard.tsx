@@ -131,13 +131,13 @@ const MonthlyExerciseCard: React.FC<MonthlyExerciseCardProps> = ({
         {/* 현재 값과 월간 비교 */}
         <Box sx={{ mb: 2 }}>
           <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
-            {thisMonthAverage.toFixed(1)}
+            {title === '달리기' ? Math.round(thisMonthAverage) : thisMonthAverage.toFixed(1)}
             <Typography component="span" variant="body1" sx={{ ml: 0.5, color: 'text.secondary' }}>
               {unit}/일
             </Typography>
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            지난 달: {lastMonthAverage.toFixed(1)}{unit}/일
+            지난 달: {title === '달리기' ? Math.round(lastMonthAverage) : lastMonthAverage.toFixed(1)}{unit}/일
           </Typography>
         </Box>
 
@@ -194,7 +194,7 @@ const MonthlyExerciseCard: React.FC<MonthlyExerciseCardProps> = ({
                 </Tooltip>
               </Box>
               <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {totalThisMonth}/{monthlyGoal}{unit}
+                {title === '달리기' ? Math.round(totalThisMonth) : totalThisMonth}/{title === '달리기' ? Math.round(monthlyGoal) : monthlyGoal}{unit}
               </Typography>
             </Box>
             <LinearProgress
@@ -240,14 +240,14 @@ const MonthlyExerciseCard: React.FC<MonthlyExerciseCardProps> = ({
             disableTouchListener={false}
           >
             <Chip
-              label={`전체 평균 ${averageValue.toFixed(1)}${unit}`}
+              label={`전체 평균 ${title === '달리기' ? Math.round(averageValue) : averageValue.toFixed(1)}${unit}`}
               size="small"
               variant="outlined"
               sx={{ fontSize: '0.7rem', cursor: 'help' }}
             />
           </Tooltip>
           <Chip
-            label={`이번 달 총 ${totalThisMonth}${unit}`}
+            label={`이번 달 총 ${title === '달리기' ? Math.round(totalThisMonth) : totalThisMonth}${unit}`}
             size="small"
             variant="filled"
             sx={{ 

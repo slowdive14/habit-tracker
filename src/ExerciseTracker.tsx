@@ -595,6 +595,14 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       running: 6
     };
 
+    // 운동별 절대 최대값 (건강/안전 고려)
+    const maxWeeklyGoals = {
+      pushups: 1000,  // 실질적 제한 없음
+      pullups: 300,   // 실질적 제한 없음
+      dips: 500,      // 실질적 제한 없음
+      running: 25     // 주 25km 상한선
+    };
+
     const baseGoal = calculateBaseWeeklyGoal(exerciseType);
     const trendBonus = calculateTrendBonus(exerciseType);
     const userCapacity = evaluateUserCapacity(exerciseType);
@@ -609,6 +617,10 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       finalGoal = Math.min(finalGoal, maxAllowedGoal);
     }
 
+    // 절대 상한선 적용 (최종 안전장치)
+    const goalBeforeCap = finalGoal;
+    finalGoal = Math.min(finalGoal, maxWeeklyGoals[exerciseType]);
+
     // 디버깅 로그
     console.log(`[${exerciseType}] 목표 계산 상세:`, {
       사용자능력: Math.round(userCapacity * 10) / 10,
@@ -617,7 +629,9 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       추세보너스: trendBonus,
       최소보장: minWeeklyGoals[exerciseType],
       이전목표: previousGoal,
-      최대허용: previousGoal > 0 ? Math.round(previousGoal * 1.4) : 'N/A',
+      최대허용_40프로: previousGoal > 0 ? Math.round(previousGoal * 1.4) : 'N/A',
+      절대상한선: maxWeeklyGoals[exerciseType],
+      상한선적용전: goalBeforeCap,
       최종목표: finalGoal
     });
 
@@ -685,6 +699,52 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     }));
 
     setWeeklyData(data);
+  };
+
+  // 주간 목표 진행 상황 및 오늘 권장량 계산 (푸시업, 풀업, 딥스만)
+  const calculateTodayRecommendation = (exerciseType: 'pushups' | 'pullups' | 'dips') => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+
+    // 이번 주 월요일
+    const thisWeekMonday = new Date(today);
+    thisWeekMonday.setDate(today.getDate() - daysFromMonday);
+
+    // 월요일부터 오늘까지의 날짜
+    const daysUntilToday = daysFromMonday + 1; // 오늘 포함
+    const weekDaysUntilToday = Array.from({ length: daysUntilToday }, (_, i) => {
+      const date = new Date(thisWeekMonday);
+      date.setDate(thisWeekMonday.getDate() + i);
+      return date.toISOString().split('T')[0];
+    });
+
+    // 이번 주 지금까지 완료한 개수
+    const completedThisWeek = weekDaysUntilToday.reduce((sum, date) => {
+      return sum + (exerciseData[date]?.[exerciseType] || 0);
+    }, 0);
+
+    // 주간 목표 (previousWeeklyGoals에서 가져오거나 계산)
+    const weeklyGoal = previousWeeklyGoals[exerciseType] || calculateFinalWeeklyGoal(exerciseType, 0);
+
+    // 남은 일수 (오늘 포함, 일요일까지)
+    const remainingDays = 7 - daysFromMonday; // 오늘부터 일요일까지
+
+    // 진행률
+    const progressRate = weeklyGoal > 0 ? (completedThisWeek / weeklyGoal) * 100 : 0;
+
+    // 오늘 권장량 = (목표 - 완료) / 남은일수
+    const remaining = Math.max(0, weeklyGoal - completedThisWeek);
+    const todayRecommendation = remainingDays > 0 ? Math.ceil(remaining / remainingDays) : remaining;
+
+    return {
+      weeklyGoal,
+      completedThisWeek,
+      remaining,
+      remainingDays,
+      progressRate: Math.round(progressRate * 10) / 10,
+      todayRecommendation: Math.max(0, todayRecommendation)
+    };
   };
 
   const calculateMonthlyData = () => {
@@ -844,6 +904,12 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     const previousGoal = previousWeeklyGoals[exerciseType] || 0;
     const weeklyGoal = calculateFinalWeeklyGoal(exerciseType, previousGoal);
 
+    // 오늘 권장량 계산 (푸시업, 풀업, 딥스만)
+    let todayRecommendation = null;
+    if (exerciseType === 'pushups' || exerciseType === 'pullups' || exerciseType === 'dips') {
+      todayRecommendation = calculateTodayRecommendation(exerciseType);
+    }
+
     return {
       chartData,
       currentValue,
@@ -852,7 +918,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       totalThisWeek,
       bestRecord,
       averageValue,
-      weeklyGoal
+      weeklyGoal,
+      todayRecommendation
     };
   };
 
@@ -1573,6 +1640,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
                     unit={exerciseInfo[exerciseType].unit}
                     bestRecord={data.bestRecord}
                     averageValue={data.averageValue}
+                    todayRecommendation={data.todayRecommendation}
                   />
                 </Grid>
               );

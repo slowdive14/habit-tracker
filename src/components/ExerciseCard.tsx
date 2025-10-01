@@ -33,6 +33,14 @@ interface ExerciseCardProps {
   unit: string;
   bestRecord: number;
   averageValue: number;
+  todayRecommendation?: {
+    weeklyGoal: number;
+    completedThisWeek: number;
+    remaining: number;
+    remainingDays: number;
+    progressRate: number;
+    todayRecommendation: number;
+  } | null;
 }
 
 const ExerciseCard: React.FC<ExerciseCardProps> = ({
@@ -46,7 +54,8 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
   totalThisWeek,
   unit,
   bestRecord,
-  averageValue
+  averageValue,
+  todayRecommendation
 }) => {
   console.log('ExerciseCard rendered:', title);
   // 주간 추세 계산 (이번 주 평균 vs 지난 주 평균)
@@ -212,6 +221,50 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
                 backgroundColor: 'rgba(0,0,0,0.1)'
               }}
             />
+          </Box>
+        )}
+
+        {/* 오늘 권장량 (푸시업, 풀업, 딥스만) */}
+        {todayRecommendation && (
+          <Box
+            sx={{
+              mb: 2,
+              p: 1.5,
+              backgroundColor: todayRecommendation.progressRate >= 100
+                ? 'rgba(46, 125, 50, 0.12)'
+                : 'rgba(25, 118, 210, 0.08)',
+              borderRadius: 2,
+              border: `1px solid ${todayRecommendation.progressRate >= 100 ? '#2e7d32' : '#1976d2'}`,
+            }}
+          >
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5, color: 'text.primary' }}>
+              📊 이번 주 진행 상황
+            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+              <Typography variant="caption" sx={{ color: 'text.primary' }}>
+                목표: {todayRecommendation.weeklyGoal}{unit}
+              </Typography>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                완료: {todayRecommendation.completedThisWeek}{unit} ({todayRecommendation.progressRate}%)
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="caption" sx={{ color: 'text.primary' }}>
+                남은 일수: {todayRecommendation.remainingDays}일
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 700,
+                  color: todayRecommendation.progressRate >= 100 ? '#2e7d32' : '#1976d2'
+                }}
+              >
+                {todayRecommendation.progressRate >= 100
+                  ? '🎉 목표 달성!'
+                  : `💪 오늘 권장: ${todayRecommendation.todayRecommendation}${unit}`
+                }
+              </Typography>
+            </Box>
           </Box>
         )}
 

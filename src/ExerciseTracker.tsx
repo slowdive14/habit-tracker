@@ -597,10 +597,10 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
     // 운동별 절대 최대값 (건강/안전 고려)
     const maxWeeklyGoals = {
-      pushups: 1000,  // 실질적 제한 없음
-      pullups: 300,   // 실질적 제한 없음
-      dips: 500,      // 실질적 제한 없음
-      running: 25     // 주 25km 상한선
+      pushups: Infinity,  // 제한 없음
+      pullups: Infinity,  // 제한 없음
+      dips: Infinity,     // 제한 없음
+      running: 25         // 주 25km 상한선
     };
 
     const baseGoal = calculateBaseWeeklyGoal(exerciseType);

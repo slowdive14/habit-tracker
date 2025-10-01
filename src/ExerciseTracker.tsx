@@ -201,21 +201,183 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     running: { score: 0, grade: 'F', label: '시작하기', color: '#B71C1C', message: '운동을 시작해보세요!', streakDays: 0, trendChange: 0 }
   });
 
-  // 데이터 로드
+  // 이전 주간 목표 저장 (Firebase에서 로드)
+  const [previousWeeklyGoals, setPreviousWeeklyGoals] = useState<{
+    pushups: number;
+    pullups: number;
+    dips: number;
+    running: number;
+    weekOf: string; // 목표가 설정된 주의 월요일 날짜
+  }>({
+    pushups: 0,
+    pullups: 0,
+    dips: 0,
+    running: 0,
+    weekOf: ''
+  });
+
+  const loadExerciseData = async () => {
+    if (!user) {
+      console.log('No user found, skipping data load');
+      return;
+    }
+
+    console.log('Loading exercise data for user:', user.uid);
+    try {
+      const exercisesRef = collection(db, 'exercises');
+      const q = query(
+        exercisesRef,
+        where('userId', '==', user.uid)
+      );
+      const querySnapshot = await getDocs(q);
+      const newData: ExerciseData = {};
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        const date = data.timestamp.toDate().toISOString().split('T')[0];
+        newData[date] = {
+          timestamp: data.timestamp,
+          pushups: data.pushups || 0,
+          pullups: data.pullups || 0,
+          dips: data.dips || 0,
+          running: data.running || 0,
+          avgPace: data.avgPace || ''
+        };
+      });
+
+      console.log('Loaded exercise data:', newData);
+      setExerciseData(newData);
+    } catch (error) {
+      console.error('Error loading exercise data:', error);
+      setError('운동 데이터를 불러오는 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 이전 주간 목표 로드 (Firebase)
+  const loadPreviousWeeklyGoals = async () => {
+    if (!user) return;
+
+    try {
+      // 지난 주 월요일 날짜 계산
+      const today = new Date();
+      const dayOfWeek = today.getDay();
+      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const lastWeekMonday = new Date(today);
+      lastWeekMonday.setDate(today.getDate() - daysFromMonday - 7);
+      const lastWeekMondayStr = lastWeekMonday.toISOString().split('T')[0];
+
+      const goalsRef = doc(db, 'weeklyGoals', `${user.uid}_${lastWeekMondayStr}`);
+      const goalsDoc = await getDoc(goalsRef);
+
+      if (goalsDoc.exists()) {
+        const data = goalsDoc.data();
+        setPreviousWeeklyGoals({
+          pushups: data.pushups || 0,
+          pullups: data.pullups || 0,
+          dips: data.dips || 0,
+          running: data.running || 0,
+          weekOf: lastWeekMondayStr
+        });
+        console.log('이전 주간 목표 로드 성공:', data);
+      } else {
+        console.log('이전 주간 목표 없음 (첫 사용 또는 새로운 주)');
+      }
+    } catch (error) {
+      console.error('이전 주간 목표 로드 오류:', error);
+    }
+  };
+
+  // 현재 주간 목표 저장 (Firebase)
+  const saveCurrentWeeklyGoals = async (goals: {
+    pushups: number;
+    pullups: number;
+    dips: number;
+    running: number;
+  }) => {
+    if (!user) return;
+
+    try {
+      // 이번 주 월요일 날짜 계산
+      const today = new Date();
+      const dayOfWeek = today.getDay();
+      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const thisWeekMonday = new Date(today);
+      thisWeekMonday.setDate(today.getDate() - daysFromMonday);
+      const thisWeekMondayStr = thisWeekMonday.toISOString().split('T')[0];
+
+      const goalsRef = doc(db, 'weeklyGoals', `${user.uid}_${thisWeekMondayStr}`);
+      await setDoc(goalsRef, {
+        userId: user.uid,
+        weekOf: thisWeekMondayStr,
+        pushups: goals.pushups,
+        pullups: goals.pullups,
+        dips: goals.dips,
+        running: goals.running,
+        updatedAt: Timestamp.now()
+      });
+
+      console.log('주간 목표 저장 성공:', goals);
+    } catch (error) {
+      console.error('주간 목표 저장 오류:', error);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedDate(e.target.value);
+  };
+
+  const saveExerciseData = async () => {
+    if (!user) return;
+
+    try {
+      const exerciseRef = doc(db, 'exercises', `${user.uid}_${selectedDate}`);
+      const exerciseData = {
+        userId: user.uid,
+        timestamp: Timestamp.fromDate(new Date(selectedDate)),
+        pushups: Number(formData.pushups) || 0,
+        pullups: Number(formData.pullups) || 0,
+        dips: Number(formData.dips) || 0,
+        running: Number(formData.running) || 0,
+        avgPace: formData.avgPace
+      };
+
+      await setDoc(exerciseRef, exerciseData);
+      await loadExerciseData();
+      console.log('Exercise data saved and reloaded successfully');
+    } catch (error) {
+      console.error('Error saving exercise data:', error);
+      setError('운동 데이터를 저장하는 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 데이터 로드 useEffect
   useEffect(() => {
-    if (user) {  // user가 있을 때만 데이터 로드
+    if (user) {
       loadExerciseData();
+      loadPreviousWeeklyGoals();
     }
   }, [user]);
 
-  // 주간/월간 데이터 계산
+  // 주간/월간 데이터 계산 및 목표 저장 useEffect
   useEffect(() => {
     calculateWeeklyData();
     calculateMonthlyData();
     calculateConsistencyScores();
+
+    if (Object.keys(exerciseData).length > 0) {
+      saveWeeklyGoalsIfNeeded();
+    }
   }, [exerciseData]);
 
-  // 선택된 날짜가 변경될 때 해당 날짜의 데이터 로드
+  // 선택된 날짜 변경 useEffect
   useEffect(() => {
     const existingData = exerciseData[selectedDate];
     if (existingData) {
@@ -237,76 +399,263 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     }
   }, [selectedDate, exerciseData]);
 
-  const loadExerciseData = async () => {
-    if (!user) {
-      console.log('No user found, skipping data load');
-      return;
+  // Helper Functions for Goal Calculation
+
+  // 실제 운동한 날의 데이터만 추출
+  const getExerciseDays = (dateRange: string[], exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
+    return dateRange
+      .map(date => exerciseData[date]?.[exerciseType])
+      .filter((value): value is number => typeof value === 'number' && value > 0);
+  };
+
+  // 운동일 평균 계산 (0인 날 제외)
+  const getExerciseDaysAverage = (dateRange: string[], exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
+    const exerciseDays = getExerciseDays(dateRange, exerciseType);
+    if (exerciseDays.length === 0) return 0;
+
+    return exerciseDays.reduce((sum, val) => sum + val, 0) / exerciseDays.length;
+  };
+
+  // 최근 4주간 평균 주간 운동 빈도 계산 (완전한 주 단위)
+  const calculateWeeklyFrequency = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
+    const today = new Date();
+
+    // 지난 주 일요일 찾기
+    const dayOfWeek = today.getDay(); // 0=일요일, 1=월요일, ..., 6=토요일
+    const daysToLastSunday = dayOfWeek === 0 ? 0 : dayOfWeek; // 일요일이면 0, 아니면 지난 일요일까지 일수
+
+    const lastSunday = new Date(today);
+    lastSunday.setDate(today.getDate() - daysToLastSunday);
+
+    // 지난 주 월요일부터 4주간 (완전한 주 4개)
+    const last4Weeks: string[][] = [];
+    for (let weekIndex = 0; weekIndex < 4; weekIndex++) {
+      const weekDays: string[] = [];
+      for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+        const date = new Date(lastSunday);
+        date.setDate(lastSunday.getDate() - (weekIndex * 7 + 7) + dayIndex + 1); // 월요일부터 시작
+        weekDays.push(date.toISOString().split('T')[0]);
+      }
+      last4Weeks.push(weekDays);
     }
-    
-    console.log('Loading exercise data for user:', user.uid);
-    try {
-      const exercisesRef = collection(db, 'exercises');
-      const q = query(
-        exercisesRef,
-        where('userId', '==', user.uid)
-      );
-      const querySnapshot = await getDocs(q);
-      const newData: ExerciseData = {};
-      
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        const date = data.timestamp.toDate().toISOString().split('T')[0];
-        newData[date] = {
-          timestamp: data.timestamp,
-          pushups: data.pushups || 0,
-          pullups: data.pullups || 0,
-          dips: data.dips || 0,
-          running: data.running || 0,
-          avgPace: data.avgPace || ''
-        };
+
+    // 최신 주부터 오래된 순으로 정렬 (역순)
+    const weeklyData = last4Weeks.reverse();
+
+    const weeklyFrequencies = weeklyData.map(week => getExerciseDays(week, exerciseType).length);
+    const avgFrequency = weeklyFrequencies.reduce((sum, freq) => sum + freq, 0) / 4;
+
+    // 운동 특성에 따른 최적 빈도 보장
+    const characteristics = exerciseCharacteristics[exerciseType];
+    const minFrequency = Math.min(characteristics.optimalFrequency, 3);
+
+    // 실제 빈도와 권장 빈도 중 더 높은 값 사용 (최대 7회)
+    const finalFrequency = Math.max(minFrequency, Math.min(7, avgFrequency));
+
+    // 디버깅 로그
+    console.log(`[${exerciseType}] 주간 빈도 계산:`, {
+      지난주일요일: lastSunday.toISOString().split('T')[0],
+      '4주전(week1)': `${weeklyData[0][0]} ~ ${weeklyData[0][6]}`,
+      '3주전(week2)': `${weeklyData[1][0]} ~ ${weeklyData[1][6]}`,
+      '2주전(week3)': `${weeklyData[2][0]} ~ ${weeklyData[2][6]}`,
+      '지난주(week4)': `${weeklyData[3][0]} ~ ${weeklyData[3][6]}`,
+      주별운동횟수: weeklyFrequencies,
+      평균빈도: avgFrequency.toFixed(2),
+      권장최소빈도: minFrequency,
+      최종빈도: finalFrequency
+    });
+
+    return finalFrequency;
+  };
+
+  // Step 1: 사용자 운동 능력 평가 (5단계 우선순위)
+  const evaluateUserCapacity = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
+    const today = new Date();
+
+    // 날짜 범위 생성
+    const getDateRange = (daysBack: number) => {
+      return Array.from({ length: 7 }, (_, i) => {
+        const date = new Date(today);
+        date.setDate(date.getDate() - daysBack - i);
+        return date.toISOString().split('T')[0];
       });
-      
-      console.log('Loaded exercise data:', newData);
-      setExerciseData(newData);
-    } catch (error) {
-      console.error('Error loading exercise data:', error);
-      setError('운동 데이터를 불러오는 중 오류가 발생했습니다.');
+    };
+
+    const getMonthRange = (monthsBack: number) => {
+      const startDate = new Date(today);
+      startDate.setMonth(startDate.getMonth() - monthsBack);
+      const daysInRange = Math.floor((today.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000));
+      return Array.from({ length: daysInRange }, (_, i) => {
+        const date = new Date(startDate);
+        date.setDate(date.getDate() + i);
+        return date.toISOString().split('T')[0];
+      });
+    };
+
+    const thisWeekDates = getDateRange(0);
+    const lastWeekDates = getDateRange(7);
+    const lastMonthDates = getMonthRange(1);
+
+    const thisWeekAvg = getExerciseDaysAverage(thisWeekDates, exerciseType);
+    const lastWeekAvg = getExerciseDaysAverage(lastWeekDates, exerciseType);
+    const lastMonthAvg = getExerciseDaysAverage(lastMonthDates, exerciseType);
+
+    // Priority 1: 지난주 + 이번주 평균 (가장 신뢰도 높음)
+    if (lastWeekAvg > 0 && thisWeekAvg > 0) {
+      return (lastWeekAvg + thisWeekAvg) / 2;
     }
+
+    // Priority 2: 지난주 데이터만 (5 이상일 때)
+    if (lastWeekAvg >= 5) {
+      return lastWeekAvg;
+    }
+
+    // Priority 3: 가중 평균 (지난주 저조 + 지난달 양호)
+    if (lastWeekAvg > 0 && lastWeekAvg < 5 && lastMonthAvg > 10) {
+      return lastWeekAvg * 0.3 + lastMonthAvg * 0.7;
+    }
+
+    // Priority 4: 이번주 데이터 (최소 10 보장)
+    if (thisWeekAvg > 0) {
+      return Math.max(thisWeekAvg, 10);
+    }
+
+    // Priority 5: 지난달 데이터 (최소 10 보장)
+    if (lastMonthAvg > 0) {
+      return Math.max(lastMonthAvg, 10);
+    }
+
+    // 기본값
+    return 10;
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+  // Step 2: 기본 주간 목표 계산
+  const calculateBaseWeeklyGoal = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
+    const today = new Date();
+
+    // 지난달 날짜 범위
+    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+    const lastMonthDays: string[] = [];
+    for (let d = new Date(lastMonthStart); d <= lastMonthEnd; d.setDate(d.getDate() + 1)) {
+      lastMonthDays.push(d.toISOString().split('T')[0]);
+    }
+
+    const lastMonthExerciseDaysAvg = getExerciseDaysAverage(lastMonthDays, exerciseType);
+    const avgWeeklyFrequency = calculateWeeklyFrequency(exerciseType);
+    const userCapacity = evaluateUserCapacity(exerciseType);
+
+    // Case A: 지난달 데이터 존재 (신뢰도 높음)
+    if (lastMonthExerciseDaysAvg > 0) {
+      return Math.ceil(lastMonthExerciseDaysAvg * avgWeeklyFrequency * 1.05);
+    }
+
+    // Case B: 지난달 데이터 없음 (보수적 접근 - 80% 목표)
+    return Math.ceil(userCapacity * avgWeeklyFrequency * 0.8);
   };
 
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSelectedDate(e.target.value);
+  // Step 3: 최근 추세 보너스 계산
+  const calculateTrendBonus = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
+    const today = new Date();
+
+    // 지난주 날짜
+    const lastWeekDates = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(today);
+      date.setDate(date.getDate() - 7 - i);
+      return date.toISOString().split('T')[0];
+    });
+
+    // 지난달 날짜 범위
+    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+    const lastMonthDays: string[] = [];
+    for (let d = new Date(lastMonthStart); d <= lastMonthEnd; d.setDate(d.getDate() + 1)) {
+      lastMonthDays.push(d.toISOString().split('T')[0]);
+    }
+
+    const lastWeekAvg = getExerciseDaysAverage(lastWeekDates, exerciseType);
+    const lastMonthAvg = getExerciseDaysAverage(lastMonthDays, exerciseType);
+    const avgWeeklyFrequency = calculateWeeklyFrequency(exerciseType);
+
+    // 지난주가 지난달보다 개선된 경우에만 보너스 부여
+    if (lastWeekAvg > lastMonthAvg && lastMonthAvg > 0) {
+      const improvement = lastWeekAvg - lastMonthAvg;
+      return Math.ceil(improvement * avgWeeklyFrequency * 0.3);
+    }
+
+    return 0;
   };
 
-  const saveExerciseData = async () => {
+  // Step 4: 최종 주간 목표 합성 (안전장치 포함)
+  const calculateFinalWeeklyGoal = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'running', previousGoal: number = 0) => {
+    const minWeeklyGoals = {
+      pushups: 50,
+      pullups: 15,
+      dips: 30,
+      running: 6
+    };
+
+    const baseGoal = calculateBaseWeeklyGoal(exerciseType);
+    const trendBonus = calculateTrendBonus(exerciseType);
+    const userCapacity = evaluateUserCapacity(exerciseType);
+    const avgWeeklyFrequency = calculateWeeklyFrequency(exerciseType);
+
+    // 초기 목표 = 기본 + 보너스 (최소값 보장)
+    let finalGoal = Math.max(baseGoal + trendBonus, minWeeklyGoals[exerciseType]);
+
+    // 40% 증가 상한선 적용 (이전 목표가 있을 경우)
+    if (previousGoal > 0) {
+      const maxAllowedGoal = previousGoal * 1.4;
+      finalGoal = Math.min(finalGoal, maxAllowedGoal);
+    }
+
+    // 디버깅 로그
+    console.log(`[${exerciseType}] 목표 계산 상세:`, {
+      사용자능력: Math.round(userCapacity * 10) / 10,
+      주간빈도: Math.round(avgWeeklyFrequency * 10) / 10,
+      기본목표: baseGoal,
+      추세보너스: trendBonus,
+      최소보장: minWeeklyGoals[exerciseType],
+      이전목표: previousGoal,
+      최대허용: previousGoal > 0 ? Math.round(previousGoal * 1.4) : 'N/A',
+      최종목표: finalGoal
+    });
+
+    return finalGoal;
+  };
+
+  // 주간 목표를 계산하고 필요시 Firebase에 저장
+  const saveWeeklyGoalsIfNeeded = async () => {
+    // 각 운동별 목표 계산
+    const currentGoals = {
+      pushups: calculateFinalWeeklyGoal('pushups', previousWeeklyGoals.pushups),
+      pullups: calculateFinalWeeklyGoal('pullups', previousWeeklyGoals.pullups),
+      dips: calculateFinalWeeklyGoal('dips', previousWeeklyGoals.dips),
+      running: calculateFinalWeeklyGoal('running', previousWeeklyGoals.running)
+    };
+
+    // 이번 주 월요일 날짜
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const thisWeekMonday = new Date(today);
+    thisWeekMonday.setDate(today.getDate() - daysFromMonday);
+    const thisWeekMondayStr = thisWeekMonday.toISOString().split('T')[0];
+
+    // 같은 주의 목표가 이미 저장되어 있는지 확인
     if (!user) return;
-    
-    try {
-      const exerciseRef = doc(db, 'exercises', `${user.uid}_${selectedDate}`);
-      const exerciseData = {
-        userId: user.uid,
-        timestamp: Timestamp.fromDate(new Date(selectedDate)),
-        pushups: Number(formData.pushups) || 0,
-        pullups: Number(formData.pullups) || 0,
-        dips: Number(formData.dips) || 0,
-        running: Number(formData.running) || 0,
-        avgPace: formData.avgPace
-      };
 
-      await setDoc(exerciseRef, exerciseData);
-      await loadExerciseData();
-      console.log('Exercise data saved and reloaded successfully');
+    try {
+      const goalsRef = doc(db, 'weeklyGoals', `${user.uid}_${thisWeekMondayStr}`);
+      const goalsDoc = await getDoc(goalsRef);
+
+      // 이번 주 목표가 없거나, 목표값이 변경된 경우에만 저장
+      if (!goalsDoc.exists()) {
+        await saveCurrentWeeklyGoals(currentGoals);
+        console.log('새로운 주간 목표 저장:', currentGoals);
+      }
     } catch (error) {
-      console.error('Error saving exercise data:', error);
-      setError('운동 데이터를 저장하는 중 오류가 발생했습니다.');
+      console.error('주간 목표 확인 오류:', error);
     }
   };
 
@@ -491,8 +840,9 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     // 평균값
     const averageValue = averageStats[exerciseType] || 0;
 
-    // 주간 목표 (현재는 평균의 1.2배로 설정)
-    const weeklyGoal = Math.ceil(averageValue * 7 * 1.2);
+    // 주간 목표 (이전 목표를 전달하여 40% 상한선 적용)
+    const previousGoal = previousWeeklyGoals[exerciseType] || 0;
+    const weeklyGoal = calculateFinalWeeklyGoal(exerciseType, previousGoal);
 
     return {
       chartData,
@@ -575,9 +925,12 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     // 전체 평균값
     const averageValue = averageStats[exerciseType] || 0;
 
-    // 월간 목표 (주간 목표 × 4.3)
-    const weeklyGoal = Math.ceil(averageValue * 7 * 1.2);
-    const monthlyGoal = Math.ceil(weeklyGoal * 4.3);
+    // 주간 목표 (이전 목표를 전달하여 40% 상한선 적용)
+    const previousGoal = previousWeeklyGoals[exerciseType] || 0;
+    const weeklyGoal = calculateFinalWeeklyGoal(exerciseType, previousGoal);
+
+    // 월간 목표 (주간 목표 × 4주, 기존 4.3에서 4로 변경)
+    const monthlyGoal = Math.ceil(weeklyGoal * 4);
 
     return {
       chartData,

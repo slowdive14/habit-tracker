@@ -224,7 +224,7 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
           </Box>
         )}
 
-        {/* 오늘 권장량 (푸시업, 풀업, 딥스만) */}
+        {/* 오늘 권장량 */}
         {todayRecommendation && (
           <Box
             sx={{

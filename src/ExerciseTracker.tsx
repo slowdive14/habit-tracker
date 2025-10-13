@@ -600,7 +600,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       pushups: Infinity,  // 제한 없음
       pullups: Infinity,  // 제한 없음
       dips: Infinity,     // 제한 없음
-      running: 25         // 주 25km 상한선
+      running: Infinity   // 제한 없음
     };
 
     const baseGoal = calculateBaseWeeklyGoal(exerciseType);
@@ -701,8 +701,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     setWeeklyData(data);
   };
 
-  // 주간 목표 진행 상황 및 오늘 권장량 계산 (푸시업, 풀업, 딥스만)
-  const calculateTodayRecommendation = (exerciseType: 'pushups' | 'pullups' | 'dips') => {
+  // 주간 목표 진행 상황 및 오늘 권장량 계산 (푸시업, 풀업, 딥스, 달리기)
+  const calculateTodayRecommendation = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
     const today = new Date();
     const dayOfWeek = today.getDay();
     const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -904,11 +904,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     const previousGoal = previousWeeklyGoals[exerciseType] || 0;
     const weeklyGoal = calculateFinalWeeklyGoal(exerciseType, previousGoal);
 
-    // 오늘 권장량 계산 (푸시업, 풀업, 딥스만)
-    let todayRecommendation = null;
-    if (exerciseType === 'pushups' || exerciseType === 'pullups' || exerciseType === 'dips') {
-      todayRecommendation = calculateTodayRecommendation(exerciseType);
-    }
+    // 오늘 권장량 계산 (모든 운동)
+    const todayRecommendation = calculateTodayRecommendation(exerciseType);
 
     return {
       chartData,

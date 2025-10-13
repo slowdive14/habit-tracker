@@ -43,32 +43,50 @@ const WeeklyTrend: React.FC<WeeklyTrendProps> = ({
 
     // 마지막 주차(현재 주)를 제외한 데이터로 추세선 계산
     const pastData = validData.slice(0, -1);
-    
+
     // 선형 회귀 계산
     const n = pastData.length;
     const indices = pastData.map((_, i) => i);
     const values = pastData.map(d => d.value);
-    
+
     const sumX = indices.reduce((a, b) => a + b, 0);
     const sumY = values.reduce((a, b) => a + b, 0);
     const sumXY = indices.reduce((sum, x, i) => sum + x * values[i], 0);
     const sumXX = indices.reduce((sum, x) => sum + x * x, 0);
-    
+
     // 기울기와 절편 계산
     const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
     const intercept = (sumY - slope * sumX) / n;
-    
+
     // 전체 데이터에 대해 추세값 계산
     return validData.map((item, index) => {
       // 현재 주차인 경우 추세선 값을 null로 설정
       const isCurrentWeek = index === validData.length - 1;
-      
+
       return {
         ...item,
         trend: isCurrentWeek ? null : intercept + slope * index
       };
     });
   }, [validData]);
+
+  // Y축 도메인 동적 계산
+  const yAxisDomain = React.useMemo(() => {
+    if (dataWithTrend.length === 0) return [0, 21];
+
+    // 모든 값(실제 값과 추세선 값)에서 최대값 찾기
+    const allValues = dataWithTrend.flatMap(item => [
+      item.value,
+      item.trend !== null && item.trend !== undefined ? item.trend : 0
+    ]);
+
+    const maxValue = Math.max(...allValues, 0);
+
+    // 최대값이 21 이하면 21로 고정, 아니면 최대값의 1.1배로 설정
+    const upperBound = maxValue <= 21 ? 21 : Math.ceil(maxValue * 1.1);
+
+    return [0, upperBound];
+  }, [dataWithTrend]);
 
   // 데이터가 없는 경우 처리
   if (validData.length === 0) {
@@ -140,7 +158,7 @@ const WeeklyTrend: React.FC<WeeklyTrendProps> = ({
             width={30}
             tick={{ fontSize: 12 }}
             tickFormatter={(value) => `${value}`}
-            domain={[0, 21]}
+            domain={yAxisDomain}
           />
           <Tooltip content={<CustomTooltip />} />
           <Line

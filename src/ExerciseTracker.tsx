@@ -545,13 +545,17 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     const avgWeeklyFrequency = calculateWeeklyFrequency(exerciseType);
     const userCapacity = evaluateUserCapacity(exerciseType);
 
+    // 달리기는 더 보수적인 배율 적용 (0.85배), 다른 운동은 1.05배
+    const growthMultiplier = exerciseType === 'running' ? 0.85 : 1.05;
+    const capacityMultiplier = exerciseType === 'running' ? 0.7 : 0.8;
+
     // Case A: 지난달 데이터 존재 (신뢰도 높음)
     if (lastMonthExerciseDaysAvg > 0) {
-      return Math.ceil(lastMonthExerciseDaysAvg * avgWeeklyFrequency * 1.05);
+      return Math.ceil(lastMonthExerciseDaysAvg * avgWeeklyFrequency * growthMultiplier);
     }
 
-    // Case B: 지난달 데이터 없음 (보수적 접근 - 80% 목표)
-    return Math.ceil(userCapacity * avgWeeklyFrequency * 0.8);
+    // Case B: 지난달 데이터 없음 (보수적 접근)
+    return Math.ceil(userCapacity * avgWeeklyFrequency * capacityMultiplier);
   };
 
   // Step 3: 최근 추세 보너스 계산
@@ -578,6 +582,11 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     const avgWeeklyFrequency = calculateWeeklyFrequency(exerciseType);
 
     // 지난주가 지난달보다 개선된 경우에만 보너스 부여
+    // 달리기는 보너스를 주지 않음 (이미 충분히 도전적)
+    if (exerciseType === 'running') {
+      return 0;
+    }
+
     if (lastWeekAvg > lastMonthAvg && lastMonthAvg > 0) {
       const improvement = lastWeekAvg - lastMonthAvg;
       return Math.ceil(improvement * avgWeeklyFrequency * 0.3);
@@ -592,7 +601,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       pushups: 50,
       pullups: 15,
       dips: 30,
-      running: 6
+      running: 3  // 주 3km (하루 1km씩 3일)
     };
 
     // 운동별 절대 최대값 (건강/안전 고려)

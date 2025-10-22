@@ -7,9 +7,14 @@
       "Bash(git add:*)",
       "Bash(rm:*)",
       "Bash(git push:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npm run build:*)",
+      "Bash(set DISABLE_ESLINT_PLUGIN=true)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "disabledMcpjsonServers": [
+    "gemini-integration"
+  ]
 }

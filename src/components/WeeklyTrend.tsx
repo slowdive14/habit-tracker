@@ -12,6 +12,7 @@ import {
 interface WeekData {
   name: string;
   value: number;
+  trend?: number | null;
 }
 
 interface WeeklyTrendProps {

@@ -143,11 +143,17 @@ const exerciseCharacteristics = {
   }
 };
 
+// 한국 시간 기준 날짜 문자열 생성 유틸리티 함수
+const getKoreanDateString = (date: Date): string => {
+  const koreanTime = new Date(date.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
+  return koreanTime.toISOString().split('T')[0];
+};
+
 const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   const [tabValue, setTabValue] = useState(0);  // 0: 주간 통계
   const [exerciseData, setExerciseData] = useState<ExerciseData>({});
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [shareDate, setShareDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState<string>(getKoreanDateString(new Date()));
+  const [shareDate, setShareDate] = useState<string>(getKoreanDateString(new Date()));
   const [openShareDialog, setOpenShareDialog] = useState(false);
   const [openGuideDialog, setOpenGuideDialog] = useState(false);
   const [selectedExerciseType, setSelectedExerciseType] = useState<string>('');
@@ -234,7 +240,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        const date = data.timestamp.toDate().toISOString().split('T')[0];
+        const date = getKoreanDateString(data.timestamp.toDate());
         newData[date] = {
           timestamp: data.timestamp,
           pushups: data.pushups || 0,
@@ -264,7 +270,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
       const lastWeekMonday = new Date(today);
       lastWeekMonday.setDate(today.getDate() - daysFromMonday - 7);
-      const lastWeekMondayStr = lastWeekMonday.toISOString().split('T')[0];
+      const lastWeekMondayStr = getKoreanDateString(lastWeekMonday);
 
       const goalsRef = doc(db, 'weeklyGoals', `${user.uid}_${lastWeekMondayStr}`);
       const goalsDoc = await getDoc(goalsRef);
@@ -303,7 +309,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
       const thisWeekMonday = new Date(today);
       thisWeekMonday.setDate(today.getDate() - daysFromMonday);
-      const thisWeekMondayStr = thisWeekMonday.toISOString().split('T')[0];
+      const thisWeekMondayStr = getKoreanDateString(thisWeekMonday);
 
       const goalsRef = doc(db, 'weeklyGoals', `${user.uid}_${thisWeekMondayStr}`);
       await setDoc(goalsRef, {
@@ -434,7 +440,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
         const date = new Date(lastSunday);
         date.setDate(lastSunday.getDate() - (weekIndex * 7 + 7) + dayIndex + 1); // 월요일부터 시작
-        weekDays.push(date.toISOString().split('T')[0]);
+        weekDays.push(getKoreanDateString(date));
       }
       last4Weeks.push(weekDays);
     }
@@ -454,7 +460,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
     // 디버깅 로그
     console.log(`[${exerciseType}] 주간 빈도 계산:`, {
-      지난주일요일: lastSunday.toISOString().split('T')[0],
+      지난주일요일: getKoreanDateString(lastSunday),
       '4주전(week1)': `${weeklyData[0][0]} ~ ${weeklyData[0][6]}`,
       '3주전(week2)': `${weeklyData[1][0]} ~ ${weeklyData[1][6]}`,
       '2주전(week3)': `${weeklyData[2][0]} ~ ${weeklyData[2][6]}`,
@@ -477,7 +483,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       return Array.from({ length: 7 }, (_, i) => {
         const date = new Date(today);
         date.setDate(date.getDate() - daysBack - i);
-        return date.toISOString().split('T')[0];
+        return getKoreanDateString(date);
       });
     };
 
@@ -488,7 +494,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       return Array.from({ length: daysInRange }, (_, i) => {
         const date = new Date(startDate);
         date.setDate(date.getDate() + i);
-        return date.toISOString().split('T')[0];
+        return getKoreanDateString(date);
       });
     };
 
@@ -538,7 +544,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
     const lastMonthDays: string[] = [];
     for (let d = new Date(lastMonthStart); d <= lastMonthEnd; d.setDate(d.getDate() + 1)) {
-      lastMonthDays.push(d.toISOString().split('T')[0]);
+      lastMonthDays.push(getKoreanDateString(d));
     }
 
     const lastMonthExerciseDaysAvg = getExerciseDaysAverage(lastMonthDays, exerciseType);
@@ -566,7 +572,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     const lastWeekDates = Array.from({ length: 7 }, (_, i) => {
       const date = new Date(today);
       date.setDate(date.getDate() - 7 - i);
-      return date.toISOString().split('T')[0];
+      return getKoreanDateString(date);
     });
 
     // 지난달 날짜 범위
@@ -574,7 +580,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
     const lastMonthDays: string[] = [];
     for (let d = new Date(lastMonthStart); d <= lastMonthEnd; d.setDate(d.getDate() + 1)) {
-      lastMonthDays.push(d.toISOString().split('T')[0]);
+      lastMonthDays.push(getKoreanDateString(d));
     }
 
     const lastWeekAvg = getExerciseDaysAverage(lastWeekDates, exerciseType);
@@ -663,7 +669,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     const thisWeekMonday = new Date(today);
     thisWeekMonday.setDate(today.getDate() - daysFromMonday);
-    const thisWeekMondayStr = thisWeekMonday.toISOString().split('T')[0];
+    const thisWeekMondayStr = getKoreanDateString(thisWeekMonday);
 
     // 같은 주의 목표가 이미 저장되어 있는지 확인
     if (!user) return;
@@ -684,19 +690,19 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
   const calculateWeeklyData = () => {
     const today = new Date();
-    
+
     // 이번 주 월요일 찾기 (한국 시간 기준)
     const dayOfWeek = today.getDay(); // 0=일요일, 1=월요일, ..., 6=토요일
     const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 일요일인 경우 6, 그외는 요일-1
-    
+
     const thisWeekMonday = new Date(today);
     thisWeekMonday.setDate(today.getDate() - daysFromMonday);
-    
+
     // 월요일부터 7일간의 날짜 생성
     const weekDays = Array.from({ length: 7 }, (_, i) => {
       const date = new Date(thisWeekMonday);
       date.setDate(thisWeekMonday.getDate() + i);
-      return date.toISOString().split('T')[0];
+      return getKoreanDateString(date);
     });
 
     const data = weekDays.map(date => ({
@@ -725,7 +731,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     const weekDaysUntilToday = Array.from({ length: daysUntilToday }, (_, i) => {
       const date = new Date(thisWeekMonday);
       date.setDate(thisWeekMonday.getDate() + i);
-      return date.toISOString().split('T')[0];
+      return getKoreanDateString(date);
     });
 
     // 이번 주 지금까지 완료한 개수
@@ -764,7 +770,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     
     const thisMonthDays = Array.from({ length: daysInThisMonth }, (_, i) => {
       const date = new Date(thisMonthStart.getFullYear(), thisMonthStart.getMonth(), 1 + i);
-      return date.toISOString().split('T')[0];
+      return getKoreanDateString(date);
     });
 
     const data = thisMonthDays.map(date => ({
@@ -825,7 +831,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     // 디버깅: 전체 평균 계산
     console.log('전체 평균 계산 (2025-01-01 통일):', {
       시작일: '2025-01-01',
-      오늘날짜: todayDate.toISOString().split('T')[0],
+      오늘날짜: getKoreanDateString(todayDate),
       경과일수: daysFromStart,
       총운동량: {
         달리기: totalStats.running,
@@ -857,19 +863,19 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   // 카드형 차트를 위한 데이터 준비
   const prepareCardData = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
     const today = new Date();
-    
+
     // 이번 주 월요일 찾기 (한국 시간 기준)
     const dayOfWeek = today.getDay(); // 0=일요일, 1=월요일, ..., 6=토요일
     const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 일요일인 경우 6, 그외는 요일-1
-    
+
     const thisWeekMonday = new Date(today);
     thisWeekMonday.setDate(today.getDate() - daysFromMonday);
-    
+
     // 월요일부터 7일간의 날짜 생성
     const weekDays = Array.from({ length: 7 }, (_, i) => {
       const date = new Date(thisWeekMonday);
       date.setDate(thisWeekMonday.getDate() + i);
-      return date.toISOString().split('T')[0];
+      return getKoreanDateString(date);
     });
 
     const chartData = weekDays.map(date => ({
@@ -878,23 +884,23 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     }));
 
     const currentValue = exerciseData[selectedDate]?.[exerciseType] || 0;
-    
+
     // 이번 주 총합 (월요일부터 현재까지)
     const totalThisWeek = chartData.reduce((sum, day) => sum + day.value, 0);
-    
+
     // 이번 주 평균 계산 (실제 경과한 날수로 나누기)
     const currentDayOfWeek = today.getDay() === 0 ? 7 : today.getDay(); // 일요일=7, 월요일=1
     const thisWeekDaysCount = Math.min(currentDayOfWeek, 7);
     const thisWeekAverage = thisWeekDaysCount > 0 ? totalThisWeek / thisWeekDaysCount : 0;
-    
+
     // 지난 주 데이터 계산 (지난 주 월요일부터 일요일까지 7일)
     const lastWeekMonday = new Date(thisWeekMonday);
     lastWeekMonday.setDate(thisWeekMonday.getDate() - 7);
-    
+
     const lastWeekDays = Array.from({ length: 7 }, (_, i) => {
       const date = new Date(lastWeekMonday);
       date.setDate(lastWeekMonday.getDate() + i);
-      return date.toISOString().split('T')[0];
+      return getKoreanDateString(date);
     });
     
     const lastWeekTotal = lastWeekDays.reduce((sum, date) => {
@@ -938,7 +944,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     
     const thisMonthDays = Array.from({ length: daysInThisMonth }, (_, i) => {
       const date = new Date(thisMonthStart.getFullYear(), thisMonthStart.getMonth(), 1 + i);
-      return date.toISOString().split('T')[0];
+      return getKoreanDateString(date);
     });
 
     const chartData = thisMonthDays.map(date => ({
@@ -973,9 +979,9 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     if (exerciseType === 'running') {
       const originalThisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
       console.log(`달리기 월간 계산 (${exerciseType}):`, {
-        오늘날짜: today.toISOString().split('T')[0],
+        오늘날짜: getKoreanDateString(today),
         오늘getDate: today.getDate(),
-        올바른이번달시작: originalThisMonthStart.toISOString().split('T')[0],
+        올바른이번달시작: getKoreanDateString(originalThisMonthStart),
         경과일수: daysPassedThisMonth,
         이번달데이터개수: thisMonthData.length,
         이번달총거리: thisMonthTotal,
@@ -1029,7 +1035,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       const last30Days = Array.from({ length: 30 }, (_, i) => {
         const date = new Date(today);
         date.setDate(date.getDate() - i);
-        return date.toISOString().split('T')[0];
+        return getKoreanDateString(date);
       });
 
       // 운동 기록 존재 여부 (관대한 계산 - 건너뛰기 고려)
@@ -1229,7 +1235,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
     const last28Days = Array.from({ length: 28 }, (_, i) => {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
-      return date.toISOString().split('T')[0];
+      return getKoreanDateString(date);
     });
     
     // 주별 데이터 분리 (4주)
@@ -1273,7 +1279,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
     const last30Days = Array.from({ length: 30 }, (_, i) => {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
-      return date.toISOString().split('T')[0];
+      return getKoreanDateString(date);
     });
     
     // 모든 날의 평균 (0 포함)

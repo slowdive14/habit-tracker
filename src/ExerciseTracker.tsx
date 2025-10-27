@@ -27,6 +27,9 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import RecommendIcon from '@mui/icons-material/Recommend';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import TodayIcon from '@mui/icons-material/Today';
 import { User } from 'firebase/auth';
 import {
   collection,
@@ -157,6 +160,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   const [openShareDialog, setOpenShareDialog] = useState(false);
   const [openGuideDialog, setOpenGuideDialog] = useState(false);
   const [selectedExerciseType, setSelectedExerciseType] = useState<string>('');
+  const [selectedWeekOffset, setSelectedWeekOffset] = useState(0); // 0: 현재 주, -1: 지난 주, -2: 2주 전...
   const [guideContent, setGuideContent] = useState<{
     title: string;
     description: string;
@@ -222,6 +226,21 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     weekOf: ''
   });
 
+  // 선택된 주차의 목표 저장 (보고 있는 주차의 실제 목표)
+  const [selectedWeekGoals, setSelectedWeekGoals] = useState<{
+    pushups: number;
+    pullups: number;
+    dips: number;
+    running: number;
+    weekOf: string;
+  }>({
+    pushups: 0,
+    pullups: 0,
+    dips: 0,
+    running: 0,
+    weekOf: ''
+  });
+
   const loadExerciseData = async () => {
     if (!user) {
       console.log('No user found, skipping data load');
@@ -277,14 +296,22 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
       if (goalsDoc.exists()) {
         const data = goalsDoc.data();
-        setPreviousWeeklyGoals({
+        // 새로운 데이터 구조 (goals 객체) 또는 기존 데이터 구조 지원
+        const goals = data.goals || {
           pushups: data.pushups || 0,
           pullups: data.pullups || 0,
           dips: data.dips || 0,
-          running: data.running || 0,
+          running: data.running || 0
+        };
+
+        setPreviousWeeklyGoals({
+          pushups: goals.pushups,
+          pullups: goals.pullups,
+          dips: goals.dips,
+          running: goals.running,
           weekOf: lastWeekMondayStr
         });
-        console.log('이전 주간 목표 로드 성공:', data);
+        console.log('이전 주간 목표 로드 성공:', { goals, achievements: data.achievements, rates: data.achievementRates });
       } else {
         console.log('이전 주간 목표 없음 (첫 사용 또는 새로운 주)');
       }
@@ -293,36 +320,68 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     }
   };
 
-  // 현재 주간 목표 저장 (Firebase)
+  // 현재 주간 목표 저장 (Firebase) - 목표량과 달성량 모두 저장
   const saveCurrentWeeklyGoals = async (goals: {
     pushups: number;
     pullups: number;
     dips: number;
     running: number;
-  }) => {
+  }, weekMondayDate?: Date) => {
     if (!user) return;
 
     try {
-      // 이번 주 월요일 날짜 계산
-      const today = new Date();
-      const dayOfWeek = today.getDay();
+      // 주 월요일 날짜 계산 (파라미터로 받지 않으면 이번 주)
+      const targetDate = weekMondayDate || new Date();
+      const dayOfWeek = targetDate.getDay();
       const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-      const thisWeekMonday = new Date(today);
-      thisWeekMonday.setDate(today.getDate() - daysFromMonday);
-      const thisWeekMondayStr = getKoreanDateString(thisWeekMonday);
+      const weekMonday = new Date(targetDate);
+      weekMonday.setDate(targetDate.getDate() - daysFromMonday);
+      const weekMondayStr = getKoreanDateString(weekMonday);
 
-      const goalsRef = doc(db, 'weeklyGoals', `${user.uid}_${thisWeekMondayStr}`);
-      await setDoc(goalsRef, {
-        userId: user.uid,
-        weekOf: thisWeekMondayStr,
-        pushups: goals.pushups,
-        pullups: goals.pullups,
-        dips: goals.dips,
-        running: goals.running,
-        updatedAt: Timestamp.now()
+      // 해당 주의 7일간 날짜 생성
+      const weekDays = Array.from({ length: 7 }, (_, i) => {
+        const date = new Date(weekMonday);
+        date.setDate(weekMonday.getDate() + i);
+        return getKoreanDateString(date);
       });
 
-      console.log('주간 목표 저장 성공:', goals);
+      // 각 운동별 실제 달성량 계산
+      const achievements = {
+        pushups: weekDays.reduce((sum, date) => sum + (exerciseData[date]?.pushups || 0), 0),
+        pullups: weekDays.reduce((sum, date) => sum + (exerciseData[date]?.pullups || 0), 0),
+        dips: weekDays.reduce((sum, date) => sum + (exerciseData[date]?.dips || 0), 0),
+        running: weekDays.reduce((sum, date) => sum + (exerciseData[date]?.running || 0), 0)
+      };
+
+      const goalsRef = doc(db, 'weeklyGoals', `${user.uid}_${weekMondayStr}`);
+      await setDoc(goalsRef, {
+        userId: user.uid,
+        weekOf: weekMondayStr,
+        // 목표량
+        goals: {
+          pushups: goals.pushups,
+          pullups: goals.pullups,
+          dips: goals.dips,
+          running: goals.running
+        },
+        // 실제 달성량
+        achievements: {
+          pushups: achievements.pushups,
+          pullups: achievements.pullups,
+          dips: achievements.dips,
+          running: achievements.running
+        },
+        // 달성률
+        achievementRates: {
+          pushups: goals.pushups > 0 ? Math.round((achievements.pushups / goals.pushups) * 100) : 0,
+          pullups: goals.pullups > 0 ? Math.round((achievements.pullups / goals.pullups) * 100) : 0,
+          dips: goals.dips > 0 ? Math.round((achievements.dips / goals.dips) * 100) : 0,
+          running: goals.running > 0 ? Math.round((achievements.running / goals.running) * 100) : 0
+        },
+        updatedAt: Timestamp.now()
+      }, { merge: true }); // merge: true로 기존 데이터 유지하면서 업데이트
+
+      console.log('주간 목표 및 달성량 저장 성공:', { goals, achievements, weekOf: weekMondayStr });
     } catch (error) {
       console.error('주간 목표 저장 오류:', error);
     }
@@ -338,6 +397,103 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedDate(e.target.value);
+  };
+
+  // 선택된 주차의 목표 로드
+  const loadSelectedWeekGoals = async () => {
+    if (!user) return;
+
+    try {
+      const selectedMonday = getSelectedWeekMonday();
+      const selectedMondayStr = getKoreanDateString(selectedMonday);
+
+      const goalsRef = doc(db, 'weeklyGoals', `${user.uid}_${selectedMondayStr}`);
+      const goalsDoc = await getDoc(goalsRef);
+
+      if (goalsDoc.exists()) {
+        const data = goalsDoc.data();
+        // 새로운 데이터 구조 (goals 객체) 또는 기존 데이터 구조 지원
+        const goals = data.goals || {
+          pushups: data.pushups || 0,
+          pullups: data.pullups || 0,
+          dips: data.dips || 0,
+          running: data.running || 0
+        };
+
+        setSelectedWeekGoals({
+          pushups: goals.pushups,
+          pullups: goals.pullups,
+          dips: goals.dips,
+          running: goals.running,
+          weekOf: selectedMondayStr
+        });
+        console.log(`선택된 주차 (${selectedMondayStr}) 목표 로드 성공:`, { goals, achievements: data.achievements, rates: data.achievementRates });
+      } else {
+        // 목표가 없으면 계산된 목표 사용 (과거 주차의 경우)
+        console.log(`선택된 주차 (${selectedMondayStr}) 목표 없음 - 기본값 사용`);
+        setSelectedWeekGoals({
+          pushups: 0,
+          pullups: 0,
+          dips: 0,
+          running: 0,
+          weekOf: selectedMondayStr
+        });
+      }
+    } catch (error) {
+      console.error('선택된 주차 목표 로드 오류:', error);
+    }
+  };
+
+  // 주차 네비게이션 함수들
+  const goToPreviousWeek = () => {
+    setSelectedWeekOffset(prev => prev - 1);
+  };
+
+  const goToNextWeek = () => {
+    setSelectedWeekOffset(prev => prev + 1);
+  };
+
+  const goToCurrentWeek = () => {
+    setSelectedWeekOffset(0);
+  };
+
+  // 선택된 주의 월요일 날짜 계산
+  const getSelectedWeekMonday = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+
+    const currentWeekMonday = new Date(today);
+    currentWeekMonday.setDate(today.getDate() - daysFromMonday);
+
+    // offset 적용
+    const selectedWeekMonday = new Date(currentWeekMonday);
+    selectedWeekMonday.setDate(currentWeekMonday.getDate() + (selectedWeekOffset * 7));
+
+    return selectedWeekMonday;
+  };
+
+  // 선택된 주의 날짜 범위 텍스트 생성
+  const getSelectedWeekRangeText = () => {
+    const monday = getSelectedWeekMonday();
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    const formatDate = (date: Date) => {
+      const month = date.getMonth() + 1;
+      const day = date.getDate();
+      return `${month}/${day}`;
+    };
+
+    if (selectedWeekOffset === 0) {
+      return `이번 주 (${formatDate(monday)} - ${formatDate(sunday)})`;
+    } else if (selectedWeekOffset === -1) {
+      return `지난 주 (${formatDate(monday)} - ${formatDate(sunday)})`;
+    } else if (selectedWeekOffset < -1) {
+      return `${Math.abs(selectedWeekOffset)}주 전 (${formatDate(monday)} - ${formatDate(sunday)})`;
+    } else {
+      return `${selectedWeekOffset}주 후 (${formatDate(monday)} - ${formatDate(sunday)})`;
+    }
   };
 
   const saveExerciseData = async () => {
@@ -378,10 +534,19 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     calculateMonthlyData();
     calculateConsistencyScores();
 
-    if (Object.keys(exerciseData).length > 0) {
-      saveWeeklyGoalsIfNeeded();
+    // 운동 데이터가 있거나, 이전 목표가 로드되었으면 이번 주 목표 생성
+    if (user && (Object.keys(exerciseData).length > 0 || previousWeeklyGoals.weekOf)) {
+      saveWeeklyGoalsIfNeeded();  // 현재 주차의 목표 및 달성량 저장
+      updateHistoricalAchievements();  // 과거 주차는 달성량만 업데이트 (목표는 변경 안함)
     }
-  }, [exerciseData]);
+  }, [exerciseData, previousWeeklyGoals, user]);
+
+  // 선택된 주차 변경 시 해당 주차 목표 로드
+  useEffect(() => {
+    if (user) {
+      loadSelectedWeekGoals();
+    }
+  }, [selectedWeekOffset, user]);
 
   // 선택된 날짜 변경 useEffect
   useEffect(() => {
@@ -678,13 +843,111 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       const goalsRef = doc(db, 'weeklyGoals', `${user.uid}_${thisWeekMondayStr}`);
       const goalsDoc = await getDoc(goalsRef);
 
-      // 이번 주 목표가 없거나, 목표값이 변경된 경우에만 저장
+      // 이번 주 목표가 없으면 새로 저장, 있으면 달성량만 업데이트
       if (!goalsDoc.exists()) {
         await saveCurrentWeeklyGoals(currentGoals);
         console.log('새로운 주간 목표 저장:', currentGoals);
+      } else {
+        // 기존 목표가 있으면 달성량만 업데이트
+        await saveCurrentWeeklyGoals(currentGoals);
       }
     } catch (error) {
       console.error('주간 목표 확인 오류:', error);
+    }
+  };
+
+  // 과거 주차의 달성량만 업데이트하는 함수 (목표는 변경하지 않음)
+  const updateHistoricalAchievements = async () => {
+    if (!user || Object.keys(exerciseData).length === 0) return;
+
+    try {
+      // 현재 주 월요일
+      const today = new Date();
+      const todayDayOfWeek = today.getDay();
+      const todayDaysFromMonday = todayDayOfWeek === 0 ? 6 : todayDayOfWeek - 1;
+      const currentWeekMonday = new Date(today);
+      currentWeekMonday.setDate(today.getDate() - todayDaysFromMonday);
+      const currentWeekMondayStr = getKoreanDateString(currentWeekMonday);
+
+      // 모든 운동 데이터의 날짜를 가져와서 주차별로 그룹화
+      const dates = Object.keys(exerciseData).sort();
+      if (dates.length === 0) return;
+
+      // 각 날짜가 속한 주의 월요일 찾기
+      const weekMondays = new Set<string>();
+      dates.forEach(dateStr => {
+        const date = new Date(dateStr);
+        const dayOfWeek = date.getDay();
+        const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const monday = new Date(date);
+        monday.setDate(date.getDate() - daysFromMonday);
+        weekMondays.add(getKoreanDateString(monday));
+      });
+
+      // 각 주차의 달성량만 업데이트 (현재 주는 제외, 목표는 절대 변경하지 않음)
+      for (const mondayStr of Array.from(weekMondays)) {
+        if (mondayStr === currentWeekMondayStr) continue; // 현재 주는 saveWeeklyGoalsIfNeeded에서 처리
+
+        const goalsRef = doc(db, 'weeklyGoals', `${user.uid}_${mondayStr}`);
+        const goalsDoc = await getDoc(goalsRef);
+
+        // 해당 주의 7일간 날짜 생성
+        const monday = new Date(mondayStr);
+        const weekDays = Array.from({ length: 7 }, (_, i) => {
+          const date = new Date(monday);
+          date.setDate(monday.getDate() + i);
+          return getKoreanDateString(date);
+        });
+
+        // 실제 달성량 계산
+        const achievements = {
+          pushups: weekDays.reduce((sum, date) => sum + (exerciseData[date]?.pushups || 0), 0),
+          pullups: weekDays.reduce((sum, date) => sum + (exerciseData[date]?.pullups || 0), 0),
+          dips: weekDays.reduce((sum, date) => sum + (exerciseData[date]?.dips || 0), 0),
+          running: weekDays.reduce((sum, date) => sum + (exerciseData[date]?.running || 0), 0)
+        };
+
+        // ⚠️ 중요: 과거 주차는 달성량만 업데이트, 목표는 절대 변경하지 않음
+        if (goalsDoc.exists()) {
+          // 기존에 저장된 목표가 있으면 그 목표를 유지하고 달성량만 업데이트
+          const existingData = goalsDoc.data();
+          const existingGoals = existingData.goals || {
+            pushups: existingData.pushups || 0,
+            pullups: existingData.pullups || 0,
+            dips: existingData.dips || 0,
+            running: existingData.running || 0
+          };
+
+          // 달성률 계산
+          const achievementRates = {
+            pushups: existingGoals.pushups > 0 ? Math.round((achievements.pushups / existingGoals.pushups) * 100) : 0,
+            pullups: existingGoals.pullups > 0 ? Math.round((achievements.pullups / existingGoals.pullups) * 100) : 0,
+            dips: existingGoals.dips > 0 ? Math.round((achievements.dips / existingGoals.dips) * 100) : 0,
+            running: existingGoals.running > 0 ? Math.round((achievements.running / existingGoals.running) * 100) : 0
+          };
+
+          // 목표는 유지하고 달성량과 달성률만 업데이트
+          await setDoc(goalsRef, {
+            userId: user.uid,
+            weekOf: mondayStr,
+            goals: existingGoals,  // 기존 목표 유지
+            achievements: achievements,  // 달성량만 업데이트
+            achievementRates: achievementRates,
+            updatedAt: Timestamp.now()
+          }, { merge: true });
+
+          console.log(`✅ 과거 주차 (${mondayStr}) 달성량 업데이트:`, {
+            goals: existingGoals,
+            achievements,
+            rates: achievementRates
+          });
+        } else {
+          // 과거 주차인데 목표가 없는 경우: 저장하지 않음 (당시 목표를 모르므로)
+          console.log(`⚠️ 과거 주차 (${mondayStr}) 목표 없음 - 건너뜀 (당시 목표 데이터 없음)`);
+        }
+      }
+    } catch (error) {
+      console.error('과거 주차 달성량 업데이트 오류:', error);
     }
   };
 
@@ -864,12 +1127,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   const prepareCardData = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
     const today = new Date();
 
-    // 이번 주 월요일 찾기 (한국 시간 기준)
-    const dayOfWeek = today.getDay(); // 0=일요일, 1=월요일, ..., 6=토요일
-    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 일요일인 경우 6, 그외는 요일-1
-
-    const thisWeekMonday = new Date(today);
-    thisWeekMonday.setDate(today.getDate() - daysFromMonday);
+    // 선택된 주의 월요일 가져오기
+    const thisWeekMonday = getSelectedWeekMonday();
 
     // 월요일부터 7일간의 날짜 생성
     const weekDays = Array.from({ length: 7 }, (_, i) => {
@@ -885,12 +1144,18 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
     const currentValue = exerciseData[selectedDate]?.[exerciseType] || 0;
 
-    // 이번 주 총합 (월요일부터 현재까지)
+    // 선택된 주의 총합 계산
     const totalThisWeek = chartData.reduce((sum, day) => sum + day.value, 0);
 
-    // 이번 주 평균 계산 (실제 경과한 날수로 나누기)
-    const currentDayOfWeek = today.getDay() === 0 ? 7 : today.getDay(); // 일요일=7, 월요일=1
-    const thisWeekDaysCount = Math.min(currentDayOfWeek, 7);
+    // 선택된 주의 평균 계산
+    // 현재 주를 보는 경우: 오늘까지만 평균 계산
+    // 과거 주를 보는 경우: 전체 7일로 평균 계산
+    let thisWeekDaysCount = 7;
+    if (selectedWeekOffset === 0) {
+      // 현재 주인 경우, 오늘까지만 계산
+      const currentDayOfWeek = today.getDay() === 0 ? 7 : today.getDay();
+      thisWeekDaysCount = Math.min(currentDayOfWeek, 7);
+    }
     const thisWeekAverage = thisWeekDaysCount > 0 ? totalThisWeek / thisWeekDaysCount : 0;
 
     // 지난 주 데이터 계산 (지난 주 월요일부터 일요일까지 7일)
@@ -915,12 +1180,29 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     // 평균값
     const averageValue = averageStats[exerciseType] || 0;
 
-    // 주간 목표 (이전 목표를 전달하여 40% 상한선 적용)
-    const previousGoal = previousWeeklyGoals[exerciseType] || 0;
-    const weeklyGoal = calculateFinalWeeklyGoal(exerciseType, previousGoal);
+    // 주간 목표 결정 로직
+    // 1. 선택된 주차가 현재 주인 경우: previousWeeklyGoals 사용 (현재 주 목표)
+    // 2. 선택된 주차가 과거 주인 경우: selectedWeekGoals 사용 (그 주차의 실제 목표)
+    // 3. 과거 주차에 저장된 목표가 없으면: 계산된 목표를 대신 사용
+    let weeklyGoal: number;
+    if (selectedWeekOffset === 0) {
+      // 현재 주: 계산된 목표 사용
+      const previousGoal = previousWeeklyGoals[exerciseType] || 0;
+      weeklyGoal = calculateFinalWeeklyGoal(exerciseType, previousGoal);
+    } else {
+      // 과거/미래 주: 저장된 목표 사용
+      const savedGoal = selectedWeekGoals[exerciseType];
+      if (savedGoal && savedGoal > 0) {
+        // 저장된 목표가 있으면 사용
+        weeklyGoal = savedGoal;
+      } else {
+        // 저장된 목표가 없으면 계산된 목표를 대신 사용
+        weeklyGoal = calculateFinalWeeklyGoal(exerciseType, 0);
+      }
+    }
 
-    // 오늘 권장량 계산 (모든 운동)
-    const todayRecommendation = calculateTodayRecommendation(exerciseType);
+    // 오늘 권장량 계산 (현재 주에만 의미 있음)
+    const todayRecommendation = selectedWeekOffset === 0 ? calculateTodayRecommendation(exerciseType) : null;
 
     return {
       chartData,
@@ -1625,6 +1907,63 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
         </Box>
 
         <TabPanel value={tabValue} index={0}>
+          {/* 주차 네비게이션 컨트롤 */}
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            mb: 3,
+            p: 2,
+            borderRadius: 2,
+            backgroundColor: 'rgba(0, 0, 0, 0.02)',
+            border: '1px solid rgba(0, 0, 0, 0.08)'
+          }}>
+            <IconButton
+              onClick={goToPreviousWeek}
+              color="primary"
+              sx={{
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                }
+              }}
+            >
+              <ChevronLeftIcon />
+            </IconButton>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                {getSelectedWeekRangeText()}
+              </Typography>
+              {selectedWeekOffset !== 0 && (
+                <Button
+                  size="small"
+                  startIcon={<TodayIcon />}
+                  onClick={goToCurrentWeek}
+                  variant="outlined"
+                  sx={{
+                    minWidth: '100px',
+                    borderRadius: 2
+                  }}
+                >
+                  이번 주
+                </Button>
+              )}
+            </Box>
+
+            <IconButton
+              onClick={goToNextWeek}
+              color="primary"
+              disabled={selectedWeekOffset >= 0}
+              sx={{
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                }
+              }}
+            >
+              <ChevronRightIcon />
+            </IconButton>
+          </Box>
+
           <Typography variant="h6" gutterBottom sx={{ mb: 3, fontWeight: 600, color: 'text.primary' }}>
             주간 운동 현황
           </Typography>

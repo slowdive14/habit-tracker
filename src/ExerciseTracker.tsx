@@ -61,6 +61,7 @@ interface Exercise {
   pushups: number;
   pullups: number;
   dips: number;
+  lateralRaise: number;  // 사이드 래터럴 레이즈
   running: number;
   avgPace: string;  // mm:ss format
 }
@@ -128,16 +129,24 @@ const exerciseCharacteristics = {
     progression: "reps",
     maxRecommended: 15
   },
-  dips: { 
-    optimalFrequency: 3, 
+  dips: {
+    optimalFrequency: 3,
     recoveryNeeded: true,
     intensityType: "근력",
     recommendedRest: 1,
     progression: "reps",
     maxRecommended: 25
   },
-  running: { 
-    optimalFrequency: 3, 
+  lateralRaise: {
+    optimalFrequency: 3,
+    recoveryNeeded: true,
+    intensityType: "근력",
+    recommendedRest: 1,
+    progression: "reps",
+    maxRecommended: 20
+  },
+  running: {
+    optimalFrequency: 3,
     recoveryNeeded: true,
     intensityType: "유산소 중강도",
     recommendedRest: 1,
@@ -182,6 +191,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     pushups: '',
     pullups: '',
     dips: '',
+    lateralRaise: '',
     running: '',
     avgPace: ''
   });
@@ -193,6 +203,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     pushups: 0,
     pullups: 0,
     dips: 0,
+    lateralRaise: 0,
     avgPace: '',
     daysCountedRunning: 0,
     daysCountedExercises: 0,
@@ -216,12 +227,14 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     pushups: number;
     pullups: number;
     dips: number;
+    lateralRaise: number;
     running: number;
     weekOf: string; // 목표가 설정된 주의 월요일 날짜
   }>({
     pushups: 0,
     pullups: 0,
     dips: 0,
+    lateralRaise: 0,
     running: 0,
     weekOf: ''
   });
@@ -231,12 +244,14 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     pushups: number;
     pullups: number;
     dips: number;
+    lateralRaise: number;
     running: number;
     weekOf: string;
   }>({
     pushups: 0,
     pullups: 0,
     dips: 0,
+    lateralRaise: 0,
     running: 0,
     weekOf: ''
   });
@@ -265,6 +280,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           pushups: data.pushups || 0,
           pullups: data.pullups || 0,
           dips: data.dips || 0,
+          lateralRaise: data.lateralRaise || 0,
           running: data.running || 0,
           avgPace: data.avgPace || ''
         };
@@ -301,6 +317,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           pushups: data.pushups || 0,
           pullups: data.pullups || 0,
           dips: data.dips || 0,
+          lateralRaise: data.lateralRaise || 0,
           running: data.running || 0
         };
 
@@ -308,6 +325,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           pushups: goals.pushups,
           pullups: goals.pullups,
           dips: goals.dips,
+          lateralRaise: goals.lateralRaise,
           running: goals.running,
           weekOf: lastWeekMondayStr
         });
@@ -325,6 +343,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     pushups: number;
     pullups: number;
     dips: number;
+    lateralRaise: number;
     running: number;
   }, weekMondayDate?: Date) => {
     if (!user) return;
@@ -350,6 +369,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         pushups: weekDays.reduce((sum, date) => sum + (exerciseData[date]?.pushups || 0), 0),
         pullups: weekDays.reduce((sum, date) => sum + (exerciseData[date]?.pullups || 0), 0),
         dips: weekDays.reduce((sum, date) => sum + (exerciseData[date]?.dips || 0), 0),
+        lateralRaise: weekDays.reduce((sum, date) => sum + (exerciseData[date]?.lateralRaise || 0), 0),
         running: weekDays.reduce((sum, date) => sum + (exerciseData[date]?.running || 0), 0)
       };
 
@@ -362,6 +382,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           pushups: goals.pushups,
           pullups: goals.pullups,
           dips: goals.dips,
+          lateralRaise: goals.lateralRaise,
           running: goals.running
         },
         // 실제 달성량
@@ -369,6 +390,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           pushups: achievements.pushups,
           pullups: achievements.pullups,
           dips: achievements.dips,
+          lateralRaise: achievements.lateralRaise,
           running: achievements.running
         },
         // 달성률
@@ -376,6 +398,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           pushups: goals.pushups > 0 ? Math.round((achievements.pushups / goals.pushups) * 100) : 0,
           pullups: goals.pullups > 0 ? Math.round((achievements.pullups / goals.pullups) * 100) : 0,
           dips: goals.dips > 0 ? Math.round((achievements.dips / goals.dips) * 100) : 0,
+          lateralRaise: goals.lateralRaise > 0 ? Math.round((achievements.lateralRaise / goals.lateralRaise) * 100) : 0,
           running: goals.running > 0 ? Math.round((achievements.running / goals.running) * 100) : 0
         },
         updatedAt: Timestamp.now()
@@ -417,6 +440,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           pushups: data.pushups || 0,
           pullups: data.pullups || 0,
           dips: data.dips || 0,
+          lateralRaise: data.lateralRaise || 0,
           running: data.running || 0
         };
 
@@ -424,6 +448,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           pushups: goals.pushups,
           pullups: goals.pullups,
           dips: goals.dips,
+          lateralRaise: goals.lateralRaise,
           running: goals.running,
           weekOf: selectedMondayStr
         });
@@ -435,6 +460,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           pushups: 0,
           pullups: 0,
           dips: 0,
+          lateralRaise: 0,
           running: 0,
           weekOf: selectedMondayStr
         });
@@ -507,6 +533,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         pushups: Number(formData.pushups) || 0,
         pullups: Number(formData.pullups) || 0,
         dips: Number(formData.dips) || 0,
+        lateralRaise: Number(formData.lateralRaise) || 0,
         running: Number(formData.running) || 0,
         avgPace: formData.avgPace
       };
@@ -556,6 +583,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         pushups: String(existingData.pushups || ''),
         pullups: String(existingData.pullups || ''),
         dips: String(existingData.dips || ''),
+        lateralRaise: String(existingData.lateralRaise || ''),
         running: String(existingData.running || ''),
         avgPace: existingData.avgPace || ''
       });
@@ -564,6 +592,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         pushups: '',
         pullups: '',
         dips: '',
+        lateralRaise: '',
         running: '',
         avgPace: ''
       });
@@ -573,14 +602,14 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   // Helper Functions for Goal Calculation
 
   // 실제 운동한 날의 데이터만 추출
-  const getExerciseDays = (dateRange: string[], exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
+  const getExerciseDays = (dateRange: string[], exerciseType: 'pushups' | 'pullups' | 'dips' | 'lateralRaise' | 'running') => {
     return dateRange
       .map(date => exerciseData[date]?.[exerciseType])
       .filter((value): value is number => typeof value === 'number' && value > 0);
   };
 
   // 운동일 평균 계산 (0인 날 제외)
-  const getExerciseDaysAverage = (dateRange: string[], exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
+  const getExerciseDaysAverage = (dateRange: string[], exerciseType: 'pushups' | 'pullups' | 'dips' | 'lateralRaise' | 'running') => {
     const exerciseDays = getExerciseDays(dateRange, exerciseType);
     if (exerciseDays.length === 0) return 0;
 
@@ -588,7 +617,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   };
 
   // 최근 4주간 평균 주간 운동 빈도 계산 (완전한 주 단위)
-  const calculateWeeklyFrequency = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
+  const calculateWeeklyFrequency = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'lateralRaise' | 'running') => {
     const today = new Date();
 
     // 지난 주 일요일 찾기
@@ -640,7 +669,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   };
 
   // Step 1: 사용자 운동 능력 평가 (5단계 우선순위)
-  const evaluateUserCapacity = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
+  const evaluateUserCapacity = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'lateralRaise' | 'running') => {
     const today = new Date();
 
     // 날짜 범위 생성
@@ -701,7 +730,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   };
 
   // Step 2: 기본 주간 목표 계산
-  const calculateBaseWeeklyGoal = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
+  const calculateBaseWeeklyGoal = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'lateralRaise' | 'running') => {
     const today = new Date();
 
     // 지난달 날짜 범위
@@ -730,7 +759,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   };
 
   // Step 3: 최근 추세 보너스 계산
-  const calculateTrendBonus = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
+  const calculateTrendBonus = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'lateralRaise' | 'running') => {
     const today = new Date();
 
     // 지난주 날짜
@@ -767,11 +796,12 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   };
 
   // Step 4: 최종 주간 목표 합성 (안전장치 포함)
-  const calculateFinalWeeklyGoal = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'running', previousGoal: number = 0) => {
+  const calculateFinalWeeklyGoal = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'lateralRaise' | 'running', previousGoal: number = 0) => {
     const minWeeklyGoals = {
       pushups: 50,
       pullups: 15,
       dips: 30,
+      lateralRaise: 50,
       running: 3  // 주 3km (하루 1km씩 3일)
     };
 
@@ -780,6 +810,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       pushups: Infinity,  // 제한 없음
       pullups: Infinity,  // 제한 없음
       dips: Infinity,     // 제한 없음
+      lateralRaise: Infinity,  // 제한 없음
       running: Infinity   // 제한 없음
     };
 
@@ -825,6 +856,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       pushups: calculateFinalWeeklyGoal('pushups', previousWeeklyGoals.pushups),
       pullups: calculateFinalWeeklyGoal('pullups', previousWeeklyGoals.pullups),
       dips: calculateFinalWeeklyGoal('dips', previousWeeklyGoals.dips),
+      lateralRaise: calculateFinalWeeklyGoal('lateralRaise', previousWeeklyGoals.lateralRaise),
       running: calculateFinalWeeklyGoal('running', previousWeeklyGoals.running)
     };
 
@@ -904,6 +936,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           pushups: weekDays.reduce((sum, date) => sum + (exerciseData[date]?.pushups || 0), 0),
           pullups: weekDays.reduce((sum, date) => sum + (exerciseData[date]?.pullups || 0), 0),
           dips: weekDays.reduce((sum, date) => sum + (exerciseData[date]?.dips || 0), 0),
+          lateralRaise: weekDays.reduce((sum, date) => sum + (exerciseData[date]?.lateralRaise || 0), 0),
           running: weekDays.reduce((sum, date) => sum + (exerciseData[date]?.running || 0), 0)
         };
 
@@ -915,6 +948,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
             pushups: existingData.pushups || 0,
             pullups: existingData.pullups || 0,
             dips: existingData.dips || 0,
+            lateralRaise: existingData.lateralRaise || 0,
             running: existingData.running || 0
           };
 
@@ -923,6 +957,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
             pushups: existingGoals.pushups > 0 ? Math.round((achievements.pushups / existingGoals.pushups) * 100) : 0,
             pullups: existingGoals.pullups > 0 ? Math.round((achievements.pullups / existingGoals.pullups) * 100) : 0,
             dips: existingGoals.dips > 0 ? Math.round((achievements.dips / existingGoals.dips) * 100) : 0,
+            lateralRaise: existingGoals.lateralRaise > 0 ? Math.round((achievements.lateralRaise / existingGoals.lateralRaise) * 100) : 0,
             running: existingGoals.running > 0 ? Math.round((achievements.running / existingGoals.running) * 100) : 0
           };
 
@@ -979,8 +1014,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     setWeeklyData(data);
   };
 
-  // 주간 목표 진행 상황 및 오늘 권장량 계산 (푸시업, 풀업, 딥스, 달리기)
-  const calculateTodayRecommendation = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
+  // 주간 목표 진행 상황 및 오늘 권장량 계산 (푸시업, 풀업, 딥스, 사이드 래터럴 레이즈, 달리기)
+  const calculateTodayRecommendation = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'lateralRaise' | 'running') => {
     const today = new Date();
     const dayOfWeek = today.getDay();
     const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -1061,6 +1096,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           acc.pushups += data.pushups || 0;
           acc.pullups += data.pullups || 0;
           acc.dips += data.dips || 0;
+          acc.lateralRaise += data.lateralRaise || 0;
           acc.running += data.running || 0;
           if (data.running && data.avgPace) {
             acc.runningDays++;
@@ -1071,7 +1107,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         }
         return acc;
       },
-      { running: 0, pushups: 0, pullups: 0, dips: 0, runningDays: 0, totalPaceSeconds: 0 }
+      { running: 0, pushups: 0, pullups: 0, dips: 0, lateralRaise: 0, runningDays: 0, totalPaceSeconds: 0 }
     );
 
     // Calculate average pace
@@ -1090,7 +1126,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     const pushupsTotalAverage = totalStats.pushups / daysFromStart;
     const pullupsTotalAverage = totalStats.pullups / daysFromStart;
     const dipsTotalAverage = totalStats.dips / daysFromStart;
-    
+    const lateralRaiseTotalAverage = totalStats.lateralRaise / daysFromStart;
+
     // 디버깅: 전체 평균 계산
     console.log('전체 평균 계산 (2025-01-01 통일):', {
       시작일: '2025-01-01',
@@ -1100,13 +1137,15 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         달리기: totalStats.running,
         푸시업: totalStats.pushups,
         풀업: totalStats.pullups,
-        딥스: totalStats.dips
+        딥스: totalStats.dips,
+        래터럴레이즈: totalStats.lateralRaise
       },
       계산된평균: {
         달리기: runningTotalAverage,
         푸시업: pushupsTotalAverage,
         풀업: pullupsTotalAverage,
-        딥스: dipsTotalAverage
+        딥스: dipsTotalAverage,
+        래터럴레이즈: lateralRaiseTotalAverage
       }
     });
 
@@ -1116,6 +1155,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       pushups: Math.round(pushupsTotalAverage * 10) / 10,
       pullups: Math.round(pullupsTotalAverage * 10) / 10,
       dips: Math.round(dipsTotalAverage * 10) / 10,
+      lateralRaise: Math.round(lateralRaiseTotalAverage * 10) / 10,
       avgPace: averagePace,
       daysCountedRunning: daysFromStart,
       daysCountedExercises: daysFromStart,
@@ -1124,7 +1164,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   };
 
   // 카드형 차트를 위한 데이터 준비
-  const prepareCardData = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
+  const prepareCardData = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'lateralRaise' | 'running') => {
     const today = new Date();
 
     // 선택된 주의 월요일 가져오기
@@ -1185,6 +1225,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     // 2. 선택된 주차가 과거 주인 경우: selectedWeekGoals 사용 (그 주차의 실제 목표)
     // 3. 과거 주차에 저장된 목표가 없으면: 계산된 목표를 대신 사용
     let weeklyGoal: number;
+
     if (selectedWeekOffset === 0) {
       // 현재 주: 계산된 목표 사용
       const previousGoal = previousWeeklyGoals[exerciseType] || 0;
@@ -1218,7 +1259,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   };
 
   // 월간 카드형 차트를 위한 데이터 준비
-  const prepareMonthlyCardData = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'running') => {
+  const prepareMonthlyCardData = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'lateralRaise' | 'running') => {
     // 이번 달 1일부터 오늘까지의 날짜 생성
     const today = new Date();
     const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -1811,6 +1852,16 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
+                label="사이드 래터럴 레이즈"
+                name="lateralRaise"
+                type="number"
+                value={formData.lateralRaise}
+                onChange={handleInputChange}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
                 label="달리기 (km)"
                 name="running"
                 type="number"
@@ -1968,12 +2019,13 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
             주간 운동 현황
           </Typography>
           <Grid container spacing={3}>
-            {(['pushups', 'pullups', 'dips', 'running'] as const).map((exerciseType) => {
+            {(['pushups', 'pullups', 'dips', 'lateralRaise', 'running'] as const).map((exerciseType) => {
               const data = prepareCardData(exerciseType);
               const exerciseInfo = {
                 pushups: { title: '푸시업', color: '#8884d8', unit: '회' },
                 pullups: { title: '풀업', color: '#82ca9d', unit: '회' },
                 dips: { title: '딥스', color: '#ffc658', unit: '회' },
+                lateralRaise: { title: '사이드 래터럴 레이즈', color: '#ff7043', unit: '회' },
                 running: { title: '달리기', color: '#e91e63', unit: 'km' }
               };
               

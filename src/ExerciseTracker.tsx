@@ -1525,6 +1525,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 Push-up: ${dayData.pushups}회 💪
 Pull-up: ${dayData.pullups}회 🏋️
 Dips: ${dayData.dips}회 🔥
+Lateral Raise: ${dayData.lateralRaise}회 🏋️‍♂️
 Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
 
 #내재역량 #저속노화 #감정조절 #인지기능개선`;

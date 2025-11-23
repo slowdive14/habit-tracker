@@ -1,0 +1,644 @@
+/* ============================================
+   ZEN GARDEN HABITFLOW THEME
+   Calm. Organic. Peaceful.
+   ============================================ */
+
+/* Import Zen Garden Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Crimson+Pro:wght@400;600&family=Lora:wght@400;600&display=swap');
+
+:root[data-theme="zen-garden"] {
+  /* Zen Garden Color Palette */
+  --zen-forest: #2D5016;        /* Deep forest green */
+  --zen-cream: #E8DCC4;          /* Warm cream */
+  --zen-terracotta: #C97D60;     /* Terracotta accent */
+  --zen-sage: #A8B5A0;           /* Sage green */
+  --zen-white: #FDFBF7;          /* Off-white */
+  --zen-moss: #4A6741;           /* Moss green */
+  --zen-sand: #D4C5B0;           /* Sandy beige */
+  --zen-clay: #A67C52;           /* Clay brown */
+
+  /* Typography */
+  --font-display: 'Playfair Display', serif;
+  --font-body: 'Crimson Pro', serif;
+  --font-accent: 'Lora', serif;
+  --font-mono: 'Crimson Pro', serif;
+
+  /* Spacing (organic, asymmetric) */
+  --zen-spacing-xs: 8px;
+  --zen-spacing-sm: 16px;
+  --zen-spacing-md: 32px;
+  --zen-spacing-lg: 64px;
+  --zen-spacing-xl: 96px;
+
+  /* Border Radius (soft, organic) */
+  --zen-radius-sm: 12px;
+  --zen-radius-md: 16px;
+  --zen-radius-lg: 24px;
+  --zen-radius-xl: 32px;
+
+  /* Shadows (soft, layered) */
+  --zen-shadow-sm: 0 2px 12px rgba(45, 80, 22, 0.06);
+  --zen-shadow-md: 0 4px 20px rgba(45, 80, 22, 0.08);
+  --zen-shadow-lg: 0 12px 40px rgba(45, 80, 22, 0.12);
+  --zen-shadow-xl: 0 20px 60px rgba(45, 80, 22, 0.16);
+
+  /* Gradients */
+  --zen-gradient-primary: linear-gradient(135deg, #FDFBF7 0%, #E8DCC4 100%);
+  --zen-gradient-secondary: linear-gradient(135deg, #A8B5A0 0%, #2D5016 100%);
+  --zen-gradient-accent: linear-gradient(135deg, #D4C5B0 0%, #C97D60 100%);
+}
+
+/* ============================================
+   GLOBAL RESETS - ZEN STYLE
+   ============================================ */
+
+:root[data-theme="zen-garden"] * {
+  box-sizing: border-box;
+}
+
+:root[data-theme="zen-garden"] body {
+  font-family: var(--font-body);
+  background: var(--zen-gradient-primary);
+  color: var(--zen-forest);
+  line-height: 1.8;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================
+   APP CONTAINER - ORGANIC LAYOUT
+   ============================================ */
+
+:root[data-theme="zen-garden"] .app-container {
+  min-height: 100vh;
+  background: var(--zen-gradient-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Watercolor texture overlay */
+:root[data-theme="zen-garden"] .app-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(168, 181, 160, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(201, 125, 96, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(212, 197, 176, 0.03) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  animation: watercolorFloat 30s ease-in-out infinite;
+}
+
+@keyframes watercolorFloat {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.05);
+  }
+}
+
+/* ============================================
+   HEADER - ELEGANT TYPOGRAPHY
+   ============================================ */
+
+:root[data-theme="zen-garden"] .brutal-header {
+  background: var(--zen-gradient-secondary);
+  color: var(--zen-white);
+  padding: var(--zen-spacing-xl) var(--zen-spacing-md);
+  border-bottom: none;
+  box-shadow: var(--zen-shadow-lg);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: var(--zen-spacing-lg);
+}
+
+/* Organic shape background */
+:root[data-theme="zen-garden"] .brutal-header::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 80%;
+  height: 200%;
+  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: gentleFloat 20s ease-in-out infinite;
+}
+
+@keyframes gentleFloat {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(-20px, 20px) rotate(5deg);
+  }
+}
+
+:root[data-theme="zen-garden"] .brutal-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  text-transform: none;
+  margin-bottom: var(--zen-spacing-sm);
+  position: relative;
+  z-index: 1;
+  animation: none;
+}
+
+:root[data-theme="zen-garden"] .brutal-title span {
+  animation: none;
+  font-style: italic;
+}
+
+:root[data-theme="zen-garden"] .brutal-subtitle {
+  font-family: var(--font-accent);
+  font-size: 1.1rem;
+  text-transform: none;
+  letter-spacing: 0.15em;
+  color: var(--zen-cream);
+  font-style: italic;
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================
+   TABS - SOFT NAVIGATION
+   ============================================ */
+
+:root[data-theme="zen-garden"] .brutal-tabs {
+  display: flex;
+  gap: var(--zen-spacing-sm);
+  margin: 0 var(--zen-spacing-md) var(--zen-spacing-lg);
+  border: none;
+  background: transparent;
+}
+
+:root[data-theme="zen-garden"] .brutal-tab {
+  flex: 1;
+  padding: var(--zen-spacing-md);
+  background: var(--zen-white);
+  border: 2px solid var(--zen-sage);
+  border-radius: var(--zen-radius-md);
+  font-family: var(--font-accent);
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: var(--zen-shadow-sm);
+  color: var(--zen-forest);
+}
+
+:root[data-theme="zen-garden"] .brutal-tab:hover {
+  background: var(--zen-cream);
+  transform: translateY(-2px);
+  box-shadow: var(--zen-shadow-md);
+}
+
+:root[data-theme="zen-garden"] .brutal-tab.active {
+  background: var(--zen-gradient-secondary);
+  color: var(--zen-white);
+  border-color: var(--zen-forest);
+  box-shadow: var(--zen-shadow-lg);
+}
+
+:root[data-theme="zen-garden"] .brutal-tab.active::before {
+  content: '🌸';
+  position: absolute;
+  left: 12px;
+  animation: blossomFloat 2s ease-in-out infinite;
+}
+
+@keyframes blossomFloat {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-5px) rotate(10deg);
+    opacity: 0.7;
+  }
+}
+
+/* ============================================
+   CARDS - ORGANIC SHAPES
+   ============================================ */
+
+:root[data-theme="zen-garden"] .brutal-card {
+  background: var(--zen-white);
+  border: 2px solid var(--zen-sage);
+  border-radius: var(--zen-radius-lg);
+  box-shadow: var(--zen-shadow-md);
+  padding: var(--zen-spacing-md);
+  margin-bottom: var(--zen-spacing-md);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+:root[data-theme="zen-garden"] .brutal-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(168, 181, 160, 0.1) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+:root[data-theme="zen-garden"] .brutal-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: var(--zen-shadow-xl);
+  border-color: var(--zen-terracotta);
+}
+
+:root[data-theme="zen-garden"] .brutal-card:hover::before {
+  opacity: 1;
+}
+
+/* ============================================
+   BUTTONS - SOFT INTERACTIONS
+   ============================================ */
+
+:root[data-theme="zen-garden"] .brutal-button {
+  background: var(--zen-white);
+  border: 2px solid var(--zen-forest);
+  border-radius: var(--zen-radius-md);
+  padding: var(--zen-spacing-sm) var(--zen-spacing-md);
+  font-family: var(--font-accent);
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  box-shadow: var(--zen-shadow-sm);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--zen-forest);
+}
+
+:root[data-theme="zen-garden"] .brutal-button:hover {
+  background: var(--zen-terracotta);
+  color: var(--zen-white);
+  transform: translateY(-4px);
+  box-shadow: var(--zen-shadow-lg);
+  border-color: var(--zen-terracotta);
+}
+
+:root[data-theme="zen-garden"] .brutal-button:active {
+  transform: translateY(-2px);
+  box-shadow: var(--zen-shadow-md);
+}
+
+:root[data-theme="zen-garden"] .brutal-button-primary {
+  background: var(--zen-gradient-secondary);
+  color: var(--zen-white);
+  border-color: var(--zen-forest);
+}
+
+:root[data-theme="zen-garden"] .brutal-button-primary:hover {
+  background: var(--zen-terracotta);
+}
+
+/* ============================================
+   STATS - SERENE NUMBERS
+   ============================================ */
+
+:root[data-theme="zen-garden"] .brutal-stat-card {
+  background: var(--zen-gradient-accent);
+  color: var(--zen-forest);
+  border: 2px solid var(--zen-terracotta);
+  border-radius: var(--zen-radius-lg);
+  padding: var(--zen-spacing-lg) var(--zen-spacing-md);
+  text-align: center;
+  box-shadow: var(--zen-shadow-md);
+  transition: all 0.4s ease;
+}
+
+:root[data-theme="zen-garden"] .brutal-stat-card::before {
+  display: none;
+}
+
+:root[data-theme="zen-garden"] .brutal-stat-card:hover {
+  transform: scale(1.05);
+  box-shadow: var(--zen-shadow-lg);
+}
+
+:root[data-theme="zen-garden"] .brutal-stat-value {
+  font-family: var(--font-display);
+  font-size: 4rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--zen-forest);
+}
+
+:root[data-theme="zen-garden"] .brutal-stat-label {
+  font-family: var(--font-accent);
+  font-size: 0.9rem;
+  text-transform: none;
+  letter-spacing: 0.1em;
+  margin-top: var(--zen-spacing-sm);
+  font-style: italic;
+  color: var(--zen-moss);
+}
+
+/* ============================================
+   STREAK - GENTLE MOTIVATION
+   ============================================ */
+
+:root[data-theme="zen-garden"] .brutal-streak {
+  background: linear-gradient(135deg, #FDFBF7 0%, #E8DCC4 100%);
+  border: 2px solid var(--zen-terracotta);
+  border-radius: var(--zen-radius-md);
+  padding: var(--zen-spacing-sm) var(--zen-spacing-md);
+  font-family: var(--font-accent);
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--zen-forest);
+  box-shadow: var(--zen-shadow-md);
+  animation: gentlePulse 3s ease-in-out infinite;
+}
+
+@keyframes gentlePulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: var(--zen-shadow-md);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: var(--zen-shadow-lg);
+  }
+}
+
+:root[data-theme="zen-garden"] .brutal-streak-icon {
+  animation: gentleFlicker 2s ease-in-out infinite;
+}
+
+@keyframes gentleFlicker {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.15) rotate(15deg);
+    opacity: 0.8;
+  }
+}
+
+/* ============================================
+   LOADING - PEACEFUL WAITING
+   ============================================ */
+
+:root[data-theme="zen-garden"] .brutal-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: var(--zen-spacing-md);
+}
+
+:root[data-theme="zen-garden"] .brutal-spinner {
+  width: 80px;
+  height: 80px;
+  border: 4px solid var(--zen-sage);
+  border-top-color: var(--zen-terracotta);
+  border-radius: 50%;
+  animation: zenSpin 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes zenSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+:root[data-theme="zen-garden"] .brutal-loading-text {
+  font-family: var(--font-accent);
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.2em;
+  color: var(--zen-forest);
+  font-style: italic;
+  animation: gentleFade 2s ease-in-out infinite;
+}
+
+@keyframes gentleFade {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ============================================
+   HEATMAP - ORGANIC VISUALIZATION
+   ============================================ */
+
+:root[data-theme="zen-garden"] .brutal-heatmap-container {
+  background: var(--zen-white);
+  border: 2px solid var(--zen-sage);
+  border-radius: var(--zen-radius-lg);
+  padding: var(--zen-spacing-lg);
+  margin: var(--zen-spacing-md);
+  box-shadow: var(--zen-shadow-md);
+}
+
+:root[data-theme="zen-garden"] .brutal-heatmap-title {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  margin-bottom: var(--zen-spacing-md);
+  border-bottom: 3px solid var(--zen-sage);
+  padding-bottom: var(--zen-spacing-sm);
+  color: var(--zen-forest);
+}
+
+:root[data-theme="zen-garden"] .brutal-heatmap-cell {
+  border: 1px solid var(--zen-sage);
+  border-radius: var(--zen-radius-sm);
+  transition: all 0.3s ease;
+}
+
+:root[data-theme="zen-garden"] .brutal-heatmap-cell:hover {
+  transform: scale(1.15);
+  box-shadow: var(--zen-shadow-md);
+  border-color: var(--zen-terracotta);
+  z-index: 10;
+}
+
+/* ============================================
+   MUI COMPONENT OVERRIDES - ZEN STYLE
+   ============================================ */
+
+:root[data-theme="zen-garden"] .MuiPaper-root {
+  background: var(--zen-white) !important;
+  border: 2px solid var(--zen-sage) !important;
+  border-radius: var(--zen-radius-md) !important;
+  box-shadow: var(--zen-shadow-md) !important;
+  transition: all 0.3s ease !important;
+}
+
+:root[data-theme="zen-garden"] .MuiPaper-root:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: var(--zen-shadow-lg) !important;
+  border-color: var(--zen-terracotta) !important;
+}
+
+:root[data-theme="zen-garden"] .MuiButton-root {
+  border-radius: var(--zen-radius-md) !important;
+  font-family: var(--font-accent) !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  letter-spacing: 0.05em !important;
+  border: 2px solid var(--zen-forest) !important;
+  box-shadow: var(--zen-shadow-sm) !important;
+  transition: all 0.3s ease !important;
+}
+
+:root[data-theme="zen-garden"] .MuiButton-root:hover {
+  background: var(--zen-terracotta) !important;
+  color: var(--zen-white) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: var(--zen-shadow-md) !important;
+}
+
+:root[data-theme="zen-garden"] .MuiButton-contained {
+  background: var(--zen-gradient-secondary) !important;
+  color: var(--zen-white) !important;
+}
+
+:root[data-theme="zen-garden"] .MuiButton-outlined {
+  background: var(--zen-white) !important;
+  color: var(--zen-forest) !important;
+}
+
+:root[data-theme="zen-garden"] .MuiTypography-h1,
+:root[data-theme="zen-garden"] .MuiTypography-h2,
+:root[data-theme="zen-garden"] .MuiTypography-h3,
+:root[data-theme="zen-garden"] .MuiTypography-h4 {
+  font-family: var(--font-display) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  color: var(--zen-forest) !important;
+}
+
+:root[data-theme="zen-garden"] .MuiTypography-h5,
+:root[data-theme="zen-garden"] .MuiTypography-h6 {
+  font-family: var(--font-accent) !important;
+  font-weight: 600 !important;
+  color: var(--zen-forest) !important;
+}
+
+:root[data-theme="zen-garden"] .MuiTypography-body1,
+:root[data-theme="zen-garden"] .MuiTypography-body2 {
+  font-family: var(--font-body) !important;
+  color: var(--zen-forest) !important;
+}
+
+:root[data-theme="zen-garden"] p,
+:root[data-theme="zen-garden"] span,
+:root[data-theme="zen-garden"] div {
+  color: var(--zen-forest);
+}
+
+:root[data-theme="zen-garden"] label {
+  color: var(--zen-moss) !important;
+  font-family: var(--font-accent) !important;
+}
+
+:root[data-theme="zen-garden"] .MuiInputBase-root,
+:root[data-theme="zen-garden"] input[type="date"] {
+  border: 2px solid var(--zen-sage) !important;
+  border-radius: var(--zen-radius-md) !important;
+  background: var(--zen-white) !important;
+  font-family: var(--font-body) !important;
+  transition: all 0.3s ease !important;
+}
+
+:root[data-theme="zen-garden"] .MuiInputBase-root:focus,
+:root[data-theme="zen-garden"] input[type="date"]:focus {
+  border-color: var(--zen-terracotta) !important;
+  box-shadow: var(--zen-shadow-md) !important;
+}
+
+:root[data-theme="zen-garden"] .MuiAlert-root {
+  border: 2px solid var(--zen-sage) !important;
+  border-radius: var(--zen-radius-md) !important;
+  font-family: var(--font-body) !important;
+  box-shadow: var(--zen-shadow-md) !important;
+}
+
+:root[data-theme="zen-garden"] .MuiChip-root {
+  border-radius: var(--zen-radius-sm) !important;
+  border: 2px solid var(--zen-sage) !important;
+  font-family: var(--font-accent) !important;
+  font-weight: 600 !important;
+  background: var(--zen-cream) !important;
+}
+
+/* ============================================
+   RESPONSIVE - MAINTAIN SERENITY
+   ============================================ */
+
+@media (max-width: 768px) {
+  :root[data-theme="zen-garden"] .brutal-title {
+    font-size: 2.5rem;
+  }
+
+  :root[data-theme="zen-garden"] .brutal-tabs {
+    flex-direction: column;
+  }
+
+  :root[data-theme="zen-garden"] .brutal-stat-value {
+    font-size: 3rem;
+  }
+}
+
+/* ============================================
+   DECORATIVE ELEMENTS
+   ============================================ */
+
+/* Floating petals animation (optional) */
+@keyframes petalFall {
+  0% {
+    transform: translateY(-100vh) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* Gentle wave effect for backgrounds */
+@keyframes waveFlow {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}

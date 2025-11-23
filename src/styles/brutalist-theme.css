@@ -1,0 +1,786 @@
+/* ============================================
+   BRUTALIST HABITFLOW THEME
+   Raw. Bold. Uncompromising.
+   ============================================ */
+
+/* Import Brutalist Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Sans:wght@400;600;700&family=Bebas+Neue&display=swap');
+
+:root[data-theme="brutalist"] {
+  /* Brutalist Color Palette */
+  --brutal-black: #000000;
+  --brutal-white: #FFFFFF;
+  --brutal-gray: #F5F5F5;
+  --brutal-dark-gray: #333333;
+  --brutal-orange: #FF4500; /* Safety Orange */
+  --brutal-red: #FF0000;
+  --brutal-yellow: #FFFF00;
+
+  /* Typography */
+  --font-display: 'Bebas Neue', 'Space Mono', monospace;
+  --font-body: 'IBM Plex Sans', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+
+  /* Brutal Spacing */
+  --brutal-border: 4px solid var(--brutal-black);
+  --brutal-border-thick: 8px solid var(--brutal-black);
+  --brutal-shadow: 8px 8px 0 var(--brutal-black);
+  --brutal-shadow-hover: 12px 12px 0 var(--brutal-black);
+  --brutal-shadow-active: 4px 4px 0 var(--brutal-black);
+
+  /* Grid */
+  --brutal-spacing: 24px;
+  --brutal-spacing-sm: 12px;
+  --brutal-spacing-lg: 48px;
+}
+
+/* ============================================
+   GLOBAL RESETS - BRUTALIST STYLE
+   ============================================ */
+
+:root[data-theme="brutalist"] * {
+  box-sizing: border-box;
+}
+
+:root[data-theme="brutalist"] body {
+  font-family: var(--font-body);
+  background: var(--brutal-white);
+  color: var(--brutal-black);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Remove all rounded corners in brutalist theme */
+:root[data-theme="brutalist"] * {
+  border-radius: 0 !important;
+}
+
+/* ============================================
+   APP CONTAINER - BRUTAL LAYOUT
+   ============================================ */
+
+:root[data-theme="brutalist"] .app-container,
+:root[data-theme="brutalist"] .app-container.brutalist {
+  min-height: 100vh;
+  background: var(--brutal-white);
+  position: relative;
+  overflow: visible;
+}
+
+/* Brutal Grid Background */
+:root[data-theme="brutalist"] .app-container::before,
+:root[data-theme="brutalist"] .app-container.brutalist::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 23px, var(--brutal-black) 23px, var(--brutal-black) 24px),
+    repeating-linear-gradient(90deg, transparent, transparent 23px, var(--brutal-black) 23px, var(--brutal-black) 24px);
+  opacity: 0.05;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============================================
+   HEADER - MASSIVE TYPOGRAPHY
+   ============================================ */
+
+:root[data-theme="brutalist"] .brutal-header {
+  background: var(--brutal-black);
+  color: var(--brutal-white);
+  padding: var(--brutal-spacing-lg) var(--brutal-spacing);
+  border-bottom: var(--brutal-border-thick);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: var(--brutal-spacing-lg);
+}
+
+:root[data-theme="brutalist"] .brutal-header::after {
+  content: 'HABITFLOW';
+  position: absolute;
+  top: 50%;
+  right: -20px;
+  transform: translateY(-50%) rotate(90deg);
+  font-family: var(--font-display);
+  font-size: 8rem;
+  font-weight: 700;
+  color: var(--brutal-white);
+  opacity: 0.05;
+  letter-spacing: 0.2em;
+  pointer-events: none;
+}
+
+:root[data-theme="brutalist"] .brutal-title {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 10vw, 8rem);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 0.9;
+  text-transform: uppercase;
+  margin-bottom: var(--brutal-spacing-sm);
+  position: relative;
+  z-index: 1;
+  color: var(--brutal-white) !important;
+}
+
+:root[data-theme="brutalist"] .brutal-title span {
+  display: inline-block;
+  animation: glitchText 3s infinite;
+  color: var(--brutal-white) !important;
+}
+
+@keyframes glitchText {
+  0%, 90%, 100% {
+    transform: translate(0);
+  }
+  92% {
+    transform: translate(-2px, 2px);
+  }
+  94% {
+    transform: translate(2px, -2px);
+  }
+}
+
+:root[data-theme="brutalist"] .brutal-subtitle {
+  font-family: var(--font-mono) !important;
+  font-size: 1rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.2em !important;
+  color: var(--brutal-orange) !important;
+  position: relative;
+  z-index: 1;
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* ============================================
+   TABS - BRUTAL NAVIGATION
+   ============================================ */
+
+.brutal-tabs {
+  display: flex;
+  gap: 0;
+  margin: 0 var(--brutal-spacing) var(--brutal-spacing-lg);
+  border: var(--brutal-border);
+  background: var(--brutal-white);
+}
+
+.brutal-tab {
+  flex: 1;
+  padding: var(--brutal-spacing) var(--brutal-spacing);
+  background: var(--brutal-white);
+  border: none;
+  border-right: var(--brutal-border);
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.brutal-tab:last-child {
+  border-right: none;
+}
+
+.brutal-tab:hover {
+  background: var(--brutal-yellow);
+  transform: translateY(-4px);
+}
+
+.brutal-tab.active {
+  background: var(--brutal-black);
+  color: var(--brutal-white);
+}
+
+.brutal-tab.active::before {
+  content: '▶';
+  position: absolute;
+  left: 8px;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* ============================================
+   CARDS - HARD SHADOWS & BORDERS
+   ============================================ */
+
+.brutal-card {
+  background: var(--brutal-white);
+  border: var(--brutal-border);
+  box-shadow: var(--brutal-shadow);
+  padding: var(--brutal-spacing);
+  margin-bottom: var(--brutal-spacing);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.brutal-card:hover {
+  transform: translate(-4px, -4px);
+  box-shadow: var(--brutal-shadow-hover);
+}
+
+.brutal-card:active {
+  transform: translate(4px, 4px);
+  box-shadow: var(--brutal-shadow-active);
+}
+
+/* Habit Card with Stripe */
+.brutal-habit-card {
+  border-left: 12px solid var(--habit-color, var(--brutal-orange));
+  position: relative;
+  overflow: visible;
+}
+
+.brutal-habit-card::before {
+  content: attr(data-habit-name);
+  position: absolute;
+  top: -20px;
+  left: -4px;
+  background: var(--brutal-black);
+  color: var(--brutal-white);
+  padding: 4px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border: 2px solid var(--brutal-black);
+}
+
+/* ============================================
+   HEATMAP - BRUTAL GRID
+   ============================================ */
+
+.brutal-heatmap-container {
+  background: var(--brutal-gray);
+  border: var(--brutal-border);
+  padding: var(--brutal-spacing-lg);
+  margin: var(--brutal-spacing) var(--brutal-spacing);
+  box-shadow: var(--brutal-shadow);
+}
+
+.brutal-heatmap-title {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--brutal-spacing);
+  border-bottom: var(--brutal-border-thick);
+  padding-bottom: var(--brutal-spacing-sm);
+}
+
+.brutal-heatmap-cell {
+  border: 2px solid var(--brutal-black);
+  aspect-ratio: 1;
+  transition: all 0.1s ease;
+  cursor: pointer;
+}
+
+.brutal-heatmap-cell:hover {
+  transform: scale(1.2);
+  z-index: 10;
+  box-shadow: 4px 4px 0 var(--brutal-black);
+}
+
+.brutal-heatmap-cell.empty {
+  background: var(--brutal-white);
+}
+
+.brutal-heatmap-cell.level-1 {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--brutal-white),
+    var(--brutal-white) 5px,
+    var(--habit-color) 5px,
+    var(--habit-color) 10px
+  );
+}
+
+.brutal-heatmap-cell.level-2 {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--habit-color),
+    var(--habit-color) 5px,
+    var(--brutal-white) 5px,
+    var(--brutal-white) 10px
+  );
+}
+
+.brutal-heatmap-cell.level-3 {
+  background: var(--habit-color);
+}
+
+/* ============================================
+   STATS - MASSIVE NUMBERS
+   ============================================ */
+
+.brutal-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--brutal-spacing);
+  margin: var(--brutal-spacing);
+}
+
+.brutal-stat-card {
+  background: var(--brutal-black);
+  color: var(--brutal-white);
+  border: var(--brutal-border);
+  padding: var(--brutal-spacing-lg) var(--brutal-spacing);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.brutal-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: var(--brutal-orange);
+  transition: left 0.3s ease;
+  z-index: 0;
+}
+
+.brutal-stat-card:hover::before {
+  left: 0;
+}
+
+.brutal-stat-value {
+  font-family: var(--font-display);
+  font-size: 5rem;
+  font-weight: 700;
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.brutal-stat-label {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  margin-top: var(--brutal-spacing-sm);
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================
+   STREAK INDICATOR - AGGRESSIVE DESIGN
+   ============================================ */
+
+.brutal-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--brutal-spacing-sm);
+  background: var(--brutal-yellow);
+  border: var(--brutal-border);
+  padding: var(--brutal-spacing-sm) var(--brutal-spacing);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 1.25rem;
+  text-transform: uppercase;
+  box-shadow: 4px 4px 0 var(--brutal-black);
+  position: relative;
+  animation: pulseStreak 2s infinite;
+}
+
+@keyframes pulseStreak {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.brutal-streak-icon {
+  font-size: 1.5rem;
+  animation: fireFlicker 0.5s infinite;
+}
+
+@keyframes fireFlicker {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.1) rotate(-5deg);
+  }
+  75% {
+    transform: scale(1.1) rotate(5deg);
+  }
+}
+
+/* ============================================
+   BUTTONS - BRUTAL INTERACTIONS
+   ============================================ */
+
+.brutal-button {
+  background: var(--brutal-white);
+  border: var(--brutal-border);
+  padding: var(--brutal-spacing-sm) var(--brutal-spacing);
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 var(--brutal-black);
+  transition: all 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.brutal-button:hover {
+  background: var(--brutal-orange);
+  color: var(--brutal-white);
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--brutal-black);
+}
+
+.brutal-button:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 var(--brutal-black);
+}
+
+.brutal-button-primary {
+  background: var(--brutal-black);
+  color: var(--brutal-white);
+}
+
+.brutal-button-primary:hover {
+  background: var(--brutal-orange);
+}
+
+/* ============================================
+   SCORE SELECTOR - BRUTAL UI
+   ============================================ */
+
+.brutal-score-selector {
+  display: flex;
+  gap: 0;
+  border: var(--brutal-border);
+}
+
+.brutal-score-button {
+  flex: 1;
+  padding: var(--brutal-spacing);
+  background: var(--brutal-white);
+  border: none;
+  border-right: var(--brutal-border);
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.brutal-score-button:last-child {
+  border-right: none;
+}
+
+.brutal-score-button:hover {
+  background: var(--brutal-gray);
+  transform: scale(1.1);
+}
+
+.brutal-score-button.selected {
+  background: var(--brutal-black);
+  color: var(--brutal-white);
+}
+
+.brutal-score-button[data-score="0"] { border-left: 4px solid #CCCCCC; }
+.brutal-score-button[data-score="1"] { border-left: 4px solid #FFFF00; }
+.brutal-score-button[data-score="2"] { border-left: 4px solid #FF8800; }
+.brutal-score-button[data-score="3"] { border-left: 4px solid #00FF00; }
+
+/* ============================================
+   LOADING STATE - BRUTAL ANIMATION
+   ============================================ */
+
+.brutal-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: var(--brutal-spacing);
+}
+
+.brutal-spinner {
+  width: 80px;
+  height: 80px;
+  border: 8px solid var(--brutal-black);
+  border-top-color: var(--brutal-orange);
+  animation: brutalSpin 0.6s linear infinite;
+}
+
+@keyframes brutalSpin {
+  to { transform: rotate(360deg); }
+}
+
+.brutal-loading-text {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  animation: blink 1s infinite;
+}
+
+/* ============================================
+   CHARTS - BRUTAL DATA VIZ
+   ============================================ */
+
+.brutal-chart-container {
+  background: var(--brutal-white);
+  border: var(--brutal-border);
+  padding: var(--brutal-spacing-lg);
+  margin: var(--brutal-spacing);
+  box-shadow: var(--brutal-shadow);
+}
+
+.brutal-chart-title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: var(--brutal-spacing);
+  border-bottom: var(--brutal-border);
+  padding-bottom: var(--brutal-spacing-sm);
+}
+
+/* Override Recharts styles for brutalist look */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: var(--brutal-black);
+  stroke-width: 2;
+}
+
+.recharts-cartesian-axis-line {
+  stroke: var(--brutal-black);
+  stroke-width: 4;
+}
+
+/* ============================================
+   RESPONSIVE - MAINTAIN BRUTALITY
+   ============================================ */
+
+@media (max-width: 768px) {
+  .brutal-title {
+    font-size: 3rem;
+  }
+
+  .brutal-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .brutal-tabs {
+    flex-direction: column;
+  }
+
+  .brutal-tab {
+    border-right: none;
+    border-bottom: var(--brutal-border);
+  }
+
+  .brutal-tab:last-child {
+    border-bottom: none;
+  }
+}
+
+/* ============================================
+   MUI COMPONENT OVERRIDES - BRUTALIST STYLE
+   ============================================ */
+
+/* Override all MUI Paper components */
+.MuiPaper-root {
+  background: var(--brutal-white) !important;
+  border: var(--brutal-border) !important;
+  box-shadow: var(--brutal-shadow) !important;
+  border-radius: 0 !important;
+  transition: all 0.15s ease !important;
+}
+
+.MuiPaper-root:hover {
+  transform: translate(-2px, -2px) !important;
+  box-shadow: var(--brutal-shadow-hover) !important;
+}
+
+/* Override all MUI Buttons */
+.MuiButton-root,
+.MuiButtonBase-root:not(.MuiTab-root) {
+  border-radius: 0 !important;
+  font-family: var(--font-mono) !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  border: var(--brutal-border) !important;
+  box-shadow: 4px 4px 0 var(--brutal-black) !important;
+  transition: all 0.15s ease !important;
+}
+
+.MuiButton-root:hover {
+  background: var(--brutal-orange) !important;
+  color: var(--brutal-white) !important;
+  transform: translate(-2px, -2px) !important;
+  box-shadow: 6px 6px 0 var(--brutal-black) !important;
+}
+
+.MuiButton-contained {
+  background: var(--brutal-black) !important;
+  color: var(--brutal-white) !important;
+}
+
+.MuiButton-outlined {
+  background: var(--brutal-white) !important;
+  color: var(--brutal-black) !important;
+}
+
+/* Override MUI Typography for brutalist fonts */
+.MuiTypography-h1,
+.MuiTypography-h2,
+.MuiTypography-h3,
+.MuiTypography-h4 {
+  font-family: var(--font-display) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.MuiTypography-h5,
+.MuiTypography-h6 {
+  font-family: var(--font-body) !important;
+  font-weight: 700 !important;
+}
+
+.MuiTypography-body1,
+.MuiTypography-body2 {
+  font-family: var(--font-body) !important;
+  color: var(--brutal-black) !important;
+}
+
+:root[data-theme="brutalist"] p,
+:root[data-theme="brutalist"] span,
+:root[data-theme="brutalist"] div {
+  color: var(--brutal-black);
+}
+
+:root[data-theme="brutalist"] label {
+  color: var(--brutal-black) !important;
+  font-family: var(--font-mono) !important;
+}
+
+/* Override MUI Input/Select */
+.MuiInputBase-root,
+.MuiSelect-root,
+.MuiTextField-root input {
+  border: var(--brutal-border) !important;
+  border-radius: 0 !important;
+  background: var(--brutal-white) !important;
+  font-family: var(--font-mono) !important;
+}
+
+.MuiOutlinedInput-notchedOutline {
+  border: var(--brutal-border) !important;
+  border-radius: 0 !important;
+}
+
+/* Date input */
+input[type="date"] {
+  border: var(--brutal-border) !important;
+  border-radius: 0 !important;
+  background: var(--brutal-white) !important;
+  font-family: var(--font-mono) !important;
+  padding: 12px !important;
+  font-size: 1rem !important;
+}
+
+/* Override MUI Chip */
+.MuiChip-root {
+  border-radius: 0 !important;
+  border: 2px solid var(--brutal-black) !important;
+  font-family: var(--font-mono) !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+}
+
+/* Override MUI Alert */
+.MuiAlert-root {
+  border: var(--brutal-border) !important;
+  border-radius: 0 !important;
+  font-family: var(--font-mono) !important;
+}
+
+/* Override MUI Dialog */
+.MuiDialog-paper {
+  border: var(--brutal-border-thick) !important;
+  box-shadow: 16px 16px 0 var(--brutal-black) !important;
+}
+
+/* Override MUI Card */
+.MuiCard-root {
+  border: var(--brutal-border) !important;
+  box-shadow: var(--brutal-shadow) !important;
+  border-radius: 0 !important;
+}
+
+.MuiCard-root:hover {
+  transform: translate(-2px, -2px) !important;
+  box-shadow: var(--brutal-shadow-hover) !important;
+}
+
+/* Override MUI CircularProgress for brutal loading */
+.MuiCircularProgress-root {
+  color: var(--brutal-orange) !important;
+}
+
+/* Override MUI IconButton */
+.MuiIconButton-root {
+  border-radius: 0 !important;
+  border: 2px solid var(--brutal-black) !important;
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+.brutal-divider {
+  height: 4px;
+  background: var(--brutal-black);
+  margin: var(--brutal-spacing-lg) 0;
+}
+
+.brutal-text-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.brutal-text-mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.1em;
+}
+
+.brutal-bg-stripe {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--brutal-black),
+    var(--brutal-black) 10px,
+    var(--brutal-yellow) 10px,
+    var(--brutal-yellow) 20px
+  );
+}

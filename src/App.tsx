@@ -1,12 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Box, Fab, Button, Typography, CircularProgress, Alert, Snackbar, Tabs, Tab } from '@mui/material';
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import { Container, Box, Typography, Alert, Snackbar } from '@mui/material';
 import { onAuthStateChanged, User, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import HabitTracker from './HabitTracker';
 import ExerciseTracker from './ExerciseTracker';
+import ThemeSelector from './components/ThemeSelector';
+import { ThemeProvider } from './contexts/ThemeContext';
 import './App.css';
+import './styles/brutalist-theme.css';
+import './styles/themes/zen-garden-theme.css';
+import './styles/themes/retro-pixel-theme.css';
+import './styles/themes/neumorphic-theme.css';
+import './styles/theme-transition.css';
 
 // Types
 interface HabitBase {
@@ -67,7 +73,7 @@ const App: React.FC = () => {
   useEffect(() => {
     window.addEventListener('scroll', checkScrollTop);
     return () => window.removeEventListener('scroll', checkScrollTop);
-  }, [showScroll]);
+  }, [showScroll, checkScrollTop]);
 
   const signInWithGoogle = async () => {
     try {
@@ -75,48 +81,68 @@ const App: React.FC = () => {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
 
-      // 모바일 환경이나 PWA에서는 리다이렉트, 데스크톱에서는 팝업 시도
+      // 모바일 환경 감지
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       const isPWA = window.matchMedia('(display-mode: standalone)').matches;
-      
-      if (isMobile || isPWA || isObsidianWebview()) {
+
+      console.log('Login attempt:', { isMobile, isPWA, isObsidian: isObsidianWebview(), userAgent: navigator.userAgent });
+
+      // Obsidian은 무조건 리다이렉트
+      if (isObsidianWebview()) {
+        console.log('Using signInWithRedirect for Obsidian');
         await signInWithRedirect(auth, provider);
-      } else {
-        // 데스크톱에서는 팝업 시도, 실패시 리다이렉트로 폴백
-        try {
-          await signInWithPopup(auth, provider);
-        } catch (popupError: any) {
-          if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/popup-closed-by-user') {
-            await signInWithRedirect(auth, provider);
-          } else {
-            throw popupError;
-          }
+        return;
+      }
+
+      // 모바일/데스크톱 모두 팝업 먼저 시도, 실패시 리다이렉트
+      try {
+        console.log('Trying signInWithPopup');
+        await signInWithPopup(auth, provider);
+        console.log('Popup login successful');
+      } catch (popupError: any) {
+        console.log('Popup error:', popupError.code, popupError.message);
+        if (popupError.code === 'auth/popup-blocked' ||
+            popupError.code === 'auth/popup-closed-by-user' ||
+            popupError.code === 'auth/cancelled-popup-request') {
+          console.log('Falling back to signInWithRedirect');
+          await signInWithRedirect(auth, provider);
+        } else {
+          throw popupError;
         }
       }
     } catch (error: any) {
-      setError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
+      console.error('Login error:', error);
+      setError(`로그인 중 오류가 발생했습니다: ${error.code || error.message}`);
     }
   };
 
   // 리다이렉트 결과 처리 (모든 환경에서)
   useEffect(() => {
+    console.log('Checking redirect result...');
     getRedirectResult(auth)
       .then((result) => {
+        console.log('Redirect result:', result);
         if (result?.user) {
+          console.log('User from redirect:', result.user.email);
           if (result.user.email !== ALLOWED_EMAIL) {
+            console.log('Email not allowed:', result.user.email);
             auth.signOut();
             setError('허용되지 않은 이메일입니다.');
             setUser(null);
           } else {
+            console.log('Login successful!');
             setUser(result.user);
           }
+        } else {
+          console.log('No redirect result');
         }
       })
       .catch((error) => {
         // 리다이렉트 결과가 없는 경우는 정상적인 상황이므로 에러 처리하지 않음
+        console.log('Redirect error:', error.code, error.message);
         if (error.code !== 'auth/no-current-user') {
           console.error('Redirect result error:', error);
-          setError('로그인 중 오류가 발생했습니다: ' + error.message);
+          setError(`로그인 중 오류가 발생했습니다: ${error.code} - ${error.message}`);
         }
       });
   }, []);
@@ -215,35 +241,39 @@ const App: React.FC = () => {
   // 로그인하지 않은 경우 로그인 화면 표시
   if (!user) {
     return (
-      <Box
-        display="flex"
-        flexDirection="column"
-        alignItems="center"
-        justifyContent="center"
-        minHeight="100vh"
-        gap={2}
-      >
-        <Typography variant="h5" gutterBottom>
-          HabitFlow
-        </Typography>
-        <Typography variant="body1" gutterBottom color="textSecondary">
-          로그인하여 습관을 기록하고 관리하세요.
-        </Typography>
-        <Button 
-          variant="contained" 
-          onClick={signInWithGoogle}
-          size="large"
-          sx={{ mt: 2 }}
+      <Box className="app-container brutalist">
+        <Box
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+          minHeight="100vh"
+          gap={4}
+          sx={{ position: 'relative', zIndex: 1 }}
         >
-          Google로 로그인
-        </Button>
-        <Snackbar 
-          open={!!error} 
-          autoHideDuration={6000} 
+          <Box className="brutal-card" sx={{ padding: '48px !important', textAlign: 'center', maxWidth: '600px' }}>
+            <Typography className="brutal-title" sx={{ fontSize: '6rem !important', marginBottom: '24px !important' }}>
+              HABITFLOW
+            </Typography>
+            <Typography className="brutal-text-mono" sx={{ fontSize: '1rem', marginBottom: '48px', textTransform: 'uppercase', letterSpacing: '0.2em' }}>
+              로그인하여 습관을 기록하고 관리하세요
+            </Typography>
+            <button
+              className="brutal-button brutal-button-primary"
+              onClick={signInWithGoogle}
+              style={{ width: '100%', padding: '24px', fontSize: '1.25rem' }}
+            >
+              GOOGLE 로그인
+            </button>
+          </Box>
+        </Box>
+        <Snackbar
+          open={!!error}
+          autoHideDuration={6000}
           onClose={handleCloseError}
           anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         >
-          <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%' }}>
+          <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%', borderRadius: '0 !important', border: '4px solid #000' }}>
             {error}
           </Alert>
         </Snackbar>
@@ -254,13 +284,13 @@ const App: React.FC = () => {
   // 로딩 중인 경우 로딩 화면 표시
   if (loading) {
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="100vh"
-      >
-        <CircularProgress />
+      <Box className="app-container brutalist">
+        <Box className="brutal-loading">
+          <Box className="brutal-spinner" />
+          <Typography className="brutal-loading-text">
+            LOADING...
+          </Typography>
+        </Box>
       </Box>
     );
   }
@@ -268,108 +298,32 @@ const App: React.FC = () => {
   console.log(window.location.origin);
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        position: 'relative',
-        paddingTop: 3,
-        paddingBottom: 3,
-      }}
-    >
+    <Box className="app-container brutalist">
+      {/* BRUTALIST HEADER */}
+      <Box className="brutal-header">
+        <Typography className="brutal-title">
+          <span>HABIT</span>FLOW
+        </Typography>
+        <Typography className="brutal-subtitle">
+          Track. Measure. Dominate.
+        </Typography>
+      </Box>
+
       <Container maxWidth="lg">
-        <Box
-          sx={{
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: 4,
-            p: 4,
-            mb: 3,
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
-            textAlign: 'center',
-            animation: 'fadeIn 0.6s ease-out',
-            '@keyframes fadeIn': {
-              from: { opacity: 0, transform: 'translateY(-20px)' },
-              to: { opacity: 1, transform: 'translateY(0)' },
-            },
-          }}
-        >
-          <Typography
-            variant="h2"
-            component="h1"
-            sx={{
-              fontWeight: 800,
-              mb: 1,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
+        {/* BRUTALIST TABS */}
+        <Box className="brutal-tabs">
+          <button
+            className={`brutal-tab ${activeTab === 'habits' ? 'active' : ''}`}
+            onClick={() => setActiveTab('habits')}
           >
-            HabitFlow ✨
-          </Typography>
-          <Typography
-            variant="body1"
-            sx={{
-              color: 'text.secondary',
-              fontSize: '1.1rem',
-            }}
+            🎯 HABITS
+          </button>
+          <button
+            className={`brutal-tab ${activeTab === 'exercise' ? 'active' : ''}`}
+            onClick={() => setActiveTab('exercise')}
           >
-            매일의 작은 습관이 만드는 큰 변화
-          </Typography>
-        </Box>
-        
-        <Box sx={{ 
-          width: '100%', 
-          mb: 3,
-          background: 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(20px)',
-          borderRadius: 2,
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-          overflow: 'hidden',
-        }}>
-          <Tabs 
-            value={activeTab} 
-            onChange={(e, newValue) => setActiveTab(newValue)}
-            aria-label="habit tracker tabs"
-            variant="fullWidth"
-            sx={{
-              '& .MuiTab-root': {
-                fontSize: '1.1rem',
-                fontWeight: 600,
-                textTransform: 'none',
-                transition: 'all 0.3s ease',
-                color: '#64748b',
-                minHeight: '56px',
-                '&:hover': {
-                  color: '#667eea',
-                  backgroundColor: 'rgba(102, 126, 234, 0.04)',
-                },
-              },
-              '& .Mui-selected': {
-                color: '#667eea !important',
-                fontWeight: 700,
-              },
-              '& .MuiTabs-indicator': {
-                backgroundColor: '#667eea',
-                height: '4px',
-                borderRadius: '4px 4px 0 0',
-              },
-            }}
-          >
-            <Tab 
-              value="habits" 
-              label="🎯 습관 기록" 
-              id="habits-tab"
-              aria-controls="habits-panel"
-            />
-            <Tab 
-              value="exercise" 
-              label="💪 운동 기록" 
-              id="exercise-tab"
-              aria-controls="exercise-panel"
-            />
-          </Tabs>
+            💪 EXERCISE
+          </button>
         </Box>
 
       <Box role="tabpanel" hidden={activeTab !== 'habits'} id="habits-panel">
@@ -384,34 +338,47 @@ const App: React.FC = () => {
         )}
       </Box>
 
-      <Fab 
-        color="primary" 
-        size="small"
-        onClick={scrollTop}
-        style={{ 
-          position: 'fixed', 
-          bottom: '20px', 
-          right: '20px',
-          display: showScroll ? 'flex' : 'none'
-        }}
-        aria-label="scroll to top"
-      >
-        <KeyboardArrowUpIcon />
-      </Fab>
+        {/* BRUTALIST SCROLL TO TOP BUTTON */}
+        {showScroll && (
+          <button
+            className="brutal-button brutal-button-primary"
+            onClick={scrollTop}
+            style={{
+              position: 'fixed',
+              bottom: '24px',
+              right: '24px',
+              padding: '12px 24px',
+              zIndex: 1000,
+            }}
+            aria-label="scroll to top"
+          >
+            ▲ TOP
+          </button>
+        )}
 
-      <Snackbar 
-        open={!!error} 
-        autoHideDuration={6000} 
-        onClose={handleCloseError}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%' }}>
-          {error}
-        </Alert>
-      </Snackbar>
+        <Snackbar
+          open={!!error}
+          autoHideDuration={6000}
+          onClose={handleCloseError}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%', borderRadius: '0 !important', border: '4px solid #000' }}>
+            {error}
+          </Alert>
+        </Snackbar>
       </Container>
     </Box>
   );
 };
 
-export default App;
+// Wrap App with ThemeProvider
+const AppWithTheme: React.FC = () => {
+  return (
+    <ThemeProvider>
+      <App />
+      <ThemeSelector />
+    </ThemeProvider>
+  );
+};
+
+export default AppWithTheme;

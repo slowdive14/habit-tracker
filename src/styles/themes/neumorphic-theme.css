@@ -1,0 +1,643 @@
+/* ============================================
+   NEUMORPHIC HABITFLOW THEME
+   Soft. Modern. Minimal.
+   ============================================ */
+
+/* Import Neumorphic Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=DM+Sans:wght@400;500;700&family=Inter:wght@400;600&display=swap');
+
+:root[data-theme="neumorphic"] {
+  /* Neumorphic Color Palette */
+  --neuro-bg: #E0E5EC;               /* Main background */
+  --neuro-surface: #E0E5EC;          /* Surface color */
+  --neuro-primary: #6C63FF;          /* Primary purple */
+  --neuro-secondary: #A3B1C6;        /* Secondary gray */
+  --neuro-dark: #4A5568;             /* Dark text */
+  --neuro-light: #F7FAFC;            /* Light highlight */
+  --neuro-shadow-dark: #A3B1C6;      /* Dark shadow */
+  --neuro-shadow-light: #FFFFFF;     /* Light shadow */
+  --neuro-accent: #FF6584;           /* Accent pink */
+
+  /* Typography */
+  --font-display: 'Outfit', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'Inter', sans-serif;
+
+  /* Spacing (modern, consistent) */
+  --neuro-spacing-xs: 8px;
+  --neuro-spacing-sm: 16px;
+  --neuro-spacing-md: 24px;
+  --neuro-spacing-lg: 48px;
+  --neuro-spacing-xl: 72px;
+
+  /* Border Radius (soft, rounded) */
+  --neuro-radius-sm: 12px;
+  --neuro-radius-md: 20px;
+  --neuro-radius-lg: 30px;
+  --neuro-radius-xl: 40px;
+  --neuro-radius-full: 9999px;
+
+  /* Neumorphic Shadows */
+  --neuro-shadow-raised:
+    8px 8px 16px var(--neuro-shadow-dark),
+    -8px -8px 16px var(--neuro-shadow-light);
+
+  --neuro-shadow-pressed:
+    inset 4px 4px 8px var(--neuro-shadow-dark),
+    inset -4px -4px 8px var(--neuro-shadow-light);
+
+  --neuro-shadow-flat:
+    4px 4px 8px var(--neuro-shadow-dark),
+    -4px -4px 8px var(--neuro-shadow-light);
+
+  --neuro-shadow-hover:
+    12px 12px 24px var(--neuro-shadow-dark),
+    -12px -12px 24px var(--neuro-shadow-light);
+}
+
+/* ============================================
+   GLOBAL RESETS - NEUMORPHIC STYLE
+   ============================================ */
+
+:root[data-theme="neumorphic"] * {
+  box-sizing: border-box;
+}
+
+:root[data-theme="neumorphic"] body {
+  font-family: var(--font-body);
+  background: var(--neuro-bg);
+  color: var(--neuro-dark);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  font-weight: 400;
+}
+
+/* ============================================
+   APP CONTAINER - SOFT SURFACE
+   ============================================ */
+
+:root[data-theme="neumorphic"] .app-container {
+  min-height: 100vh;
+  background: var(--neuro-bg);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle gradient overlay */
+:root[data-theme="neumorphic"] .app-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    circle at 30% 20%,
+    rgba(108, 99, 255, 0.05) 0%,
+    transparent 50%
+  ),
+  radial-gradient(
+    circle at 70% 80%,
+    rgba(255, 101, 132, 0.05) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============================================
+   HEADER - SOFT ELEVATION
+   ============================================ */
+
+:root[data-theme="neumorphic"] .brutal-header {
+  background: var(--neuro-bg);
+  color: var(--neuro-dark);
+  padding: var(--neuro-spacing-xl) var(--neuro-spacing-md);
+  border-bottom: none;
+  box-shadow: var(--neuro-shadow-flat);
+  border-radius: 0 0 var(--neuro-radius-lg) var(--neuro-radius-lg);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: var(--neuro-spacing-lg);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:root[data-theme="neumorphic"] .brutal-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  text-transform: none;
+  margin-bottom: var(--neuro-spacing-sm);
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(135deg, var(--neuro-primary) 0%, var(--neuro-accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: none;
+}
+
+:root[data-theme="neumorphic"] .brutal-title span {
+  animation: none;
+}
+
+:root[data-theme="neumorphic"] .brutal-subtitle {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  text-transform: none;
+  letter-spacing: 0.05em;
+  color: var(--neuro-secondary);
+  font-weight: 500;
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================
+   TABS - SOFT TOGGLE
+   ============================================ */
+
+:root[data-theme="neumorphic"] .brutal-tabs {
+  display: flex;
+  gap: var(--neuro-spacing-sm);
+  margin: 0 var(--neuro-spacing-md) var(--neuro-spacing-lg);
+  border: none;
+  background: var(--neuro-bg);
+  padding: var(--neuro-spacing-xs);
+  border-radius: var(--neuro-radius-lg);
+  box-shadow: var(--neuro-shadow-pressed);
+}
+
+:root[data-theme="neumorphic"] .brutal-tab {
+  flex: 1;
+  padding: var(--neuro-spacing-md);
+  background: transparent;
+  border: none;
+  border-radius: var(--neuro-radius-md);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--neuro-secondary);
+}
+
+:root[data-theme="neumorphic"] .brutal-tab:hover {
+  color: var(--neuro-dark);
+  background: transparent;
+  transform: none;
+}
+
+:root[data-theme="neumorphic"] .brutal-tab.active {
+  background: var(--neuro-bg);
+  color: var(--neuro-primary);
+  box-shadow: var(--neuro-shadow-raised);
+  font-weight: 700;
+}
+
+:root[data-theme="neumorphic"] .brutal-tab.active::before {
+  content: none;
+}
+
+/* ============================================
+   CARDS - SOFT DEPTH
+   ============================================ */
+
+:root[data-theme="neumorphic"] .brutal-card {
+  background: var(--neuro-bg);
+  border: none;
+  border-radius: var(--neuro-radius-lg);
+  box-shadow: var(--neuro-shadow-raised);
+  padding: var(--neuro-spacing-lg);
+  margin-bottom: var(--neuro-spacing-md);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+:root[data-theme="neumorphic"] .brutal-card::before {
+  display: none;
+}
+
+:root[data-theme="neumorphic"] .brutal-card:hover {
+  transform: translateY(-8px);
+  box-shadow:
+    16px 16px 32px var(--neuro-shadow-dark),
+    -16px -16px 32px var(--neuro-shadow-light);
+}
+
+:root[data-theme="neumorphic"] .brutal-card:active {
+  transform: translateY(-2px);
+  box-shadow: var(--neuro-shadow-pressed);
+}
+
+/* ============================================
+   BUTTONS - SOFT PRESS
+   ============================================ */
+
+:root[data-theme="neumorphic"] .brutal-button {
+  background: var(--neuro-bg);
+  border: none;
+  border-radius: var(--neuro-radius-md);
+  padding: var(--neuro-spacing-sm) var(--neuro-spacing-md);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: var(--neuro-shadow-raised);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--neuro-dark);
+}
+
+:root[data-theme="neumorphic"] .brutal-button:hover {
+  color: var(--neuro-primary);
+  transform: translateY(-4px);
+  box-shadow: var(--neuro-shadow-hover);
+}
+
+:root[data-theme="neumorphic"] .brutal-button:active {
+  transform: translateY(0);
+  box-shadow: var(--neuro-shadow-pressed);
+}
+
+:root[data-theme="neumorphic"] .brutal-button-primary {
+  background: linear-gradient(135deg, var(--neuro-primary) 0%, var(--neuro-accent) 100%);
+  color: white;
+  box-shadow:
+    8px 8px 16px rgba(108, 99, 255, 0.3),
+    -8px -8px 16px rgba(255, 255, 255, 0.5);
+}
+
+:root[data-theme="neumorphic"] .brutal-button-primary:hover {
+  color: white;
+  box-shadow:
+    12px 12px 24px rgba(108, 99, 255, 0.4),
+    -12px -12px 24px rgba(255, 255, 255, 0.6);
+}
+
+/* ============================================
+   STATS - SOFT DISPLAY
+   ============================================ */
+
+:root[data-theme="neumorphic"] .brutal-stat-card {
+  background: var(--neuro-bg);
+  color: var(--neuro-dark);
+  border: none;
+  border-radius: var(--neuro-radius-xl);
+  padding: var(--neuro-spacing-xl) var(--neuro-spacing-md);
+  text-align: center;
+  box-shadow: var(--neuro-shadow-raised);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+:root[data-theme="neumorphic"] .brutal-stat-card::before {
+  display: none;
+}
+
+:root[data-theme="neumorphic"] .brutal-stat-card:hover {
+  transform: scale(1.05) translateY(-8px);
+  box-shadow: var(--neuro-shadow-hover);
+}
+
+:root[data-theme="neumorphic"] .brutal-stat-value {
+  font-family: var(--font-display);
+  font-size: 4rem;
+  font-weight: 700;
+  line-height: 1;
+  background: linear-gradient(135deg, var(--neuro-primary) 0%, var(--neuro-accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+:root[data-theme="neumorphic"] .brutal-stat-label {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-top: var(--neuro-spacing-sm);
+  font-weight: 600;
+  color: var(--neuro-secondary);
+}
+
+/* ============================================
+   STREAK - SOFT INDICATOR
+   ============================================ */
+
+:root[data-theme="neumorphic"] .brutal-streak {
+  background: var(--neuro-bg);
+  border: none;
+  border-radius: var(--neuro-radius-full);
+  padding: var(--neuro-spacing-sm) var(--neuro-spacing-md);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--neuro-primary);
+  box-shadow: var(--neuro-shadow-raised);
+  animation: softPulse 3s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes softPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: var(--neuro-shadow-raised);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: var(--neuro-shadow-hover);
+  }
+}
+
+:root[data-theme="neumorphic"] .brutal-streak::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    135deg,
+    transparent 0%,
+    rgba(108, 99, 255, 0.1) 50%,
+    transparent 100%
+  );
+  animation: shimmerSoft 3s linear infinite;
+}
+
+@keyframes shimmerSoft {
+  0% { transform: translateX(-50%) translateY(-50%); }
+  100% { transform: translateX(50%) translateY(50%); }
+}
+
+:root[data-theme="neumorphic"] .brutal-streak-icon {
+  animation: softFlicker 2s ease-in-out infinite;
+}
+
+@keyframes softFlicker {
+  0%, 100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.1);
+    filter: brightness(1.2);
+  }
+}
+
+/* ============================================
+   LOADING - SOFT SPINNER
+   ============================================ */
+
+:root[data-theme="neumorphic"] .brutal-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: var(--neuro-spacing-md);
+}
+
+:root[data-theme="neumorphic"] .brutal-spinner {
+  width: 80px;
+  height: 80px;
+  border: none;
+  border-radius: 50%;
+  background: var(--neuro-bg);
+  box-shadow: var(--neuro-shadow-pressed);
+  position: relative;
+  animation: softRotate 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+:root[data-theme="neumorphic"] .brutal-spinner::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--neuro-primary) 0%, var(--neuro-accent) 100%);
+  opacity: 0.5;
+}
+
+@keyframes softRotate {
+  to { transform: rotate(360deg); }
+}
+
+:root[data-theme="neumorphic"] .brutal-loading-text {
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.1em;
+  color: var(--neuro-secondary);
+  animation: softFade 2s ease-in-out infinite;
+}
+
+@keyframes softFade {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ============================================
+   HEATMAP - SOFT VISUALIZATION
+   ============================================ */
+
+:root[data-theme="neumorphic"] .brutal-heatmap-container {
+  background: var(--neuro-bg);
+  border: none;
+  border-radius: var(--neuro-radius-lg);
+  padding: var(--neuro-spacing-lg);
+  margin: var(--neuro-spacing-md);
+  box-shadow: var(--neuro-shadow-raised);
+}
+
+:root[data-theme="neumorphic"] .brutal-heatmap-title {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--neuro-spacing-md);
+  border-bottom: none;
+  padding-bottom: var(--neuro-spacing-sm);
+  background: linear-gradient(135deg, var(--neuro-primary) 0%, var(--neuro-accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+:root[data-theme="neumorphic"] .brutal-heatmap-cell {
+  border: none;
+  border-radius: var(--neuro-radius-sm);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--neuro-shadow-pressed);
+}
+
+:root[data-theme="neumorphic"] .brutal-heatmap-cell:hover {
+  transform: scale(1.2);
+  box-shadow: var(--neuro-shadow-raised);
+  z-index: 10;
+}
+
+/* ============================================
+   MUI COMPONENT OVERRIDES - NEUMORPHIC STYLE
+   ============================================ */
+
+:root[data-theme="neumorphic"] .MuiPaper-root {
+  background: var(--neuro-bg) !important;
+  border: none !important;
+  border-radius: var(--neuro-radius-lg) !important;
+  box-shadow: var(--neuro-shadow-raised) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+:root[data-theme="neumorphic"] .MuiPaper-root:hover {
+  transform: translateY(-6px) !important;
+  box-shadow: var(--neuro-shadow-hover) !important;
+}
+
+:root[data-theme="neumorphic"] .MuiButton-root {
+  border-radius: var(--neuro-radius-md) !important;
+  font-family: var(--font-body) !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  letter-spacing: 0.02em !important;
+  border: none !important;
+  box-shadow: var(--neuro-shadow-raised) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+:root[data-theme="neumorphic"] .MuiButton-root:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: var(--neuro-shadow-hover) !important;
+}
+
+:root[data-theme="neumorphic"] .MuiButton-root:active {
+  transform: translateY(0) !important;
+  box-shadow: var(--neuro-shadow-pressed) !important;
+}
+
+:root[data-theme="neumorphic"] .MuiButton-contained {
+  background: linear-gradient(135deg, var(--neuro-primary) 0%, var(--neuro-accent) 100%) !important;
+  color: white !important;
+}
+
+:root[data-theme="neumorphic"] .MuiButton-outlined {
+  background: var(--neuro-bg) !important;
+  color: var(--neuro-dark) !important;
+}
+
+:root[data-theme="neumorphic"] .MuiTypography-h1,
+:root[data-theme="neumorphic"] .MuiTypography-h2,
+:root[data-theme="neumorphic"] .MuiTypography-h3,
+:root[data-theme="neumorphic"] .MuiTypography-h4 {
+  font-family: var(--font-display) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+  color: var(--neuro-dark) !important;
+}
+
+:root[data-theme="neumorphic"] .MuiTypography-h5,
+:root[data-theme="neumorphic"] .MuiTypography-h6 {
+  font-family: var(--font-body) !important;
+  font-weight: 600 !important;
+  color: var(--neuro-dark) !important;
+}
+
+:root[data-theme="neumorphic"] .MuiTypography-body1,
+:root[data-theme="neumorphic"] .MuiTypography-body2 {
+  font-family: var(--font-body) !important;
+  color: var(--neuro-dark) !important;
+}
+
+:root[data-theme="neumorphic"] p,
+:root[data-theme="neumorphic"] span,
+:root[data-theme="neumorphic"] div {
+  color: var(--neuro-dark);
+}
+
+:root[data-theme="neumorphic"] label {
+  color: var(--neuro-secondary) !important;
+  font-family: var(--font-body) !important;
+  font-weight: 600 !important;
+}
+
+:root[data-theme="neumorphic"] .MuiInputBase-root,
+:root[data-theme="neumorphic"] input[type="date"] {
+  border: none !important;
+  border-radius: var(--neuro-radius-md) !important;
+  background: var(--neuro-bg) !important;
+  font-family: var(--font-body) !important;
+  box-shadow: var(--neuro-shadow-pressed) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+:root[data-theme="neumorphic"] .MuiInputBase-root:focus,
+:root[data-theme="neumorphic"] input[type="date"]:focus {
+  box-shadow:
+    inset 6px 6px 12px var(--neuro-shadow-dark),
+    inset -6px -6px 12px var(--neuro-shadow-light) !important;
+}
+
+:root[data-theme="neumorphic"] .MuiAlert-root {
+  border: none !important;
+  border-radius: var(--neuro-radius-md) !important;
+  font-family: var(--font-body) !important;
+  box-shadow: var(--neuro-shadow-raised) !important;
+}
+
+:root[data-theme="neumorphic"] .MuiChip-root {
+  border-radius: var(--neuro-radius-full) !important;
+  border: none !important;
+  font-family: var(--font-body) !important;
+  font-weight: 600 !important;
+  background: var(--neuro-bg) !important;
+  box-shadow: var(--neuro-shadow-flat) !important;
+}
+
+/* ============================================
+   RESPONSIVE - MAINTAIN SOFTNESS
+   ============================================ */
+
+@media (max-width: 768px) {
+  :root[data-theme="neumorphic"] .brutal-title {
+    font-size: 2.5rem;
+  }
+
+  :root[data-theme="neumorphic"] .brutal-stat-value {
+    font-size: 3rem;
+  }
+
+  :root[data-theme="neumorphic"] .brutal-tabs {
+    flex-direction: column;
+  }
+}
+
+/* ============================================
+   SPECIAL NEUMORPHIC EFFECTS
+   ============================================ */
+
+/* Soft glow effect on interactive elements */
+:root[data-theme="neumorphic"] .brutal-button:focus,
+:root[data-theme="neumorphic"] .brutal-tab:focus {
+  outline: none;
+  box-shadow:
+    var(--neuro-shadow-raised),
+    0 0 0 3px rgba(108, 99, 255, 0.2);
+}
+
+/* Smooth transitions for all interactive elements */
+:root[data-theme="neumorphic"] button,
+:root[data-theme="neumorphic"] .brutal-card,
+:root[data-theme="neumorphic"] .MuiPaper-root {
+  will-change: transform, box-shadow;
+}

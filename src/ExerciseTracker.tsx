@@ -21,6 +21,7 @@ import {
   Chip,
   Divider
 } from '@mui/material';
+import { useTheme } from './contexts/ThemeContext';
 import TwitterIcon from '@mui/icons-material/Twitter';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
@@ -162,6 +163,7 @@ const getKoreanDateString = (date: Date): string => {
 };
 
 const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
+  const { theme } = useTheme();
   const [tabValue, setTabValue] = useState(0);  // 0: 주간 통계
   const [exerciseData, setExerciseData] = useState<ExerciseData>({});
   const [selectedDate, setSelectedDate] = useState<string>(getKoreanDateString(new Date()));
@@ -1811,19 +1813,16 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
               <TextField
                 fullWidth
                 type="date"
-                label="날짜 선택"
+                placeholder="날짜"
                 value={selectedDate}
                 onChange={handleDateChange}
-                InputLabelProps={{
-                  shrink: true,
-                }}
                 sx={{ mb: 2 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="푸시업"
+                placeholder="푸시업"
                 name="pushups"
                 type="number"
                 value={formData.pushups}
@@ -1833,7 +1832,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="풀업"
+                placeholder="풀업"
                 name="pullups"
                 type="number"
                 value={formData.pullups}
@@ -1843,7 +1842,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="딥스"
+                placeholder="딥스"
                 name="dips"
                 type="number"
                 value={formData.dips}
@@ -1853,7 +1852,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="사이드 래터럴 레이즈"
+                placeholder="사이드 래터럴 레이즈"
                 name="lateralRaise"
                 type="number"
                 value={formData.lateralRaise}
@@ -1863,7 +1862,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="달리기 (km)"
+                placeholder="달리기 (km)"
                 name="running"
                 type="number"
                 inputProps={{ step: "0.1" }}
@@ -1874,16 +1873,15 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Avg. pace (mm:ss)"
                 name="avgPace"
-                placeholder="05:30"
+                placeholder="평균 페이스 (mm:ss) 예: 05:30"
                 value={formData.avgPace}
                 onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
                   let value = e.target.value;
-                  
+
                   // 콜론 제거
                   value = value.replace(/:/g, '');
-                  
+
                   // 숫자만 허용
                   if (!/^[0-9]*$/.test(value)) {
                     return;
@@ -1922,7 +1920,13 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
                 variant="contained"
                 color="primary"
                 fullWidth
-                sx={{ mt: 1 }}
+                sx={{
+                  mt: 1,
+                  fontFamily: theme === 'retro-pixel' ? "'Press Start 2P', cursive" : 'inherit',
+                  fontSize: theme === 'retro-pixel' ? '0.75rem' : 'inherit',
+                  letterSpacing: theme === 'retro-pixel' ? '0.1em' : 'inherit',
+                  textTransform: theme === 'retro-pixel' ? 'uppercase' : 'inherit',
+                }}
               >
                 기록하기
               </Button>

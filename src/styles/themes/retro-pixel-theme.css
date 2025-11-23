@@ -1,0 +1,665 @@
+/* ============================================
+   RETRO PIXEL HABITFLOW THEME
+   Nostalgic. Playful. 8-Bit.
+   ============================================ */
+
+/* Import Retro Pixel Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Pixelify+Sans:wght@400;600&display=swap');
+
+:root[data-theme="retro-pixel"] {
+  /* Retro Pixel Color Palette - Enhanced contrast */
+  --pixel-navy: #1A1A2E;           /* Dark navy background */
+  --pixel-red: #FF5555;            /* Bright red */
+  --pixel-cyan: #55FFFF;           /* Bright cyan - better contrast */
+  --pixel-yellow: #FFFF55;         /* Bright yellow - better contrast */
+  --pixel-purple: #BD93F9;         /* Bright purple */
+  --pixel-green: #50FA7B;          /* Bright green */
+  --pixel-white: #FFFFFF;          /* Pure white - max contrast */
+  --pixel-dark: #0F0F1E;           /* Very dark */
+
+  /* Typography */
+  --font-display: 'Press Start 2P', cursive;
+  --font-body: 'VT323', monospace;
+  --font-mono: 'Press Start 2P', cursive;
+  --font-accent: 'Pixelify Sans', cursive;
+
+  /* Spacing (8px grid) */
+  --pixel-spacing-xs: 8px;
+  --pixel-spacing-sm: 16px;
+  --pixel-spacing-md: 24px;
+  --pixel-spacing-lg: 32px;
+  --pixel-spacing-xl: 48px;
+
+  /* Pixel Borders */
+  --pixel-border: 3px solid var(--pixel-navy);
+  --pixel-border-thick: 4px solid var(--pixel-navy);
+
+  /* Pixel Shadows (8-bit style) */
+  --pixel-shadow: 4px 4px 0 var(--pixel-navy);
+  --pixel-shadow-lg: 6px 6px 0 var(--pixel-navy);
+  --pixel-shadow-neon: 0 0 10px currentColor, 0 0 20px currentColor;
+}
+
+/* ============================================
+   GLOBAL RESETS - PIXEL STYLE
+   ============================================ */
+
+:root[data-theme="retro-pixel"] * {
+  box-sizing: border-box;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+:root[data-theme="retro-pixel"] body {
+  font-family: var(--font-body);
+  background: var(--pixel-navy);
+  color: var(--pixel-white);
+  line-height: 1.6;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   APP CONTAINER - GAME SCREEN
+   ============================================ */
+
+:root[data-theme="retro-pixel"] .app-container {
+  min-height: 100vh;
+  background: var(--pixel-navy);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Scanline effect */
+:root[data-theme="retro-pixel"] .app-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.1) 2px,
+    rgba(0, 0, 0, 0.1) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+  animation: scanlines 8s linear infinite;
+}
+
+@keyframes scanlines {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(4px); }
+}
+
+/* Pixel grid background */
+:root[data-theme="retro-pixel"] .app-container::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 7px, rgba(255, 255, 255, 0.03) 7px, rgba(255, 255, 255, 0.03) 8px),
+    repeating-linear-gradient(90deg, transparent, transparent 7px, rgba(255, 255, 255, 0.03) 7px, rgba(255, 255, 255, 0.03) 8px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============================================
+   HEADER - GAME TITLE SCREEN
+   ============================================ */
+
+:root[data-theme="retro-pixel"] .brutal-header {
+  background: var(--pixel-dark);
+  color: var(--pixel-cyan);
+  padding: var(--pixel-spacing-xl) var(--pixel-spacing-md);
+  border-bottom: var(--pixel-border-thick);
+  border-color: var(--pixel-cyan);
+  box-shadow: none;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: var(--pixel-spacing-lg);
+  animation: pixelGlow 2s ease-in-out infinite;
+}
+
+@keyframes pixelGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px var(--pixel-cyan);
+  }
+  50% {
+    box-shadow: 0 0 40px var(--pixel-cyan);
+  }
+}
+
+/* Pixel stars background */
+:root[data-theme="retro-pixel"] .brutal-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    radial-gradient(2px 2px at 20% 30%, white, transparent),
+    radial-gradient(2px 2px at 60% 70%, white, transparent),
+    radial-gradient(1px 1px at 50% 50%, white, transparent),
+    radial-gradient(1px 1px at 80% 10%, white, transparent),
+    radial-gradient(2px 2px at 90% 60%, white, transparent),
+    radial-gradient(1px 1px at 33% 80%, white, transparent);
+  background-size: 200% 200%;
+  animation: starfield 20s linear infinite;
+  opacity: 0.6;
+}
+
+@keyframes starfield {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 100% 100%; }
+}
+
+:root[data-theme="retro-pixel"] .brutal-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 3rem);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  line-height: 1.5;
+  text-transform: uppercase;
+  margin-bottom: var(--pixel-spacing-md);
+  position: relative;
+  z-index: 1;
+  text-shadow:
+    3px 3px 0 var(--pixel-red),
+    6px 6px 0 var(--pixel-yellow);
+  animation: pixelBounce 1s ease-in-out infinite;
+}
+
+@keyframes pixelBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+:root[data-theme="retro-pixel"] .brutal-title span {
+  animation: colorCycle 3s linear infinite;
+}
+
+@keyframes colorCycle {
+  0% { color: var(--pixel-cyan); }
+  33% { color: var(--pixel-red); }
+  66% { color: var(--pixel-yellow); }
+  100% { color: var(--pixel-cyan); }
+}
+
+:root[data-theme="retro-pixel"] .brutal-subtitle {
+  font-family: var(--font-body);
+  font-size: 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--pixel-yellow);
+  position: relative;
+  z-index: 1;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* ============================================
+   TABS - GAME MENU
+   ============================================ */
+
+:root[data-theme="retro-pixel"] .brutal-tabs {
+  display: flex;
+  gap: 0;
+  margin: 0 var(--pixel-spacing-md) var(--pixel-spacing-lg);
+  border: var(--pixel-border-thick);
+  border-color: var(--pixel-cyan);
+  background: var(--pixel-dark);
+}
+
+:root[data-theme="retro-pixel"] .brutal-tab {
+  flex: 1;
+  padding: var(--pixel-spacing-md);
+  background: var(--pixel-dark);
+  border: none;
+  border-right: var(--pixel-border);
+  border-color: var(--pixel-cyan);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.1s step-end;
+  color: var(--pixel-cyan);
+  position: relative;
+}
+
+:root[data-theme="retro-pixel"] .brutal-tab:last-child {
+  border-right: none;
+}
+
+:root[data-theme="retro-pixel"] .brutal-tab:hover {
+  background: var(--pixel-navy);
+  color: var(--pixel-yellow);
+  transform: none;
+  animation: pixelShake 0.3s ease-in-out;
+}
+
+@keyframes pixelShake {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-2px, 0); }
+  75% { transform: translate(2px, 0); }
+}
+
+:root[data-theme="retro-pixel"] .brutal-tab.active {
+  background: var(--pixel-cyan);
+  color: var(--pixel-navy);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme="retro-pixel"] .brutal-tab.active::before {
+  content: '▶';
+  position: absolute;
+  left: 8px;
+  animation: blink 1s step-end infinite;
+}
+
+/* ============================================
+   CARDS - GAME WINDOWS
+   ============================================ */
+
+:root[data-theme="retro-pixel"] .brutal-card {
+  background: #16162A;
+  border: var(--pixel-border-thick);
+  border-color: var(--pixel-cyan);
+  box-shadow: var(--pixel-shadow-lg);
+  padding: var(--pixel-spacing-md);
+  margin-bottom: var(--pixel-spacing-md);
+  transition: all 0.1s step-end;
+  position: relative;
+  color: var(--pixel-white);
+}
+
+:root[data-theme="retro-pixel"] .brutal-card::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  border: 1px solid rgba(78, 205, 196, 0.3);
+  pointer-events: none;
+}
+
+:root[data-theme="retro-pixel"] .brutal-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 8px 8px 0 var(--pixel-navy);
+  border-color: var(--pixel-yellow);
+}
+
+/* ============================================
+   BUTTONS - GAME CONTROLS
+   ============================================ */
+
+:root[data-theme="retro-pixel"] .brutal-button {
+  background: var(--pixel-dark);
+  border: var(--pixel-border);
+  border-color: var(--pixel-cyan);
+  padding: var(--pixel-spacing-sm) var(--pixel-spacing-md);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  box-shadow: var(--pixel-shadow);
+  transition: all 0.1s step-end;
+  color: var(--pixel-cyan);
+}
+
+:root[data-theme="retro-pixel"] .brutal-button:hover {
+  background: var(--pixel-cyan);
+  color: var(--pixel-navy);
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--pixel-navy);
+}
+
+:root[data-theme="retro-pixel"] .brutal-button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--pixel-navy);
+}
+
+:root[data-theme="retro-pixel"] .brutal-button-primary {
+  background: var(--pixel-red);
+  color: var(--pixel-white);
+  border-color: var(--pixel-red);
+  box-shadow:
+    4px 4px 0 var(--pixel-navy),
+    0 0 10px var(--pixel-red);
+}
+
+:root[data-theme="retro-pixel"] .brutal-button-primary:hover {
+  background: var(--pixel-yellow);
+  border-color: var(--pixel-yellow);
+  color: var(--pixel-navy);
+}
+
+/* ============================================
+   STATS - GAME HUD
+   ============================================ */
+
+:root[data-theme="retro-pixel"] .brutal-stat-card {
+  background: var(--pixel-dark);
+  color: var(--pixel-yellow);
+  border: var(--pixel-border-thick);
+  border-color: var(--pixel-red);
+  padding: var(--pixel-spacing-lg) var(--pixel-spacing-md);
+  text-align: center;
+  box-shadow: var(--pixel-shadow-lg);
+  position: relative;
+  animation: statPulse 2s ease-in-out infinite;
+}
+
+@keyframes statPulse {
+  0%, 100% {
+    box-shadow:
+      6px 6px 0 var(--pixel-navy),
+      0 0 10px var(--pixel-red);
+  }
+  50% {
+    box-shadow:
+      6px 6px 0 var(--pixel-navy),
+      0 0 20px var(--pixel-red),
+      0 0 30px var(--pixel-red);
+  }
+}
+
+:root[data-theme="retro-pixel"] .brutal-stat-card::before {
+  display: none;
+}
+
+:root[data-theme="retro-pixel"] .brutal-stat-value {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--pixel-yellow);
+  text-shadow:
+    2px 2px 0 var(--pixel-red),
+    4px 4px 0 var(--pixel-cyan);
+  animation: numberGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes numberGlow {
+  0%, 100% {
+    text-shadow:
+      2px 2px 0 var(--pixel-red),
+      4px 4px 0 var(--pixel-cyan);
+  }
+  50% {
+    text-shadow:
+      2px 2px 0 var(--pixel-red),
+      4px 4px 0 var(--pixel-cyan),
+      0 0 20px var(--pixel-yellow);
+  }
+}
+
+:root[data-theme="retro-pixel"] .brutal-stat-label {
+  font-family: var(--font-body);
+  font-size: 1.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  margin-top: var(--pixel-spacing-sm);
+  color: var(--pixel-cyan);
+}
+
+/* ============================================
+   STREAK - COMBO COUNTER
+   ============================================ */
+
+:root[data-theme="retro-pixel"] .brutal-streak {
+  background: var(--pixel-dark);
+  border: var(--pixel-border-thick);
+  border-color: var(--pixel-yellow);
+  padding: var(--pixel-spacing-sm) var(--pixel-spacing-md);
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 0.875rem;
+  color: var(--pixel-yellow);
+  box-shadow:
+    4px 4px 0 var(--pixel-navy),
+    0 0 20px var(--pixel-yellow);
+  animation: comboFlash 1s ease-in-out infinite;
+}
+
+@keyframes comboFlash {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow:
+      4px 4px 0 var(--pixel-navy),
+      0 0 20px var(--pixel-yellow);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow:
+      4px 4px 0 var(--pixel-navy),
+      0 0 30px var(--pixel-yellow),
+      0 0 40px var(--pixel-yellow);
+  }
+}
+
+:root[data-theme="retro-pixel"] .brutal-streak-icon {
+  animation: firePixel 0.5s step-end infinite;
+}
+
+@keyframes firePixel {
+  0%, 50% { transform: scale(1); }
+  51%, 100% { transform: scale(1.2); }
+}
+
+/* ============================================
+   LOADING - GAME LOADING
+   ============================================ */
+
+:root[data-theme="retro-pixel"] .brutal-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: var(--pixel-spacing-md);
+}
+
+:root[data-theme="retro-pixel"] .brutal-spinner {
+  width: 80px;
+  height: 80px;
+  border: 4px solid var(--pixel-cyan);
+  border-top-color: var(--pixel-red);
+  animation: pixelSpin 0.8s steps(8) infinite;
+}
+
+@keyframes pixelSpin {
+  to { transform: rotate(360deg); }
+}
+
+:root[data-theme="retro-pixel"] .brutal-loading-text {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--pixel-cyan);
+  animation: blink 1s step-end infinite;
+}
+
+/* ============================================
+   MUI COMPONENT OVERRIDES - PIXEL STYLE
+   ============================================ */
+
+:root[data-theme="retro-pixel"] .MuiPaper-root {
+  background: #16162A !important;
+  border: var(--pixel-border) !important;
+  border-color: var(--pixel-cyan) !important;
+  box-shadow: var(--pixel-shadow) !important;
+  transition: all 0.1s step-end !important;
+  color: var(--pixel-white) !important;
+}
+
+:root[data-theme="retro-pixel"] .MuiPaper-root:hover {
+  transform: translate(-2px, -2px) !important;
+  box-shadow: var(--pixel-shadow-lg) !important;
+  border-color: var(--pixel-yellow) !important;
+}
+
+:root[data-theme="retro-pixel"] .MuiButton-root {
+  font-family: var(--font-display) !important;
+  font-size: 0.75rem !important;
+  font-weight: 400 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  border: var(--pixel-border) !important;
+  border-color: var(--pixel-cyan) !important;
+  box-shadow: var(--pixel-shadow) !important;
+  transition: all 0.1s step-end !important;
+}
+
+:root[data-theme="retro-pixel"] .MuiButton-root * {
+  font-family: var(--font-display) !important;
+  font-size: 0.75rem !important;
+  font-weight: 400 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+}
+
+:root[data-theme="retro-pixel"] .MuiButton-label,
+:root[data-theme="retro-pixel"] .MuiButton-root span {
+  font-family: var(--font-display) !important;
+  font-size: 0.75rem !important;
+  font-weight: 400 !important;
+}
+
+:root[data-theme="retro-pixel"] .MuiButton-root:hover {
+  background: var(--pixel-cyan) !important;
+  color: var(--pixel-navy) !important;
+  transform: translate(-2px, -2px) !important;
+  box-shadow: var(--pixel-shadow-lg) !important;
+}
+
+:root[data-theme="retro-pixel"] .MuiTypography-h1,
+:root[data-theme="retro-pixel"] .MuiTypography-h2,
+:root[data-theme="retro-pixel"] .MuiTypography-h3,
+:root[data-theme="retro-pixel"] .MuiTypography-h4 {
+  font-family: var(--font-display) !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.1em !important;
+  color: var(--pixel-cyan) !important;
+}
+
+:root[data-theme="retro-pixel"] .MuiTypography-h5,
+:root[data-theme="retro-pixel"] .MuiTypography-h6 {
+  font-family: var(--font-body) !important;
+  font-weight: 400 !important;
+  color: var(--pixel-yellow) !important;
+}
+
+:root[data-theme="retro-pixel"] .MuiTypography-body1,
+:root[data-theme="retro-pixel"] .MuiTypography-body2 {
+  font-family: var(--font-body) !important;
+  color: var(--pixel-white) !important;
+}
+
+:root[data-theme="retro-pixel"] p,
+:root[data-theme="retro-pixel"] span,
+:root[data-theme="retro-pixel"] div {
+  color: var(--pixel-white);
+}
+
+:root[data-theme="retro-pixel"] label {
+  color: var(--pixel-cyan) !important;
+  font-family: var(--font-body) !important;
+}
+
+:root[data-theme="retro-pixel"] .MuiInputBase-root,
+:root[data-theme="retro-pixel"] input[type="date"] {
+  border: var(--pixel-border) !important;
+  border-color: var(--pixel-cyan) !important;
+  background: var(--pixel-dark) !important;
+  font-family: var(--font-body) !important;
+  color: var(--pixel-white) !important;
+  font-size: 1.2rem !important;
+}
+
+:root[data-theme="retro-pixel"] .MuiAlert-root {
+  border: var(--pixel-border-thick) !important;
+  border-color: var(--pixel-red) !important;
+  font-family: var(--font-body) !important;
+  background: var(--pixel-dark) !important;
+  color: var(--pixel-white) !important;
+  box-shadow: var(--pixel-shadow) !important;
+}
+
+/* ============================================
+   RESPONSIVE - MAINTAIN PIXELATION
+   ============================================ */
+
+@media (max-width: 768px) {
+  :root[data-theme="retro-pixel"] .brutal-title {
+    font-size: 1.5rem;
+  }
+
+  :root[data-theme="retro-pixel"] .brutal-stat-value {
+    font-size: 2rem;
+  }
+
+  :root[data-theme="retro-pixel"] .brutal-tabs {
+    flex-direction: column;
+  }
+
+  :root[data-theme="retro-pixel"] .brutal-tab {
+    border-right: none;
+    border-bottom: var(--pixel-border);
+  }
+
+  :root[data-theme="retro-pixel"] .brutal-tab:last-child {
+    border-bottom: none;
+  }
+}
+
+/* ============================================
+   SPECIAL PIXEL EFFECTS
+   ============================================ */
+
+/* Level up animation */
+@keyframes levelUp {
+  0% {
+    transform: scale(0.5) translateY(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2) translateY(-20px);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) translateY(-40px);
+    opacity: 0;
+  }
+}
+
+/* Coin collect animation */
+@keyframes coinCollect {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100px) rotate(360deg);
+    opacity: 0;
+  }
+}

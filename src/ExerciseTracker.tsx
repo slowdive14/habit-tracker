@@ -296,20 +296,20 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     }
   };
 
-  // 이전 주간 목표 로드 (Firebase)
+  // 이전 주간 목표 로드 (Firebase) - 실제로는 현재 주의 기존 목표를 로드
   const loadPreviousWeeklyGoals = async () => {
     if (!user) return;
 
     try {
-      // 지난 주 월요일 날짜 계산
+      // 현재 주 월요일 날짜 계산 (이번 주 목표가 이미 있는지 확인용)
       const today = new Date();
       const dayOfWeek = today.getDay();
       const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-      const lastWeekMonday = new Date(today);
-      lastWeekMonday.setDate(today.getDate() - daysFromMonday - 7);
-      const lastWeekMondayStr = getKoreanDateString(lastWeekMonday);
+      const thisWeekMonday = new Date(today);
+      thisWeekMonday.setDate(today.getDate() - daysFromMonday);
+      const thisWeekMondayStr = getKoreanDateString(thisWeekMonday);
 
-      const goalsRef = doc(db, 'weeklyGoals', `${user.uid}_${lastWeekMondayStr}`);
+      const goalsRef = doc(db, 'weeklyGoals', `${user.uid}_${thisWeekMondayStr}`);
       const goalsDoc = await getDoc(goalsRef);
 
       if (goalsDoc.exists()) {
@@ -329,11 +329,39 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           dips: goals.dips,
           lateralRaise: goals.lateralRaise,
           running: goals.running,
-          weekOf: lastWeekMondayStr
+          weekOf: thisWeekMondayStr
         });
-        console.log('이전 주간 목표 로드 성공:', { goals, achievements: data.achievements, rates: data.achievementRates });
+        console.log('현재 주 기존 목표 로드 성공:', { goals, achievements: data.achievements, rates: data.achievementRates });
       } else {
-        console.log('이전 주간 목표 없음 (첫 사용 또는 새로운 주)');
+        console.log('현재 주 목표 없음 (새로운 주 시작 - 지난 주 목표 기반으로 계산 예정)');
+        // 새로운 주가 시작되었으면 지난 주 목표를 불러와서 참고
+        const lastWeekMonday = new Date(today);
+        lastWeekMonday.setDate(today.getDate() - daysFromMonday - 7);
+        const lastWeekMondayStr = getKoreanDateString(lastWeekMonday);
+
+        const lastWeekGoalsRef = doc(db, 'weeklyGoals', `${user.uid}_${lastWeekMondayStr}`);
+        const lastWeekGoalsDoc = await getDoc(lastWeekGoalsRef);
+
+        if (lastWeekGoalsDoc.exists()) {
+          const lastWeekData = lastWeekGoalsDoc.data();
+          const lastWeekGoals = lastWeekData.goals || {
+            pushups: lastWeekData.pushups || 0,
+            pullups: lastWeekData.pullups || 0,
+            dips: lastWeekData.dips || 0,
+            lateralRaise: lastWeekData.lateralRaise || 0,
+            running: lastWeekData.running || 0
+          };
+
+          setPreviousWeeklyGoals({
+            pushups: lastWeekGoals.pushups,
+            pullups: lastWeekGoals.pullups,
+            dips: lastWeekGoals.dips,
+            lateralRaise: lastWeekGoals.lateralRaise,
+            running: lastWeekGoals.running,
+            weekOf: lastWeekMondayStr
+          });
+          console.log('지난 주 목표를 기반으로 새 목표 계산 예정:', lastWeekGoals);
+        }
       }
     } catch (error) {
       console.error('이전 주간 목표 로드 오류:', error);

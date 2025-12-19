@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Paper,
@@ -19,7 +19,9 @@ import {
   CardContent,
   Tooltip as MuiTooltip,
   Chip,
-  Divider
+  Divider,
+  Select,
+  MenuItem
 } from '@mui/material';
 import { useTheme } from './contexts/ThemeContext';
 import TwitterIcon from '@mui/icons-material/Twitter';
@@ -55,6 +57,7 @@ import {
 } from 'recharts';
 import ExerciseCard from './components/ExerciseCard';
 import MonthlyExerciseCard from './components/MonthlyExerciseCard';
+import YearlyExerciseCard from './components/YearlyExerciseCard';
 import './styles/ExerciseTracker.css';
 
 interface Exercise {
@@ -80,6 +83,8 @@ interface TabPanelProps {
   index: number;
   value: number;
 }
+
+type TrendType = 'strong_increase' | 'increasing' | 'stable' | 'decreasing' | 'strong_decrease';
 
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
@@ -172,6 +177,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   const [openGuideDialog, setOpenGuideDialog] = useState(false);
   const [selectedExerciseType, setSelectedExerciseType] = useState<string>('');
   const [selectedWeekOffset, setSelectedWeekOffset] = useState(0); // 0: 현재 주, -1: 지난 주, -2: 2주 전...
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [yearlyData, setYearlyData] = useState<any[]>([]);
   const [guideContent, setGuideContent] = useState<{
     title: string;
     description: string;
@@ -257,6 +264,16 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     running: 0,
     weekOf: ''
   });
+
+  // 연간 통계를 위한 사용 가능한 연도 목록 계산
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    Object.keys(exerciseData).forEach(dateStr => {
+      const year = new Date(dateStr).getFullYear();
+      years.add(year);
+    });
+    return Array.from(years).sort((a, b) => b - a); // 최신 연도가 먼저
+  }, [exerciseData]);
 
   const loadExerciseData = async () => {
     if (!user) {
@@ -589,6 +606,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   useEffect(() => {
     calculateWeeklyData();
     calculateMonthlyData();
+    calculateYearlyData();
     calculateConsistencyScores();
 
     // 운동 데이터가 있거나, 이전 목표가 로드되었으면 이번 주 목표 생성
@@ -604,6 +622,13 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       loadSelectedWeekGoals();
     }
   }, [selectedWeekOffset, user]);
+
+  // 선택된 연도 변경 시 연간 데이터 재계산
+  useEffect(() => {
+    if (exerciseData && Object.keys(exerciseData).length > 0) {
+      calculateYearlyData();
+    }
+  }, [selectedYear, exerciseData]);
 
   // 선택된 날짜 변경 useEffect
   useEffect(() => {
@@ -1188,6 +1213,55 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     });
   };
 
+  // 연간 데이터 집계
+  const calculateYearlyData = () => {
+    const monthlyTotals = [];
+    const koreanNow = new Date(new Date().getTime() + (9 * 60 * 60 * 1000));
+    const currentYear = koreanNow.getFullYear();
+    const currentMonth = koreanNow.getMonth(); // 0-11
+
+    for (let month = 0; month < 12; month++) {
+      const monthData = {
+        month: `${month + 1}월`,
+        pushups: 0,
+        pullups: 0,
+        dips: 0,
+        lateralRaise: 0,
+        running: 0
+      };
+
+      // 해당 월의 일수 계산
+      const daysInMonth = new Date(selectedYear, month + 1, 0).getDate();
+
+      // 현재 연도의 미래 월은 건너뛰기
+      if (selectedYear === currentYear && month > currentMonth) {
+        monthlyTotals.push(monthData);
+        continue;
+      }
+
+      // 해당 월의 모든 날짜 데이터 집계
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${selectedYear}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const exercise = exerciseData[dateStr];
+
+        if (exercise) {
+          monthData.pushups += exercise.pushups || 0;
+          monthData.pullups += exercise.pullups || 0;
+          monthData.dips += exercise.dips || 0;
+          monthData.lateralRaise += exercise.lateralRaise || 0;
+          monthData.running += exercise.running || 0;
+        }
+      }
+
+      // running은 소수점 1자리까지
+      monthData.running = Math.round(monthData.running * 10) / 10;
+
+      monthlyTotals.push(monthData);
+    }
+
+    setYearlyData(monthlyTotals);
+  };
+
   // 카드형 차트를 위한 데이터 준비
   const prepareCardData = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'lateralRaise' | 'running') => {
     const today = new Date();
@@ -1369,6 +1443,121 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       monthlyGoal,
       thisMonthAverage,
       lastMonthAverage
+    };
+  };
+
+  // 연간 카드 데이터 준비
+  const prepareYearlyCardData = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'lateralRaise' | 'running') => {
+    // yearlyData에서 해당 운동의 월별 데이터 추출
+    const chartData = yearlyData.map(month => ({
+      month: month.month,
+      value: month[exerciseType] || 0
+    }));
+
+    // 연간 총합 계산
+    const yearlyTotal = chartData.reduce((sum, item) => sum + item.value, 0);
+
+    // 연도의 일수 계산 (윤년 고려)
+    const isLeapYear = (selectedYear % 4 === 0 && selectedYear % 100 !== 0) || (selectedYear % 400 === 0);
+    const daysInYear = isLeapYear ? 366 : 365;
+
+    // 현재 연도의 경우 실제 경과 일수 사용
+    const koreanNow = new Date(new Date().getTime() + (9 * 60 * 60 * 1000));
+    const currentYear = koreanNow.getFullYear();
+    let actualDays = daysInYear;
+
+    if (selectedYear === currentYear) {
+      const startOfYear = new Date(selectedYear, 0, 1);
+      actualDays = Math.floor((koreanNow.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    }
+
+    // 일일 평균
+    const yearlyAverage = actualDays > 0 ? Math.round((yearlyTotal / actualDays) * 10) / 10 : 0;
+
+    // 최고/최저 월 찾기 (0이 아닌 값 중에서)
+    const nonZeroData = chartData.filter(item => item.value > 0);
+    const bestMonth = nonZeroData.length > 0
+      ? nonZeroData.reduce((max, item) => item.value > max.value ? item : max, nonZeroData[0])
+      : { month: '-', value: 0 };
+
+    const worstMonth = nonZeroData.length > 0
+      ? nonZeroData.reduce((min, item) => item.value < min.value ? item : min, nonZeroData[0])
+      : { month: '-', value: 0 };
+
+    // 전년도 데이터 계산
+    let previousYearTotal: number | undefined;
+    let yearOverYearChange: number | undefined;
+
+    if (selectedYear > 2025) { // 2025년이 시작 연도라고 가정
+      // 전년도 데이터 집계
+      let prevYearTotal = 0;
+      for (let month = 0; month < 12; month++) {
+        const daysInMonth = new Date(selectedYear - 1, month + 1, 0).getDate();
+        for (let day = 1; day <= daysInMonth; day++) {
+          const dateStr = `${selectedYear - 1}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          const exercise = exerciseData[dateStr];
+          if (exercise && exercise[exerciseType]) {
+            prevYearTotal += exercise[exerciseType];
+          }
+        }
+      }
+
+      if (prevYearTotal > 0) {
+        previousYearTotal = Math.round(prevYearTotal * 10) / 10;
+        yearOverYearChange = Math.round(((yearlyTotal - prevYearTotal) / prevYearTotal) * 100);
+      }
+    }
+
+    // 추세 계산 (최근 3개월 vs 초반 3개월)
+    const calculateTrend = (): { trend: TrendType; percentage: number } => {
+      // 초반 3개월 (1-3월) 데이터
+      const firstQuarterData = chartData.slice(0, 3);
+      const firstQuarterTotal = firstQuarterData.reduce((sum, item) => sum + item.value, 0);
+      const firstQuarterAvg = firstQuarterTotal / 3;
+
+      // 최근 3개월 (10-12월) 데이터
+      const lastQuarterData = chartData.slice(9, 12);
+      const lastQuarterTotal = lastQuarterData.reduce((sum, item) => sum + item.value, 0);
+      const lastQuarterAvg = lastQuarterTotal / 3;
+
+      // 변화율 계산
+      let percentage = 0;
+      if (firstQuarterAvg > 0) {
+        percentage = ((lastQuarterAvg - firstQuarterAvg) / firstQuarterAvg) * 100;
+      } else if (lastQuarterAvg > 0) {
+        // 초반에 0이었다면 증가로 간주
+        percentage = 100;
+      }
+
+      // 5단계 분류
+      let trend: TrendType;
+      if (percentage > 20) {
+        trend = 'strong_increase';
+      } else if (percentage > 5) {
+        trend = 'increasing';
+      } else if (percentage >= -5) {
+        trend = 'stable';
+      } else if (percentage >= -20) {
+        trend = 'decreasing';
+      } else {
+        trend = 'strong_decrease';
+      }
+
+      return { trend, percentage: Math.round(percentage) };
+    };
+
+    const { trend, percentage: trendPercentage } = calculateTrend();
+
+    return {
+      chartData,
+      yearlyTotal: Math.round(yearlyTotal * 10) / 10,
+      yearlyAverage,
+      bestMonth,
+      worstMonth,
+      previousYearTotal,
+      yearOverYearChange,
+      trend,
+      trendPercentage
     };
   };
 
@@ -1975,6 +2164,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
           >
             <Tab label="주간 통계" />
             <Tab label="월간 통계" />
+            <Tab label="연간 통계" />
           </Tabs>
           <IconButton 
             color="primary" 
@@ -2305,6 +2495,87 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
               ))}
             </Grid>
           </Box>
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={2}>
+          {/* 연도 선택 컨트롤 */}
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            mb: 3,
+            p: 2,
+            borderRadius: 2,
+            backgroundColor: 'rgba(0, 0, 0, 0.02)',
+            border: '1px solid rgba(0, 0, 0, 0.08)'
+          }}>
+            <IconButton
+              onClick={() => setSelectedYear(y => y - 1)}
+              color="primary"
+              disabled={availableYears.length === 0 || selectedYear <= Math.min(...availableYears)}
+            >
+              <ChevronLeftIcon />
+            </IconButton>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                {selectedYear}년 연간 운동 현황
+              </Typography>
+              {availableYears.length > 1 && (
+                <Select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value as number)}
+                  size="small"
+                  sx={{ minWidth: 100 }}
+                >
+                  {availableYears.map(year => (
+                    <MenuItem key={year} value={year}>{year}년</MenuItem>
+                  ))}
+                </Select>
+              )}
+            </Box>
+
+            <IconButton
+              onClick={() => setSelectedYear(y => y + 1)}
+              color="primary"
+              disabled={selectedYear >= new Date().getFullYear()}
+            >
+              <ChevronRightIcon />
+            </IconButton>
+          </Box>
+
+          {/* 운동 카드 그리드 */}
+          <Grid container spacing={3}>
+            {(['pushups', 'pullups', 'dips', 'lateralRaise', 'running'] as const).map((exerciseType) => {
+              const data = prepareYearlyCardData(exerciseType);
+              const exerciseInfo = {
+                pushups: { title: '푸시업', color: '#8884d8', unit: '회' },
+                pullups: { title: '풀업', color: '#82ca9d', unit: '회' },
+                dips: { title: '딥스', color: '#ffc658', unit: '회' },
+                lateralRaise: { title: '사이드 래터럴 레이즈', color: '#ff7043', unit: '회' },
+                running: { title: '달리기', color: '#e91e63', unit: 'km' }
+              };
+
+              return (
+                <Grid item xs={12} sm={6} key={exerciseType}>
+                  <YearlyExerciseCard
+                    title={exerciseInfo[exerciseType].title}
+                    color={exerciseInfo[exerciseType].color}
+                    data={data.chartData}
+                    yearlyTotal={data.yearlyTotal}
+                    yearlyAverage={data.yearlyAverage}
+                    bestMonth={data.bestMonth}
+                    worstMonth={data.worstMonth}
+                    unit={exerciseInfo[exerciseType].unit}
+                    previousYearTotal={data.previousYearTotal}
+                    yearOverYearChange={data.yearOverYearChange}
+                    trend={data.trend}
+                    trendPercentage={data.trendPercentage}
+                  />
+                </Grid>
+              );
+            })}
+          </Grid>
         </TabPanel>
       </Paper>
 

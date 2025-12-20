@@ -141,16 +141,19 @@ const YearlyExerciseCard: React.FC<YearlyExerciseCardProps> = ({
         </Typography>
 
         {/* 12개월 바 차트 */}
-        <Box sx={{ width: '100%', height: 200, mb: 3 }}>
+        <Box sx={{ width: '100%', height: { xs: 180, sm: 200 }, mb: 3 }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
               <XAxis
                 dataKey="month"
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 9 }}
                 interval={0}
+                angle={-45}
+                textAnchor="end"
+                height={60}
               />
-              <YAxis tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 9 }} />
               <Tooltip
                 contentStyle={{
                   backgroundColor: 'rgba(255, 255, 255, 0.95)',

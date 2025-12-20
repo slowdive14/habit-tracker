@@ -2161,6 +2161,9 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
             value={tabValue}
             onChange={(_, newValue) => setTabValue(newValue)}
             aria-label="exercise statistics tabs"
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
           >
             <Tab label="주간 통계" />
             <Tab label="월간 통계" />
@@ -2504,21 +2507,24 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
             alignItems: 'center',
             justifyContent: 'space-between',
             mb: 3,
-            p: 2,
+            p: { xs: 1, sm: 2 },
             borderRadius: 2,
             backgroundColor: 'rgba(0, 0, 0, 0.02)',
-            border: '1px solid rgba(0, 0, 0, 0.08)'
+            border: '1px solid rgba(0, 0, 0, 0.08)',
+            flexWrap: 'wrap',
+            gap: 1
           }}>
             <IconButton
               onClick={() => setSelectedYear(y => y - 1)}
               color="primary"
               disabled={availableYears.length === 0 || selectedYear <= Math.min(...availableYears)}
+              size="small"
             >
               <ChevronLeftIcon />
             </IconButton>
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 }, flexWrap: 'wrap', justifyContent: 'center', flex: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary', fontSize: { xs: '0.95rem', sm: '1.25rem' } }}>
                 {selectedYear}년 연간 운동 현황
               </Typography>
               {availableYears.length > 1 && (
@@ -2526,7 +2532,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(e.target.value as number)}
                   size="small"
-                  sx={{ minWidth: 100 }}
+                  sx={{ minWidth: { xs: 80, sm: 100 } }}
                 >
                   {availableYears.map(year => (
                     <MenuItem key={year} value={year}>{year}년</MenuItem>
@@ -2539,6 +2545,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
               onClick={() => setSelectedYear(y => y + 1)}
               color="primary"
               disabled={selectedYear >= new Date().getFullYear()}
+              size="small"
             >
               <ChevronRightIcon />
             </IconButton>

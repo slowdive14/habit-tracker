@@ -221,6 +221,10 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
       try {
         setIsLoading(true);
         const rawData = await loadHabitData();
+        
+        // 컴포넌트가 언마운트되었다면 상태 업데이트 중단
+        if (!isMounted) return;
+
         console.log('로드된 원본 데이터 전체:', rawData);
         console.log('원본 2025년 1월 데이터:', rawData?.['2025']?.['January']);
         

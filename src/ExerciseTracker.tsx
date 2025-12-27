@@ -21,7 +21,8 @@ import {
   Chip,
   Divider,
   Select,
-  MenuItem
+  MenuItem,
+  Snackbar
 } from '@mui/material';
 import { useTheme } from './contexts/ThemeContext';
 import TwitterIcon from '@mui/icons-material/Twitter';
@@ -119,7 +120,7 @@ interface ConsistencyScore {
 
 // 운동 종류별 특성 정보 추가
 const exerciseCharacteristics = {
-  pushups: { 
+  pushups: {
     optimalFrequency: 3, // 주당 최적 빈도
     recoveryNeeded: true, // 회복 필요성
     intensityType: "근력", // 운동 유형
@@ -127,8 +128,8 @@ const exerciseCharacteristics = {
     progression: "reps", // 진행 유형 (횟수 증가)
     maxRecommended: 40 // 일반적인 최대 권장량
   },
-  pullups: { 
-    optimalFrequency: 3, 
+  pullups: {
+    optimalFrequency: 3,
     recoveryNeeded: true,
     intensityType: "근력",
     recommendedRest: 1,
@@ -175,6 +176,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   const [shareDate, setShareDate] = useState<string>(getKoreanDateString(new Date()));
   const [openShareDialog, setOpenShareDialog] = useState(false);
   const [openGuideDialog, setOpenGuideDialog] = useState(false);
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
   const [selectedExerciseType, setSelectedExerciseType] = useState<string>('');
   const [selectedWeekOffset, setSelectedWeekOffset] = useState(0); // 0: 현재 주, -1: 지난 주, -2: 2주 전...
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -588,6 +591,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       await setDoc(exerciseRef, exerciseData);
       await loadExerciseData();
       console.log('Exercise data saved and reloaded successfully');
+      setSnackbarMessage('운동 기록이 저장되었습니다! 💪');
+      setOpenSnackbar(true);
     } catch (error) {
       console.error('Error saving exercise data:', error);
       setError('운동 데이터를 저장하는 중 오류가 발생했습니다.');
@@ -1115,7 +1120,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     // 이번 달 1일부터 오늘까지의 날짜 생성
     const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
     const daysInThisMonth = today.getDate(); // 1일부터 오늘까지의 날 수
-    
+
     const thisMonthDays = Array.from({ length: daysInThisMonth }, (_, i) => {
       const date = new Date(thisMonthStart.getFullYear(), thisMonthStart.getMonth(), 1 + i);
       return getKoreanDateString(date);
@@ -1133,7 +1138,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
     // 평균 계산 - 모든 운동을 2025-01-01부터 계산
     const startDate = new Date('2025-01-01'); // 모든 운동 시작일 통일
-    
+
     // 현재까지의 총 일수 계산 (2025-01-01부터)
     const msPerDay = 24 * 60 * 60 * 1000;
     const todayDate = new Date();
@@ -1306,7 +1311,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       date.setDate(lastWeekMonday.getDate() + i);
       return getKoreanDateString(date);
     });
-    
+
     const lastWeekTotal = lastWeekDays.reduce((sum, date) => {
       return sum + (exerciseData[date]?.[exerciseType] || 0);
     }, 0);
@@ -1363,7 +1368,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     const today = new Date();
     const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
     const daysInThisMonth = today.getDate(); // 1일부터 오늘까지의 날 수
-    
+
     const thisMonthDays = Array.from({ length: daysInThisMonth }, (_, i) => {
       const date = new Date(thisMonthStart.getFullYear(), thisMonthStart.getMonth(), 1 + i);
       return getKoreanDateString(date);
@@ -1375,7 +1380,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     }));
 
     const currentValue = exerciseData[selectedDate]?.[exerciseType] || 0;
-    
+
     // 이번 달과 지난 달 비교 (today와 thisMonthStart는 위에서 이미 선언됨)
     const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
@@ -1384,7 +1389,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     const thisMonthData = Object.entries(exerciseData)
       .filter(([date]) => new Date(date) >= thisMonthStart && new Date(date) <= today)
       .map(([, data]) => data[exerciseType] || 0);
-    
+
     // 지난 달 데이터
     const lastMonthData = Object.entries(exerciseData)
       .filter(([date]) => new Date(date) >= lastMonthStart && new Date(date) <= lastMonthEnd)
@@ -1392,11 +1397,11 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
     const thisMonthTotal = thisMonthData.reduce((sum, val) => sum + val, 0);
     const lastMonthTotal = lastMonthData.reduce((sum, val) => sum + val, 0);
-    
+
     // 이번 달 평균 (실제 경과 날수로 계산)
     const daysPassedThisMonth = today.getDate(); // 1일부터 오늘까지의 날 수
     const thisMonthAverage = daysPassedThisMonth > 0 ? thisMonthTotal / daysPassedThisMonth : 0;
-    
+
     // 디버깅 정보 (달리기일 때만)
     if (exerciseType === 'running') {
       const originalThisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -1414,7 +1419,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         thisMonthDays마지막: thisMonthDays[thisMonthDays.length - 1]
       });
     }
-    
+
     // 지난 달 평균 (지난 달 전체 날수로 계산)
     const daysInLastMonth = lastMonthEnd.getDate(); // 지난 달 총 일수
     const lastMonthAverage = daysInLastMonth > 0 ? lastMonthTotal / daysInLastMonth : 0;
@@ -1576,22 +1581,22 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       });
 
       // 운동 기록 존재 여부 (관대한 계산 - 건너뛰기 고려)
-      const actualRecordDays = last30Days.filter(date => 
+      const actualRecordDays = last30Days.filter(date =>
         exerciseData[date] && exerciseData[date][type] && exerciseData[date][type] > 0
       );
-      
+
       // 동기부여를 위한 보너스: 실제 운동일에 건너뛰기 일수도 부분적으로 인정
       const actualExerciseDays = actualRecordDays.length;
       const maxPossibleSkipDays = Math.floor(actualExerciseDays / 3); // 실제 운동일의 1/3까지 건너뛰기 보너스
       const adjustedRecordDaysCount = Math.min(30, actualExerciseDays + maxPossibleSkipDays);
-      
+
       // 가상의 hasRecordDays 객체 생성 (배열의 length 속성만 필요)
       const hasRecordDays = { length: adjustedRecordDaysCount };
 
       // 2. 최근 10일의 기록과 그 이전 20일의 기록 비교 (추세 계산 - 관대하게)
       const recent10Days = last30Days.slice(0, 10);
       const previous20Days = last30Days.slice(10, 30);
-      
+
       const recent10HasRecords = recent10Days.filter(date => {
         const value = exerciseData[date]?.[type];
         return typeof value === 'number' && value > 0;
@@ -1600,24 +1605,24 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         const value = exerciseData[date]?.[type];
         return typeof value === 'number' && value > 0;
       });
-      
+
       // 관대한 추세 계산: 건너뛰기 보너스 적용
       const recent10BonusDays = Math.floor(recent10HasRecords.length / 3);
       const previous20BonusDays = Math.floor(previous20HasRecords.length / 3);
-      
+
       const recent10Ratio = Math.min(1, (recent10HasRecords.length + recent10BonusDays) / recent10Days.length);
       const previous20Ratio = Math.min(1, (previous20HasRecords.length + previous20BonusDays) / previous20Days.length);
-      
+
       // 3. 꾸준함 점수 계산
       // a. 기록 빈도 (60% 가중치)
       const frequencyScore = (hasRecordDays.length / 30) * 100 * 0.6;
-      
+
       // b. 최근 개선도 (20% 가중치)
       const improvementFactor = recent10Ratio > 0 && previous20Ratio > 0
         ? (recent10Ratio - previous20Ratio) / previous20Ratio
         : 0;
       const trendScore = Math.min(100, Math.max(0, 50 + (improvementFactor * 100))) * 0.2;
-      
+
       // c. 연속 일수 (20% 가중치)
       let maxConsecutiveDays = 0;
       let currentConsecutiveDays = 0;
@@ -1628,7 +1633,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       let allowedSkips = 2;
       let skipsUsed = 0;
       let currentStreakSkips = 0;
-      
+
       for (const date of last30Days) {
         if (exerciseData[date] && exerciseData[date][type] && exerciseData[date][type] > 0) {
           // 운동한 날: 연속 기록 증가, 건너뛰기 카운터 리셋
@@ -1664,10 +1669,10 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
       // 최대 30일까지 고려
       const streakScore = (maxConsecutiveDays / 30) * 100 * 0.2;
-      
+
       // 4. 총 일관성 점수 계산 (0-100)
       const totalScore = Math.min(100, Math.round(frequencyScore + trendScore + streakScore));
-      
+
       // 5. 등급 결정
       const { grade, label, color } = getGradeInfo(totalScore);
 
@@ -1752,7 +1757,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
   // 개선 가이드 다이얼로그 열기 함수
   const handleOpenGuide = (exerciseType: string) => {
     setSelectedExerciseType(exerciseType);
-    
+
     // 운동 타입별 기본 데이터 구성
     const exerciseInfo = {
       pushups: { name: '푸시업', unit: '회', defaultTarget: 15, increaseStep: 5 },
@@ -1760,22 +1765,22 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       dips: { name: '딥스', unit: '회', defaultTarget: 10, increaseStep: 3 },
       running: { name: '달리기', unit: 'km', defaultTarget: 3, increaseStep: 0.5 }
     };
-    
+
     const info = exerciseInfo[exerciseType as keyof typeof exerciseInfo];
     const score = consistencyScores[exerciseType as keyof typeof consistencyScores];
     const currentTrend = score.trendChange;
     const characteristics = exerciseCharacteristics[exerciseType as keyof typeof exerciseCharacteristics];
-    
+
     // 1. 사용자 패턴 분석 - 최근 운동 데이터 수집
     const today = new Date();
-    
+
     // 최근 28일(4주) 데이터 수집
     const last28Days = Array.from({ length: 28 }, (_, i) => {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
       return getKoreanDateString(date);
     });
-    
+
     // 주별 데이터 분리 (4주)
     const weeklyData = [
       last28Days.slice(0, 7),    // 최근 1주
@@ -1783,24 +1788,24 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       last28Days.slice(14, 21),  // 최근 3주
       last28Days.slice(21, 28)   // 최근 4주
     ];
-    
+
     // 각 주별 운동 횟수 계산
-    const weeklyFrequencies = weeklyData.map(week => 
+    const weeklyFrequencies = weeklyData.map(week =>
       week.filter(date => {
         const value = exerciseData[date]?.[exerciseType as keyof Exercise];
         return typeof value === 'number' && value > 0;
       }).length
     );
-    
+
     // 평균 주간 운동 빈도
-    const avgWeeklyFrequency = weeklyFrequencies.reduce((sum, freq) => sum + freq, 0) / 
+    const avgWeeklyFrequency = weeklyFrequencies.reduce((sum, freq) => sum + freq, 0) /
       weeklyFrequencies.length;
-    
+
     // 선호 요일 분석 코드 제거 (요일 추천 없앰)
-    
+
     // 현재 연속 일수
     const currentStreakDays = score.streakDays;
-    
+
     // 최근 7일간 운동한 날의 평균값
     const exerciseValues = last28Days.slice(0, 7)
       .map(date => {
@@ -1808,18 +1813,18 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
         return typeof value === 'number' ? value : 0;
       })
       .filter(val => val > 0);
-    
-    const currentAvg = exerciseValues.length > 0 
+
+    const currentAvg = exerciseValues.length > 0
       ? Math.round((exerciseValues.reduce((a, b) => a + b, 0) / exerciseValues.length) * 10) / 10
       : 0;
-      
+
     // 최근 30일 데이터 계산
     const last30Days = Array.from({ length: 30 }, (_, i) => {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
       return getKoreanDateString(date);
     });
-    
+
     // 모든 날의 평균 (0 포함)
     const dailyAvg30Days = last30Days
       .map(date => {
@@ -1827,7 +1832,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
         return typeof value === 'number' ? value : 0;
       })
       .reduce((sum, val) => sum + val, 0) / 30;
-    
+
     // 실제 운동한 날만의 평균
     const exerciseValues30Days = last30Days
       .map(date => {
@@ -1835,23 +1840,23 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
         return typeof value === 'number' ? value : 0;
       })
       .filter(val => val > 0);
-    
+
     const exerciseDayAvg30Days = exerciseValues30Days.length > 0
       ? exerciseValues30Days.reduce((sum, val) => sum + val, 0) / exerciseValues30Days.length
       : 0;
-    
+
     // 전체 기간 평균 (averageStats에서)
-    const longTermDailyAvg = exerciseType === 'pushups' ? averageStats.pushups : 
-                           exerciseType === 'pullups' ? averageStats.pullups :
-                           exerciseType === 'dips' ? averageStats.dips :
-                           exerciseType === 'running' ? averageStats.running : 0;
-    
+    const longTermDailyAvg = exerciseType === 'pushups' ? averageStats.pushups :
+      exerciseType === 'pullups' ? averageStats.pullups :
+        exerciseType === 'dips' ? averageStats.dips :
+          exerciseType === 'running' ? averageStats.running : 0;
+
     // 실제 운동일만 고려한 평균 (달리기의 경우)
-    const activeExerciseDayAvg = 
-      exerciseType === 'running' && averageStats.runningDaysCount > 0 
-        ? averageStats.runningDaysAvg 
+    const activeExerciseDayAvg =
+      exerciseType === 'running' && averageStats.runningDaysCount > 0
+        ? averageStats.runningDaysAvg
         : 0;
-    
+
     // 콘솔에 계산값 출력 (디버깅용)
     console.log(`${exerciseType} 목표 계산:`, {
       운동일평균: activeExerciseDayAvg,
@@ -1861,12 +1866,12 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       최근30일일일평균: dailyAvg30Days,
       주간운동빈도: avgWeeklyFrequency
     });
-    
+
     // 2. 점진적 목표 계산
-    
+
     // 현재 운동 빈도 수준에 따른 권장 빈도 계산
     let recommendedFrequency = characteristics.optimalFrequency;
-    
+
     if (avgWeeklyFrequency < 1) {
       // 거의 운동하지 않는 경우 주 1-2회부터 시작
       recommendedFrequency = Math.min(2, characteristics.optimalFrequency);
@@ -1874,18 +1879,18 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       // 현재보다 1회 증가 (최적 빈도까지 점진적 증가)
       recommendedFrequency = Math.min(Math.ceil(avgWeeklyFrequency) + 1, characteristics.optimalFrequency);
     }
-    
+
     // 목표 기간
     let goalDays = 7; // 기본 1주일
-    
+
     // 목표 운동량 계산
     let targetPerDay = 0;
     let desiredTrend = 0;
     let recommendations: string[] = [];
-    
+
     // 운동 목표량 설정 - 더 현실적이고 달성 가능한 목표로 개선
     let baseTarget = info.defaultTarget;
-    
+
     if (longTermDailyAvg > 0) {
       // 전체 기간 평균이 있으면 기본값과 평균 중 더 현실적인 값 선택
       baseTarget = Math.max(info.defaultTarget * 0.7, longTermDailyAvg);
@@ -1896,7 +1901,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       // 30일 운동일 평균이 있으면 활용
       baseTarget = Math.max(info.defaultTarget * 0.3, exerciseDayAvg30Days);
     }
-    
+
     // 추세에 따른 목표 조정 (더 관대하게)
     if (currentTrend < -10) {
       // 크게 하락한 경우: 현재 수준 유지가 목표
@@ -1911,7 +1916,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       // 안정적인 경우: 현재 수준 유지
       targetPerDay = baseTarget;
     }
-    
+
     // 최소값 보장 (너무 낮은 목표 방지)
     const minimumTargets = {
       pushups: 5,
@@ -1920,10 +1925,10 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       running: 1
     };
     targetPerDay = Math.max(targetPerDay, minimumTargets[exerciseType as keyof typeof minimumTargets] || info.defaultTarget * 0.3);
-    
+
     // 합리적인 최대치 설정 (더 관대하게)
     targetPerDay = Math.min(targetPerDay, characteristics.maxRecommended * 0.8);
-    
+
     // 반올림하여 깔끔한 숫자로 표시
     if (exerciseType === 'running') {
       // 달리기는 소수점 첫째 자리까지 표시
@@ -1932,11 +1937,11 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       // 기타 운동은 정수로 반올림
       targetPerDay = Math.round(targetPerDay);
     }
-    
+
     // 3. 현실적이고 동기부여되는 추천사항 생성
     const targetDays = Math.min(goalDays, Math.ceil(recommendedFrequency));
     desiredTrend = currentTrend < -10 ? 5 : currentTrend < 0 ? 10 : currentTrend + 5; // 목표 개선율
-    
+
     if (currentTrend < -10) { // 크게 하락한 추세
       recommendations = [
         `💪 다시 시작하는 것만으로도 대단해요! 일주일에 ${Math.min(2, recommendedFrequency)}회부터 천천히 시작하세요`,
@@ -1948,8 +1953,8 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
       recommendations = [
         `🚀 일주일에 ${recommendedFrequency}회 운동으로 리듬을 되찾아보세요`,
         `🎯 매 운동마다 ${targetPerDay}${info.unit}를 목표로 하되, 무리하지 마세요`,
-        characteristics.recoveryNeeded 
-          ? `💤 ${characteristics.intensityType} 운동 후엔 충분한 휴식을 취하세요` 
+        characteristics.recoveryNeeded
+          ? `💤 ${characteristics.intensityType} 운동 후엔 충분한 휴식을 취하세요`
           : `🌱 조금씩이라도 꾸준히 하는 것이 가장 중요해요`,
         `📅 주간 목표: ${Math.round(targetPerDay * recommendedFrequency)}${info.unit} (${recommendedFrequency}회로 나눠서)`
       ];
@@ -1961,36 +1966,36 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
         `🔥 주간 목표: ${Math.round(targetPerDay * recommendedFrequency)}${info.unit} 이상 (${recommendedFrequency}회 분산)`
       ];
     }
-    
+
     // 현재 연속 기록 중인 경우 추가 격려 메시지
     if (score.streakDays > 0) {
-      const nextMilestone = score.streakDays < 3 ? 3 : 
-                          score.streakDays < 7 ? 7 : 
-                          score.streakDays < 14 ? 14 : 
-                          score.streakDays < 30 ? 30 : 
-                          score.streakDays + 7;
-                          
+      const nextMilestone = score.streakDays < 3 ? 3 :
+        score.streakDays < 7 ? 7 :
+          score.streakDays < 14 ? 14 :
+            score.streakDays < 30 ? 30 :
+              score.streakDays + 7;
+
       recommendations.push(`🔥 현재 ${score.streakDays}일 연속 기록 중! ${nextMilestone}일 연속 달성까지 화이팅!`);
     } else {
       // 연속 기록이 없을 때 격려
       recommendations.push(`🌟 새로운 연속 기록을 시작해보세요. 3일 연속이 첫 목표입니다!`);
     }
-    
+
     // 4. 다이얼로그 내용 설정
     setGuideContent({
       title: `${info.name} 맞춤 가이드`,
-      description: currentTrend < -10 
+      description: currentTrend < -10
         ? `${info.name} 습관을 다시 시작하는 당신을 응원합니다! 천천히 함께 만들어가요.`
-        : currentTrend < 0 
-        ? `${info.name} 리듬을 되찾을 수 있는 현실적인 방법을 제안드려요.`
-        : `${info.name} 습관이 훌륭하게 자리잡고 있어요! 지속가능한 발전 방향을 알려드릴게요.`,
+        : currentTrend < 0
+          ? `${info.name} 리듬을 되찾을 수 있는 현실적인 방법을 제안드려요.`
+          : `${info.name} 습관이 훌륭하게 자리잡고 있어요! 지속가능한 발전 방향을 알려드릴게요.`,
       recommendations,
       goalDays,
       targetPerDay,
       currentTrend,
       desiredTrend
     });
-    
+
     setOpenGuideDialog(true);
   };
 
@@ -2001,8 +2006,8 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
           {error}
         </Alert>
       )}
-      <Paper elevation={3} sx={{ 
-        p: 3, 
+      <Paper elevation={3} sx={{
+        p: 3,
         width: '100%',
         borderRadius: 2,
         background: 'rgba(255, 255, 255, 0.95)',
@@ -2147,9 +2152,9 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
         </form>
       </Paper>
 
-      <Paper elevation={3} sx={{ 
-        p: 3, 
-        mt: 3, 
+      <Paper elevation={3} sx={{
+        p: 3,
+        mt: 3,
         width: '100%',
         borderRadius: 2,
         background: 'rgba(255, 255, 255, 0.95)',
@@ -2169,8 +2174,8 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
             <Tab label="월간 통계" />
             <Tab label="연간 통계" />
           </Tabs>
-          <IconButton 
-            color="primary" 
+          <IconButton
+            color="primary"
             onClick={() => setOpenShareDialog(true)}
             sx={{ mr: 2 }}
           >
@@ -2249,7 +2254,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
                 lateralRaise: { title: '사이드 래터럴 레이즈', color: '#ff7043', unit: '회' },
                 running: { title: '달리기', color: '#e91e63', unit: 'km' }
               };
-              
+
               return (
                 <Grid item xs={12} sm={6} key={exerciseType}>
                   <ExerciseCard
@@ -2286,7 +2291,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
                 dips: { title: '딥스', color: '#ffc658', unit: '회' },
                 running: { title: '달리기', color: '#e91e63', unit: 'km' }
               };
-              
+
               return (
                 <Grid item xs={12} sm={6} key={exerciseType}>
                   <MonthlyExerciseCard
@@ -2323,9 +2328,9 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
             <Grid container spacing={2}>
               {(['pushups', 'pullups', 'dips', 'running'] as const).map((type) => (
                 <Grid item xs={12} sm={6} md={4} key={type}>
-                  <Card 
-                    sx={{ 
-                      position: 'relative', 
+                  <Card
+                    sx={{
+                      position: 'relative',
                       overflow: 'visible',
                       boxShadow: 2,
                       transition: 'transform 0.3s',
@@ -2337,10 +2342,10 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
                   >
                     <CardContent sx={{ textAlign: 'center' }}>
                       {/* 운동 유형 이름 */}
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          fontWeight: 'bold', 
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          fontWeight: 'bold',
                           color: consistencyScores[type].color,
                           mb: 2
                         }}
@@ -2376,9 +2381,9 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
                           <Typography variant="h6" component="div" sx={{ lineHeight: 1 }}>
                             {consistencyScores[type].score}
                           </Typography>
-                          <Typography variant="caption" component="div" sx={{ 
+                          <Typography variant="caption" component="div" sx={{
                             color: 'text.secondary',
-                            fontWeight: 'bold' 
+                            fontWeight: 'bold'
                           }}>
                             {consistencyScores[type].grade}
                           </Typography>
@@ -2386,9 +2391,9 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
                       </Box>
 
                       {/* 등급 라벨 */}
-                      <Typography 
-                        variant="subtitle1" 
-                        sx={{ 
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
                           fontWeight: 'medium',
                           mb: 1.5,
                           color: consistencyScores[type].color
@@ -2399,11 +2404,11 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
 
                       {/* 추세 및 연속일 */}
                       <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 1.5 }}>
-                        <Box sx={{ 
-                          display: 'flex', 
+                        <Box sx={{
+                          display: 'flex',
                           alignItems: 'center',
-                          color: consistencyScores[type].trendChange > 0 ? 'success.main' : 
-                                 consistencyScores[type].trendChange < 0 ? 'error.main' : 'text.secondary'
+                          color: consistencyScores[type].trendChange > 0 ? 'success.main' :
+                            consistencyScores[type].trendChange < 0 ? 'error.main' : 'text.secondary'
                         }}>
                           {consistencyScores[type].trendChange > 0 ? (
                             <MuiTooltip title="향상된 추세">
@@ -2459,10 +2464,10 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
                       </Box>
 
                       {/* 동기부여 메시지 */}
-                      <Typography 
-                        variant="body2" 
+                      <Typography
+                        variant="body2"
                         color="text.secondary"
-                        sx={{ 
+                        sx={{
                           fontStyle: 'italic',
                           height: '40px',
                           display: 'flex',
@@ -2480,7 +2485,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
                         startIcon={<RecommendIcon />}
                         onClick={() => handleOpenGuide(type)}
                         variant="outlined"
-                        sx={{ 
+                        sx={{
                           fontSize: '0.75rem',
                           borderColor: consistencyScores[type].color,
                           color: consistencyScores[type].color,
@@ -2610,7 +2615,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ 
+        <DialogTitle sx={{
           bgcolor: selectedExerciseType && consistencyScores[selectedExerciseType as keyof typeof consistencyScores]?.color,
           color: 'white',
           display: 'flex',
@@ -2626,24 +2631,24 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
           <Typography variant="body1" gutterBottom>
             {guideContent.description}
           </Typography>
-          
+
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 2 }}>
-            <Chip 
-              label={`현재 추세: ${guideContent.currentTrend > 0 ? '+' : ''}${guideContent.currentTrend}%`} 
+            <Chip
+              label={`현재 추세: ${guideContent.currentTrend > 0 ? '+' : ''}${guideContent.currentTrend}%`}
               color={guideContent.currentTrend >= 0 ? "success" : "error"}
               size="small"
               icon={guideContent.currentTrend >= 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
             />
             <Typography variant="h6" sx={{ color: 'text.secondary' }}>→</Typography>
-            <Chip 
-              label={`목표 추세: +${guideContent.desiredTrend}%`} 
+            <Chip
+              label={`목표 추세: +${guideContent.desiredTrend}%`}
               color="primary"
               variant="outlined"
               size="small"
               icon={<TrendingUpIcon />}
             />
           </Box>
-          
+
           <Box sx={{ bgcolor: 'background.default', p: 2, borderRadius: 1, mb: 2 }}>
             <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
               다음 {guideContent.goalDays}일간 목표
@@ -2652,13 +2657,13 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
               하루 평균 {guideContent.targetPerDay}{selectedExerciseType === 'running' ? 'km' : '회'} 이상
             </Typography>
           </Box>
-          
+
           <Divider sx={{ my: 2 }} />
-          
+
           <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
             추천 사항
           </Typography>
-          
+
           <ul style={{ paddingLeft: '1.5rem' }}>
             {guideContent.recommendations.map((rec, idx) => (
               <li key={idx}>
@@ -2673,6 +2678,11 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
           <Button onClick={() => setOpenGuideDialog(false)}>닫기</Button>
         </DialogActions>
       </Dialog>
+      <Snackbar open={openSnackbar} autoHideDuration={3000} onClose={() => setOpenSnackbar(false)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={() => setOpenSnackbar(false)} severity="success" sx={{ width: '100%' }}>
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

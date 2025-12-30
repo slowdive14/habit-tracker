@@ -49,13 +49,14 @@ const HABITS: HabitBase[] = [
   { id: 'reading', name: 'Reading', color: '#009E73', title: '독서' },
   { id: 'english-kids', name: 'English with kids', color: '#D55E00', title: '아이들과 영어' },
   { id: 'massage', name: 'Wife Massage', color: '#CC79A7', title: '아내 마사지' },
+  { id: 'memo', name: 'Memo', color: '#4A90D9', title: '메모' },
   { id: 'back-pain', name: 'Back Pain', color: '#882255', title: '등 결림' },
   { id: 'esophagitis', name: 'Esophagitis', color: '#661188', title: '식도염' },
 ];
 
 // 습관 분류
-const PRIMARY_HABITS = ['exercise', 'english-reading', 'reading'];
-const SECONDARY_HABITS = ['english-kids', 'massage'];
+const PRIMARY_HABITS = ['exercise', 'reading', 'memo'];
+const SECONDARY_HABITS = ['english-reading', 'english-kids', 'massage'];
 const HEALTH_STATUS_HABITS = ['back-pain', 'esophagitis'];
 
 const MONTHS = [
@@ -871,8 +872,15 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
         { score: 2, title: '적당히 함', desc: '3분' },
         { score: 3, title: '충분히 함', desc: '5분' }
       ];
+    } else if (id === 'memo') {
+      return [
+        { score: 0, title: '메모 안함', desc: '오늘 메모하지 않음' },
+        { score: 1, title: '메모 1개', desc: '메모 1개 작성' },
+        { score: 2, title: '메모 2개', desc: '메모 2개 작성' },
+        { score: 3, title: '메모 3개+', desc: '메모 3개 이상 작성' }
+      ];
     }
-    
+
     return [];
   };
 

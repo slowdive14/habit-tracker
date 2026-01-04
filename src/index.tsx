@@ -23,4 +23,13 @@ root.render(
 // If you want your app to work offline and load faster, you can change
 // unregister() to register() below. Note this comes with some pitfalls.
 // Learn more about service workers: https://cra.link/PWA
-serviceWorkerRegistration.register();
+serviceWorkerRegistration.register({
+  onUpdate: (registration: ServiceWorkerRegistration) => {
+    // 새 버전이 있으면 즉시 활성화
+    if (registration.waiting) {
+      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+    // 페이지 새로고침
+    window.location.reload();
+  }
+});

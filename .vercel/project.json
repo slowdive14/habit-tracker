@@ -1,1 +1,16 @@
-{"orgId":"team_ydweuqVdYU7qxcIOXvhiZKbk","projectId":"prj_bbDtpEX11nxAQK0OkZ9NDwdRCJCe"}
+{
+  "projectId": "prj_bbDtpEX11nxAQK0OkZ9NDwdRCJCe",
+  "orgId": "team_ydweuqVdYU7qxcIOXvhiZKbk",
+  "projectName": "habit-tracker",
+  "settings": {
+    "createdAt": 1719328340070,
+    "framework": "create-react-app",
+    "devCommand": null,
+    "installCommand": null,
+    "buildCommand": null,
+    "outputDirectory": null,
+    "rootDirectory": null,
+    "directoryListing": false,
+    "nodeVersion": "20.x"
+  }
+}

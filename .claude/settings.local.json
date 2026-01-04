@@ -9,7 +9,20 @@
       "Bash(git push:*)",
       "Bash(git commit:*)",
       "Bash(npm run build:*)",
-      "Bash(set DISABLE_ESLINT_PLUGIN=true)"
+      "Bash(set DISABLE_ESLINT_PLUGIN=true)",
+      "Bash(git config:*)",
+      "Bash(vercel --version:*)",
+      "Bash(npx vercel:*)",
+      "Bash(DISABLE_ESLINT_PLUGIN=true npm run build:*)",
+      "Bash(firebase --version:*)",
+      "Bash(firebase login:list:*)",
+      "Bash(firebase login:*)",
+      "Bash(firebase login:ci:*)",
+      "Bash(set:*)",
+      "Bash(firebase projects:list:*)",
+      "Bash(npm install:*)",
+      "Bash(netlify deploy:*)",
+      "Skill(feature-planner)"
     ],
     "deny": [],
     "ask": []

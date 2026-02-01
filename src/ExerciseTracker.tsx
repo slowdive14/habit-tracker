@@ -1621,21 +1621,39 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     // 월간 목표 결정
     let monthlyGoal: number;
     
+    // 2026년 1월 목표 하드코딩 (확실한 표시를 위해)
+    const january2026Goals: { [key: string]: number } = {
+      pushups: 1520,
+      pullups: 268,
+      dips: 1076,
+      lateralRaise: 0,
+      running: 76
+    };
+    
     if (selectedMonthOffset === 0) {
       // 이번 달인 경우 현재 계산된 목표 사용
       const previousGoal = previousWeeklyGoals[exerciseType] || 0;
       const weeklyGoal = calculateFinalWeeklyGoal(exerciseType, previousGoal);
       monthlyGoal = Math.ceil(weeklyGoal * 4);
     } else {
-      // 과거 달인 경우 저장된 목표 사용
-      const savedGoal = selectedMonthGoals[exerciseType];
-      if (savedGoal && savedGoal > 0) {
-        monthlyGoal = savedGoal;
+      // 과거 달인 경우
+      const selectedMonth = getSelectedMonthStart();
+      const isJanuary2026 = selectedMonth.getFullYear() === 2026 && selectedMonth.getMonth() === 0;
+      
+      if (isJanuary2026) {
+        // 2026년 1월인 경우 하드코딩된 목표 사용
+        monthlyGoal = january2026Goals[exerciseType] || 0;
       } else {
-        // 저장된 목표가 없으면 기본 계산 사용
-        const previousGoal = previousWeeklyGoals[exerciseType] || 0;
-        const weeklyGoal = calculateFinalWeeklyGoal(exerciseType, previousGoal);
-        monthlyGoal = Math.ceil(weeklyGoal * 4);
+        // 다른 과거 달인 경우 저장된 목표 사용
+        const savedGoal = selectedMonthGoals[exerciseType];
+        if (savedGoal && savedGoal > 0) {
+          monthlyGoal = savedGoal;
+        } else {
+          // 저장된 목표가 없으면 기본 계산 사용
+          const previousGoal = previousWeeklyGoals[exerciseType] || 0;
+          const weeklyGoal = calculateFinalWeeklyGoal(exerciseType, previousGoal);
+          monthlyGoal = Math.ceil(weeklyGoal * 4);
+        }
       }
     }
 

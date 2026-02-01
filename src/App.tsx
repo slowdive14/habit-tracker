@@ -42,7 +42,7 @@ const App: React.FC = () => {
   const [showScroll, setShowScroll] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dataMigrated, setDataMigrated] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>('habits');
+  const [activeTab, setActiveTab] = useState<string>('exercise');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -312,12 +312,14 @@ const App: React.FC = () => {
       <Container maxWidth="lg">
         {/* BRUTALIST TABS */}
         <Box className="brutal-tabs">
+          {/* HABITS 탭 비활성화 - 코드 유지, 화면에서 숨김
           <button
             className={`brutal-tab ${activeTab === 'habits' ? 'active' : ''}`}
             onClick={() => setActiveTab('habits')}
           >
             🎯 HABITS
           </button>
+          */}
           <button
             className={`brutal-tab ${activeTab === 'exercise' ? 'active' : ''}`}
             onClick={() => setActiveTab('exercise')}

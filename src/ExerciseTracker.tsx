@@ -180,6 +180,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [selectedExerciseType, setSelectedExerciseType] = useState<string>('');
   const [selectedWeekOffset, setSelectedWeekOffset] = useState(0); // 0: 현재 주, -1: 지난 주, -2: 2주 전...
+  const [selectedMonthOffset, setSelectedMonthOffset] = useState(0); // 0: 현재 월, -1: 지난 달, -2: 2달 전...
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [yearlyData, setYearlyData] = useState<any[]>([]);
   const [guideContent, setGuideContent] = useState<{
@@ -266,6 +267,23 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     lateralRaise: 0,
     running: 0,
     weekOf: ''
+  });
+
+  // 선택된 월의 목표 저장 (보고 있는 달의 실제 목표)
+  const [selectedMonthGoals, setSelectedMonthGoals] = useState<{
+    pushups: number;
+    pullups: number;
+    dips: number;
+    lateralRaise: number;
+    running: number;
+    monthOf: string;
+  }>({
+    pushups: 0,
+    pullups: 0,
+    dips: 0,
+    lateralRaise: 0,
+    running: 0,
+    monthOf: ''
   });
 
   // 연간 통계를 위한 사용 가능한 연도 목록 계산
@@ -572,6 +590,137 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     }
   };
 
+  // 월간 네비게이션 함수들
+  const goToPreviousMonth = () => {
+    setSelectedMonthOffset(prev => prev - 1);
+  };
+
+  const goToNextMonth = () => {
+    setSelectedMonthOffset(prev => prev + 1);
+  };
+
+  const goToCurrentMonth = () => {
+    setSelectedMonthOffset(0);
+  };
+
+  // 선택된 월의 첫 날 계산
+  const getSelectedMonthStart = () => {
+    const today = new Date();
+    const selectedMonth = new Date(today.getFullYear(), today.getMonth() + selectedMonthOffset, 1);
+    return selectedMonth;
+  };
+
+  // 선택된 월의 텍스트 생성
+  const getSelectedMonthText = () => {
+    const monthStart = getSelectedMonthStart();
+    const year = monthStart.getFullYear();
+    const month = monthStart.getMonth() + 1;
+
+    if (selectedMonthOffset === 0) {
+      return `이번 달 (${year}년 ${month}월)`;
+    } else if (selectedMonthOffset === -1) {
+      return `지난 달 (${year}년 ${month}월)`;
+    } else if (selectedMonthOffset < -1) {
+      return `${Math.abs(selectedMonthOffset)}달 전 (${year}년 ${month}월)`;
+    } else {
+      return `${selectedMonthOffset}달 후 (${year}년 ${month}월)`;
+    }
+  };
+
+  // 선택된 월의 목표 로드
+  const loadSelectedMonthGoals = async () => {
+    if (!user) return;
+
+    try {
+      const selectedMonthStart = getSelectedMonthStart();
+      const monthKey = `${selectedMonthStart.getFullYear()}-${String(selectedMonthStart.getMonth() + 1).padStart(2, '0')}`;
+
+      // 해당 월의 모든 주차 목표를 가져와서 월간 목표 계산
+      // 해당 월의 첫 번째 월요일부터 마지막 주 월요일까지의 목표들을 합산
+      const monthEnd = new Date(selectedMonthStart.getFullYear(), selectedMonthStart.getMonth() + 1, 0);
+      
+      // 해당 월 첫 날의 월요일 계산
+      const firstDayOfMonth = new Date(selectedMonthStart);
+      const firstDayWeekday = firstDayOfMonth.getDay();
+      const daysFromMonday = firstDayWeekday === 0 ? 6 : firstDayWeekday - 1;
+      const firstMonday = new Date(firstDayOfMonth);
+      firstMonday.setDate(firstDayOfMonth.getDate() - daysFromMonday);
+
+      // 해당 월 내의 주간 목표들 합산
+      let totalGoals = {
+        pushups: 0,
+        pullups: 0,
+        dips: 0,
+        lateralRaise: 0,
+        running: 0
+      };
+
+      let weeksInMonth = 0;
+      const currentMonday = new Date(firstMonday);
+
+      // 해당 월에 속하는 모든 주 처리
+      while (currentMonday <= monthEnd) {
+        const mondayStr = getKoreanDateString(currentMonday);
+        const goalsRef = doc(db, 'weeklyGoals', `${user.uid}_${mondayStr}`);
+        const goalsDoc = await getDoc(goalsRef);
+
+        if (goalsDoc.exists()) {
+          const data = goalsDoc.data();
+          const goals = data.goals || {
+            pushups: data.pushups || 0,
+            pullups: data.pullups || 0,
+            dips: data.dips || 0,
+            lateralRaise: data.lateralRaise || 0,
+            running: data.running || 0
+          };
+
+          // 해당 주가 선택된 월에 포함되는 날 수 계산
+          const weekEnd = new Date(currentMonday);
+          weekEnd.setDate(currentMonday.getDate() + 6);
+          
+          const overlapStart = new Date(Math.max(currentMonday.getTime(), selectedMonthStart.getTime()));
+          const overlapEnd = new Date(Math.min(weekEnd.getTime(), monthEnd.getTime()));
+          const daysInMonth = Math.ceil((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+          const weightRatio = daysInMonth / 7;
+
+          totalGoals.pushups += goals.pushups * weightRatio;
+          totalGoals.pullups += goals.pullups * weightRatio;
+          totalGoals.dips += goals.dips * weightRatio;
+          totalGoals.lateralRaise += goals.lateralRaise * weightRatio;
+          totalGoals.running += goals.running * weightRatio;
+          weeksInMonth++;
+        }
+
+        currentMonday.setDate(currentMonday.getDate() + 7);
+      }
+
+      // 주간 목표가 있으면 사용, 없으면 기본값
+      if (weeksInMonth > 0) {
+        setSelectedMonthGoals({
+          pushups: Math.ceil(totalGoals.pushups),
+          pullups: Math.ceil(totalGoals.pullups),
+          dips: Math.ceil(totalGoals.dips),
+          lateralRaise: Math.ceil(totalGoals.lateralRaise),
+          running: Math.round(totalGoals.running * 10) / 10,
+          monthOf: monthKey
+        });
+        console.log(`선택된 월 (${monthKey}) 목표 로드 성공:`, totalGoals);
+      } else {
+        console.log(`선택된 월 (${monthKey}) 목표 없음`);
+        setSelectedMonthGoals({
+          pushups: 0,
+          pullups: 0,
+          dips: 0,
+          lateralRaise: 0,
+          running: 0,
+          monthOf: monthKey
+        });
+      }
+    } catch (error) {
+      console.error('선택된 월 목표 로드 오류:', error);
+    }
+  };
+
   const saveExerciseData = async () => {
     if (!user) return;
 
@@ -627,6 +776,13 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       loadSelectedWeekGoals();
     }
   }, [selectedWeekOffset, user]);
+
+  // 선택된 월 변경 시 해당 월 목표 로드
+  useEffect(() => {
+    if (user) {
+      loadSelectedMonthGoals();
+    }
+  }, [selectedMonthOffset, user]);
 
   // 선택된 연도 변경 시 연간 데이터 재계산
   useEffect(() => {
@@ -1364,65 +1520,53 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
   // 월간 카드형 차트를 위한 데이터 준비
   const prepareMonthlyCardData = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'lateralRaise' | 'running') => {
-    // 이번 달 1일부터 오늘까지의 날짜 생성
     const today = new Date();
-    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    const daysInThisMonth = today.getDate(); // 1일부터 오늘까지의 날 수
+    
+    // 선택된 월의 시작일과 마지막일 계산
+    const selectedMonthStart = getSelectedMonthStart();
+    const selectedMonthEnd = new Date(selectedMonthStart.getFullYear(), selectedMonthStart.getMonth() + 1, 0);
+    
+    // 이번 달인 경우 오늘까지, 아니면 해당 월 마지막 날까지
+    const isCurrentMonth = selectedMonthOffset === 0;
+    const endDate = isCurrentMonth ? today : selectedMonthEnd;
+    const daysToShow = isCurrentMonth ? today.getDate() : selectedMonthEnd.getDate();
 
-    const thisMonthDays = Array.from({ length: daysInThisMonth }, (_, i) => {
-      const date = new Date(thisMonthStart.getFullYear(), thisMonthStart.getMonth(), 1 + i);
+    const selectedMonthDays = Array.from({ length: daysToShow }, (_, i) => {
+      const date = new Date(selectedMonthStart.getFullYear(), selectedMonthStart.getMonth(), 1 + i);
       return getKoreanDateString(date);
     });
 
-    const chartData = thisMonthDays.map(date => ({
+    const chartData = selectedMonthDays.map(date => ({
       date,
       value: exerciseData[date]?.[exerciseType] || 0
     }));
 
     const currentValue = exerciseData[selectedDate]?.[exerciseType] || 0;
 
-    // 이번 달과 지난 달 비교 (today와 thisMonthStart는 위에서 이미 선언됨)
-    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+    // 선택된 달과 이전 달 비교
+    const prevMonthStart = new Date(selectedMonthStart.getFullYear(), selectedMonthStart.getMonth() - 1, 1);
+    const prevMonthEnd = new Date(selectedMonthStart.getFullYear(), selectedMonthStart.getMonth(), 0);
 
-    // 이번 달 데이터
-    const thisMonthData = Object.entries(exerciseData)
-      .filter(([date]) => new Date(date) >= thisMonthStart && new Date(date) <= today)
+    // 선택된 달 데이터
+    const selectedMonthData = Object.entries(exerciseData)
+      .filter(([date]) => new Date(date) >= selectedMonthStart && new Date(date) <= endDate)
       .map(([, data]) => data[exerciseType] || 0);
 
-    // 지난 달 데이터
-    const lastMonthData = Object.entries(exerciseData)
-      .filter(([date]) => new Date(date) >= lastMonthStart && new Date(date) <= lastMonthEnd)
+    // 이전 달 데이터
+    const prevMonthData = Object.entries(exerciseData)
+      .filter(([date]) => new Date(date) >= prevMonthStart && new Date(date) <= prevMonthEnd)
       .map(([, data]) => data[exerciseType] || 0);
 
-    const thisMonthTotal = thisMonthData.reduce((sum, val) => sum + val, 0);
-    const lastMonthTotal = lastMonthData.reduce((sum, val) => sum + val, 0);
+    const selectedMonthTotal = selectedMonthData.reduce((sum, val) => sum + val, 0);
+    const prevMonthTotal = prevMonthData.reduce((sum, val) => sum + val, 0);
 
-    // 이번 달 평균 (실제 경과 날수로 계산)
-    const daysPassedThisMonth = today.getDate(); // 1일부터 오늘까지의 날 수
-    const thisMonthAverage = daysPassedThisMonth > 0 ? thisMonthTotal / daysPassedThisMonth : 0;
+    // 선택된 달 평균 (실제 경과 날수로 계산)
+    const daysPassedInSelectedMonth = daysToShow;
+    const selectedMonthAverage = daysPassedInSelectedMonth > 0 ? selectedMonthTotal / daysPassedInSelectedMonth : 0;
 
-    // 디버깅 정보 (달리기일 때만)
-    if (exerciseType === 'running') {
-      const originalThisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-      console.log(`달리기 월간 계산 (${exerciseType}):`, {
-        오늘날짜: getKoreanDateString(today),
-        오늘getDate: today.getDate(),
-        올바른이번달시작: getKoreanDateString(originalThisMonthStart),
-        경과일수: daysPassedThisMonth,
-        이번달데이터개수: thisMonthData.length,
-        이번달총거리: thisMonthTotal,
-        이번달평균: thisMonthAverage,
-        이번달실제데이터: thisMonthData,
-        thisMonthDays길이: thisMonthDays.length,
-        thisMonthDays첫번째: thisMonthDays[0],
-        thisMonthDays마지막: thisMonthDays[thisMonthDays.length - 1]
-      });
-    }
-
-    // 지난 달 평균 (지난 달 전체 날수로 계산)
-    const daysInLastMonth = lastMonthEnd.getDate(); // 지난 달 총 일수
-    const lastMonthAverage = daysInLastMonth > 0 ? lastMonthTotal / daysInLastMonth : 0;
+    // 이전 달 평균 (이전 달 전체 날수로 계산)
+    const daysInPrevMonth = prevMonthEnd.getDate();
+    const prevMonthAverage = daysInPrevMonth > 0 ? prevMonthTotal / daysInPrevMonth : 0;
 
     // 최고 기록
     const allValues = Object.values(exerciseData).map(day => day[exerciseType] || 0);
@@ -1431,23 +1575,37 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     // 전체 평균값
     const averageValue = averageStats[exerciseType] || 0;
 
-    // 주간 목표 (이전 목표를 전달하여 40% 상한선 적용)
-    const previousGoal = previousWeeklyGoals[exerciseType] || 0;
-    const weeklyGoal = calculateFinalWeeklyGoal(exerciseType, previousGoal);
-
-    // 월간 목표 (주간 목표 × 4주, 기존 4.3에서 4로 변경)
-    const monthlyGoal = Math.ceil(weeklyGoal * 4);
+    // 월간 목표 결정
+    let monthlyGoal: number;
+    
+    if (selectedMonthOffset === 0) {
+      // 이번 달인 경우 현재 계산된 목표 사용
+      const previousGoal = previousWeeklyGoals[exerciseType] || 0;
+      const weeklyGoal = calculateFinalWeeklyGoal(exerciseType, previousGoal);
+      monthlyGoal = Math.ceil(weeklyGoal * 4);
+    } else {
+      // 과거 달인 경우 저장된 목표 사용
+      const savedGoal = selectedMonthGoals[exerciseType];
+      if (savedGoal && savedGoal > 0) {
+        monthlyGoal = savedGoal;
+      } else {
+        // 저장된 목표가 없으면 기본 계산 사용
+        const previousGoal = previousWeeklyGoals[exerciseType] || 0;
+        const weeklyGoal = calculateFinalWeeklyGoal(exerciseType, previousGoal);
+        monthlyGoal = Math.ceil(weeklyGoal * 4);
+      }
+    }
 
     return {
       chartData,
       currentValue,
-      previousValue: lastMonthAverage,
-      totalThisMonth: thisMonthTotal,
+      previousValue: prevMonthAverage,
+      totalThisMonth: selectedMonthTotal,
       bestRecord,
       averageValue,
       monthlyGoal,
-      thisMonthAverage,
-      lastMonthAverage
+      thisMonthAverage: selectedMonthAverage,
+      lastMonthAverage: prevMonthAverage
     };
   };
 
@@ -2278,6 +2436,63 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>
+          {/* 월간 네비게이션 컨트롤 */}
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            mb: 3,
+            p: 2,
+            borderRadius: 2,
+            backgroundColor: 'rgba(0, 0, 0, 0.02)',
+            border: '1px solid rgba(0, 0, 0, 0.08)'
+          }}>
+            <IconButton
+              onClick={goToPreviousMonth}
+              color="primary"
+              sx={{
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                }
+              }}
+            >
+              <ChevronLeftIcon />
+            </IconButton>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                {getSelectedMonthText()}
+              </Typography>
+              {selectedMonthOffset !== 0 && (
+                <Button
+                  size="small"
+                  startIcon={<TodayIcon />}
+                  onClick={goToCurrentMonth}
+                  variant="outlined"
+                  sx={{
+                    minWidth: '100px',
+                    borderRadius: 2
+                  }}
+                >
+                  이번 달
+                </Button>
+              )}
+            </Box>
+
+            <IconButton
+              onClick={goToNextMonth}
+              color="primary"
+              disabled={selectedMonthOffset >= 0}
+              sx={{
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                }
+              }}
+            >
+              <ChevronRightIcon />
+            </IconButton>
+          </Box>
+
           {/* 월간 운동 현황 */}
           <Typography variant="h6" gutterBottom sx={{ mb: 3, fontWeight: 600, color: 'text.primary' }}>
             월간 운동 현황

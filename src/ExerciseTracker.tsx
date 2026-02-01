@@ -413,7 +413,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     dips: number;
     lateralRaise: number;
     running: number;
-  }, weekMondayDate?: Date) => {
+  }, weekMondayDate?: Date, forceUpdateGoals: boolean = false) => {
     if (!user) return;
 
     try {
@@ -442,17 +442,25 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       };
 
       const goalsRef = doc(db, 'weeklyGoals', `${user.uid}_${weekMondayStr}`);
+      
+      // 기존 데이터 확인
+      const existingDoc = await getDoc(goalsRef);
+      const existingGoals = existingDoc.exists() ? existingDoc.data()?.goals : null;
+      
+      // 사용할 목표: 기존 목표가 있고 강제 업데이트가 아니면 기존 목표 유지
+      const goalsToSave = (existingGoals && !forceUpdateGoals) ? existingGoals : {
+        pushups: goals.pushups,
+        pullups: goals.pullups,
+        dips: goals.dips,
+        lateralRaise: goals.lateralRaise,
+        running: goals.running
+      };
+      
       await setDoc(goalsRef, {
         userId: user.uid,
         weekOf: weekMondayStr,
-        // 목표량
-        goals: {
-          pushups: goals.pushups,
-          pullups: goals.pullups,
-          dips: goals.dips,
-          lateralRaise: goals.lateralRaise,
-          running: goals.running
-        },
+        // 목표량 (기존 목표가 있으면 유지)
+        goals: goalsToSave,
         // 실제 달성량
         achievements: {
           pushups: achievements.pushups,
@@ -463,16 +471,16 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         },
         // 달성률
         achievementRates: {
-          pushups: goals.pushups > 0 ? Math.round((achievements.pushups / goals.pushups) * 100) : 0,
-          pullups: goals.pullups > 0 ? Math.round((achievements.pullups / goals.pullups) * 100) : 0,
-          dips: goals.dips > 0 ? Math.round((achievements.dips / goals.dips) * 100) : 0,
-          lateralRaise: goals.lateralRaise > 0 ? Math.round((achievements.lateralRaise / goals.lateralRaise) * 100) : 0,
-          running: goals.running > 0 ? Math.round((achievements.running / goals.running) * 100) : 0
+          pushups: goalsToSave.pushups > 0 ? Math.round((achievements.pushups / goalsToSave.pushups) * 100) : 0,
+          pullups: goalsToSave.pullups > 0 ? Math.round((achievements.pullups / goalsToSave.pullups) * 100) : 0,
+          dips: goalsToSave.dips > 0 ? Math.round((achievements.dips / goalsToSave.dips) * 100) : 0,
+          lateralRaise: goalsToSave.lateralRaise > 0 ? Math.round((achievements.lateralRaise / goalsToSave.lateralRaise) * 100) : 0,
+          running: goalsToSave.running > 0 ? Math.round((achievements.running / goalsToSave.running) * 100) : 0
         },
         updatedAt: Timestamp.now()
-      }, { merge: true }); // merge: true로 기존 데이터 유지하면서 업데이트
+      }, { merge: true });
 
-      console.log('주간 목표 및 달성량 저장 성공:', { goals, achievements, weekOf: weekMondayStr });
+      console.log('주간 목표 및 달성량 저장 성공:', { goals: goalsToSave, achievements, weekOf: weekMondayStr, 기존목표유지: !!existingGoals && !forceUpdateGoals });
     } catch (error) {
       console.error('주간 목표 저장 오류:', error);
     }

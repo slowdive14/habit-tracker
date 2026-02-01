@@ -748,11 +748,60 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     }
   };
 
+  // 2026년 1월 목표 저장 (일회성 실행)
+  const saveJanuary2026Goals = async () => {
+    if (!user) return;
+
+    // 2026년 1월 월간 목표: 푸시업 1520, 풀업 268, 딥스 1076, 달리기 76km
+    // 주간 목표로 환산 (4주 기준)
+    const january2026WeeklyGoals = {
+      pushups: 380,      // 1520 / 4
+      pullups: 67,       // 268 / 4
+      dips: 269,         // 1076 / 4
+      lateralRaise: 0,   
+      running: 19        // 76 / 4
+    };
+
+    // 2026년 1월의 월요일들: 2025-12-30(12월 마지막 주), 2026-01-06, 2026-01-13, 2026-01-20, 2026-01-27
+    const januaryMondays = [
+      '2025-12-30', // 이 주는 1월에 일부만 포함
+      '2026-01-06',
+      '2026-01-13',
+      '2026-01-20',
+      '2026-01-27'  // 이 주는 2월에 일부 포함
+    ];
+
+    try {
+      for (const mondayStr of januaryMondays) {
+        const goalsRef = doc(db, 'weeklyGoals', `${user.uid}_${mondayStr}`);
+        const existingDoc = await getDoc(goalsRef);
+        
+        // 이미 목표가 설정되어 있으면 스킵
+        if (existingDoc.exists() && existingDoc.data()?.goals) {
+          console.log(`${mondayStr} 목표 이미 존재, 스킵`);
+          continue;
+        }
+
+        await setDoc(goalsRef, {
+          userId: user.uid,
+          weekOf: mondayStr,
+          goals: january2026WeeklyGoals,
+          updatedAt: Timestamp.now()
+        }, { merge: true });
+        
+        console.log(`${mondayStr} 1월 목표 저장 완료`);
+      }
+    } catch (error) {
+      console.error('1월 목표 저장 오류:', error);
+    }
+  };
+
   // 데이터 로드 useEffect
   useEffect(() => {
     if (user) {
       loadExerciseData();
       loadPreviousWeeklyGoals();
+      saveJanuary2026Goals(); // 2026년 1월 목표 저장
     }
   }, [user]);
 
@@ -1022,7 +1071,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       pullups: Infinity,  // 제한 없음
       dips: Infinity,     // 제한 없음
       lateralRaise: Infinity,  // 제한 없음
-      running: 25   // 주 25km 상한선
+      running: 19   // 주 19km 상한선 (월 76km 목표)
     };
 
     const baseGoal = calculateBaseWeeklyGoal(exerciseType);

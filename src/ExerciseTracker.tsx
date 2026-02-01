@@ -774,14 +774,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     try {
       for (const mondayStr of januaryMondays) {
         const goalsRef = doc(db, 'weeklyGoals', `${user.uid}_${mondayStr}`);
-        const existingDoc = await getDoc(goalsRef);
         
-        // 이미 목표가 설정되어 있으면 스킵
-        if (existingDoc.exists() && existingDoc.data()?.goals) {
-          console.log(`${mondayStr} 목표 이미 존재, 스킵`);
-          continue;
-        }
-
+        // 목표를 강제로 업데이트 (기존 달성량은 유지)
         await setDoc(goalsRef, {
           userId: user.uid,
           weekOf: mondayStr,
@@ -789,7 +783,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           updatedAt: Timestamp.now()
         }, { merge: true });
         
-        console.log(`${mondayStr} 1월 목표 저장 완료`);
+        console.log(`${mondayStr} 1월 목표 저장/업데이트 완료`);
       }
     } catch (error) {
       console.error('1월 목표 저장 오류:', error);

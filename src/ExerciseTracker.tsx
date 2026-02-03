@@ -729,6 +729,16 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     }
   };
 
+  const validateExerciseValue = (value: number, max: number = 10000): number => {
+    return Math.min(max, Math.max(0, Math.floor(value) || 0));
+  };
+
+  const validatePace = (pace: string): string => {
+    if (!pace) return '';
+    const paceRegex = /^\d{1,2}:\d{2}$/;
+    return paceRegex.test(pace) ? pace : '';
+  };
+
   const saveExerciseData = async () => {
     if (!user) return;
 
@@ -737,12 +747,12 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       const exerciseData = {
         userId: user.uid,
         timestamp: Timestamp.fromDate(new Date(selectedDate)),
-        pushups: Number(formData.pushups) || 0,
-        pullups: Number(formData.pullups) || 0,
-        dips: Number(formData.dips) || 0,
-        lateralRaise: Number(formData.lateralRaise) || 0,
-        running: Number(formData.running) || 0,
-        avgPace: formData.avgPace
+        pushups: validateExerciseValue(Number(formData.pushups), 5000),
+        pullups: validateExerciseValue(Number(formData.pullups), 1000),
+        dips: validateExerciseValue(Number(formData.dips), 2000),
+        lateralRaise: validateExerciseValue(Number(formData.lateralRaise), 1000),
+        running: validateExerciseValue(Number(formData.running), 100),
+        avgPace: validatePace(formData.avgPace)
       };
 
       await setDoc(exerciseRef, exerciseData);

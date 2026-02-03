@@ -28,8 +28,8 @@ interface HabitData {
   };
 }
 
-const ALLOWED_EMAIL = 'spacekatb@gmail.com'; // 여기에 허용할 이메일 주소를 입력하세요
-const OLD_USER_ID = 'sIOyGOi27KPY9794P20Z8dsq4Ap2';  // 이전 계정의 USER_ID
+const ALLOWED_EMAIL = process.env.REACT_APP_ALLOWED_EMAIL || '';
+const OLD_USER_ID = process.env.REACT_APP_OLD_USER_ID || '';
 
 // Obsidian 환경 감지 함수
 const isObsidianWebview = () => {
@@ -43,20 +43,6 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [dataMigrated, setDataMigrated] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('exercise');
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user && user.email !== ALLOWED_EMAIL) {
-        await auth.signOut();
-        setError('허용되지 않은 이메일입니다.');
-        setUser(null);
-      } else {
-        setUser(user);
-      }
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
 
   const checkScrollTop = () => {
     if (!showScroll && window.scrollY > 400) {
@@ -81,67 +67,46 @@ const App: React.FC = () => {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
 
-      // 모바일 환경 감지
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      const isPWA = window.matchMedia('(display-mode: standalone)').matches;
-
-      console.log('Login attempt:', { isMobile, isPWA, isObsidian: isObsidianWebview(), userAgent: navigator.userAgent });
-
       // Obsidian은 무조건 리다이렉트
       if (isObsidianWebview()) {
-        console.log('Using signInWithRedirect for Obsidian');
         await signInWithRedirect(auth, provider);
         return;
       }
 
       // 모바일/데스크톱 모두 팝업 먼저 시도, 실패시 리다이렉트
       try {
-        console.log('Trying signInWithPopup');
         await signInWithPopup(auth, provider);
-        console.log('Popup login successful');
       } catch (popupError: any) {
-        console.log('Popup error:', popupError.code, popupError.message);
         if (popupError.code === 'auth/popup-blocked' ||
             popupError.code === 'auth/popup-closed-by-user' ||
             popupError.code === 'auth/cancelled-popup-request') {
-          console.log('Falling back to signInWithRedirect');
           await signInWithRedirect(auth, provider);
         } else {
           throw popupError;
         }
       }
     } catch (error: any) {
-      console.error('Login error:', error);
       setError(`로그인 중 오류가 발생했습니다: ${error.code || error.message}`);
     }
   };
 
   // 리다이렉트 결과 처리 (모든 환경에서)
   useEffect(() => {
-    console.log('Checking redirect result...');
     getRedirectResult(auth)
       .then((result) => {
-        console.log('Redirect result:', result);
         if (result?.user) {
-          console.log('User from redirect:', result.user.email);
           if (result.user.email !== ALLOWED_EMAIL) {
-            console.log('Email not allowed:', result.user.email);
             auth.signOut();
             setError('허용되지 않은 이메일입니다.');
             setUser(null);
           } else {
-            console.log('Login successful!');
             setUser(result.user);
           }
-        } else {
-          console.log('No redirect result');
         }
       })
       .catch((error) => {
         // 리다이렉트 결과가 없는 경우는 정상적인 상황이므로 에러 처리하지 않음
-        console.log('Redirect error:', error.code, error.message);
         if (error.code !== 'auth/no-current-user') {
-          console.error('Redirect result error:', error);
           setError(`로그인 중 오류가 발생했습니다: ${error.code} - ${error.message}`);
         }
       });
@@ -154,12 +119,9 @@ const App: React.FC = () => {
   const saveHabitData = async (data: HabitData) => {
     if (!user) return;
     try {
-      console.log('Saving data for user:', user.uid);
       const userDoc = doc(db, 'users', user.uid);
       await setDoc(userDoc, { habitData: data }, { merge: true });
-      console.log('Data saved successfully');
     } catch (error) {
-      console.error('Error saving data:', error);
       setError('데이터 저장 중 오류가 발생했습니다.');
     }
   };
@@ -167,18 +129,15 @@ const App: React.FC = () => {
   const loadHabitData = async (): Promise<HabitData | null> => {
     if (!user) return null;
     try {
-      console.log('Loading data for user:', user.uid);
       const userDoc = doc(db, 'users', user.uid);
       const docSnap = await getDoc(userDoc);
-      
+
       if (docSnap.exists()) {
         const data = docSnap.data();
-        console.log('Loaded data:', data);
         return data.habitData as HabitData;
       }
       return null;
     } catch (error) {
-      console.error('Error loading data:', error);
       setError('데이터 로딩 중 오류가 발생했습니다.');
       return null;
     }
@@ -187,31 +146,19 @@ const App: React.FC = () => {
   // 데이터 마이그레이션 함수
   const migrateData = async (newUserId: string) => {
     try {
-      console.log('Starting data migration from', OLD_USER_ID, 'to', newUserId);
-      
       // 이전 데이터 가져오기
       const oldUserDoc = doc(db, 'users', OLD_USER_ID);
       const oldDocSnap = await getDoc(oldUserDoc);
-      
+
       if (oldDocSnap.exists()) {
         const oldData = oldDocSnap.data();
-        console.log('Found old data:', oldData);
-        
+
         // 새 계정으로 데이터 복사
         const newUserDoc = doc(db, 'users', newUserId);
         await setDoc(newUserDoc, oldData, { merge: true });
-        console.log('Data migrated successfully');
         setDataMigrated(true);
-      } else {
-        console.log('No old data found for ID:', OLD_USER_ID);
       }
     } catch (error: any) {
-      console.error('Error migrating data:', error);
-      console.error('Error code:', error.code);
-      console.error('Error message:', error.message);
-      if (error.details) {
-        console.error('Error details:', error.details);
-      }
       setError(`데이터 마이그레이션 중 오류가 발생했습니다: ${error.message}`);
     }
   };
@@ -294,8 +241,6 @@ const App: React.FC = () => {
       </Box>
     );
   }
-
-  console.log(window.location.origin);
 
   return (
     <Box className="app-container brutalist">

@@ -442,11 +442,11 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       };
 
       const goalsRef = doc(db, 'weeklyGoals', `${user.uid}_${weekMondayStr}`);
-      
+
       // 기존 데이터 확인
       const existingDoc = await getDoc(goalsRef);
       const existingGoals = existingDoc.exists() ? existingDoc.data()?.goals : null;
-      
+
       // 사용할 목표: 기존 목표가 있고 강제 업데이트가 아니면 기존 목표 유지
       const goalsToSave = (existingGoals && !forceUpdateGoals) ? existingGoals : {
         pushups: goals.pushups,
@@ -455,7 +455,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         lateralRaise: goals.lateralRaise,
         running: goals.running
       };
-      
+
       await setDoc(goalsRef, {
         userId: user.uid,
         weekOf: weekMondayStr,
@@ -646,7 +646,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       // 해당 월의 모든 주차 목표를 가져와서 월간 목표 계산
       // 해당 월의 첫 번째 월요일부터 마지막 주 월요일까지의 목표들을 합산
       const monthEnd = new Date(selectedMonthStart.getFullYear(), selectedMonthStart.getMonth() + 1, 0);
-      
+
       // 해당 월 첫 날의 월요일 계산
       const firstDayOfMonth = new Date(selectedMonthStart);
       const firstDayWeekday = firstDayOfMonth.getDay();
@@ -685,7 +685,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           // 해당 주가 선택된 월에 포함되는 날 수 계산
           const weekEnd = new Date(currentMonday);
           weekEnd.setDate(currentMonday.getDate() + 6);
-          
+
           const overlapStart = new Date(Math.max(currentMonday.getTime(), selectedMonthStart.getTime()));
           const overlapEnd = new Date(Math.min(weekEnd.getTime(), monthEnd.getTime()));
           const daysInMonth = Math.ceil((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
@@ -766,23 +766,23 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       pushups: 380,      // 1520 / 4
       pullups: 67,       // 268 / 4
       dips: 269,         // 1076 / 4
-      lateralRaise: 0,   
+      lateralRaise: 0,
       running: 19        // 76 / 4
     };
 
-    // 2026년 1월의 월요일들: 2025-12-30(12월 마지막 주), 2026-01-06, 2026-01-13, 2026-01-20, 2026-01-27
+    // 2026년 1월의 월요일들 (실제 달력 기준)
     const januaryMondays = [
-      '2025-12-30', // 이 주는 1월에 일부만 포함
-      '2026-01-06',
-      '2026-01-13',
-      '2026-01-20',
-      '2026-01-27'  // 이 주는 2월에 일부 포함
+      '2025-12-29', // 12월 마지막 주 월요일 (1월 1-4일 포함)
+      '2026-01-05',
+      '2026-01-12',
+      '2026-01-19',
+      '2026-01-26'  // 이 주는 2월에 일부 포함
     ];
 
     try {
       for (const mondayStr of januaryMondays) {
         const goalsRef = doc(db, 'weeklyGoals', `${user.uid}_${mondayStr}`);
-        
+
         // 목표를 강제로 업데이트 (기존 달성량은 유지)
         await setDoc(goalsRef, {
           userId: user.uid,
@@ -790,7 +790,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           goals: january2026WeeklyGoals,
           updatedAt: Timestamp.now()
         }, { merge: true });
-        
+
         console.log(`${mondayStr} 1월 목표 저장/업데이트 완료`);
       }
     } catch (error) {
@@ -1572,11 +1572,11 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   // 월간 카드형 차트를 위한 데이터 준비
   const prepareMonthlyCardData = (exerciseType: 'pushups' | 'pullups' | 'dips' | 'lateralRaise' | 'running') => {
     const today = new Date();
-    
+
     // 선택된 월의 시작일과 마지막일 계산
     const selectedMonthStart = getSelectedMonthStart();
     const selectedMonthEnd = new Date(selectedMonthStart.getFullYear(), selectedMonthStart.getMonth() + 1, 0);
-    
+
     // 이번 달인 경우 오늘까지, 아니면 해당 월 마지막 날까지
     const isCurrentMonth = selectedMonthOffset === 0;
     const endDate = isCurrentMonth ? today : selectedMonthEnd;
@@ -1628,7 +1628,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
     // 월간 목표 결정
     let monthlyGoal: number;
-    
+
     // 2026년 1월 목표 하드코딩 (확실한 표시를 위해)
     const january2026Goals: { [key: string]: number } = {
       pushups: 1520,
@@ -1637,7 +1637,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       lateralRaise: 0,
       running: 76
     };
-    
+
     if (selectedMonthOffset === 0) {
       // 이번 달인 경우 현재 계산된 목표 사용
       const previousGoal = previousWeeklyGoals[exerciseType] || 0;
@@ -1647,7 +1647,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       // 과거 달인 경우
       const selectedMonth = getSelectedMonthStart();
       const isJanuary2026 = selectedMonth.getFullYear() === 2026 && selectedMonth.getMonth() === 0;
-      
+
       if (isJanuary2026) {
         // 2026년 1월인 경우 하드코딩된 목표 사용
         monthlyGoal = january2026Goals[exerciseType] || 0;

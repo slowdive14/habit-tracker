@@ -185,6 +185,20 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, [dataMigrated]);
 
+  // 로딩 중인 경우 로딩 화면 표시
+  if (loading) {
+    return (
+      <Box className="app-container brutalist">
+        <Box className="brutal-loading">
+          <Box className="brutal-spinner" />
+          <Typography className="brutal-loading-text">
+            LOADING...
+          </Typography>
+        </Box>
+      </Box>
+    );
+  }
+
   // 로그인하지 않은 경우 로그인 화면 표시
   if (!user) {
     return (
@@ -224,20 +238,6 @@ const App: React.FC = () => {
             {error}
           </Alert>
         </Snackbar>
-      </Box>
-    );
-  }
-
-  // 로딩 중인 경우 로딩 화면 표시
-  if (loading) {
-    return (
-      <Box className="app-container brutalist">
-        <Box className="brutal-loading">
-          <Box className="brutal-spinner" />
-          <Typography className="brutal-loading-text">
-            LOADING...
-          </Typography>
-        </Box>
       </Box>
     );
   }

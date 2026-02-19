@@ -64,6 +64,12 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
   
   // 목표 진행률 계산
   const progressPercentage = weeklyGoal > 0 ? Math.min((totalThisWeek / weeklyGoal) * 100, 100) : 0;
+
+  // 예상 진행률 계산 (오늘까지 균등하게 나눴을 때 달성해야 할 %)
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const daysSinceMonday = dayOfWeek === 0 ? 7 : dayOfWeek; // Mon=1, Sun=7
+  const expectedPercentage = (daysSinceMonday / 7) * 100;
   
   // 차트 데이터 준비 - 적응형 스케일을 위해 최대값 계산
   const maxValue = Math.max(...data.map(d => d.value), 1);
@@ -211,16 +217,53 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
                 {totalThisWeek}/{weeklyGoal}{unit}
               </Typography>
             </Box>
-            <LinearProgress
-              variant="determinate"
-              value={progressPercentage}
-              color={getProgressColor()}
-              sx={{
-                height: 6,
+            <Box sx={{ position: 'relative', height: 6, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.1)' }}>
+              {/* 실제 진행률 바 */}
+              <Box sx={{
+                width: `${progressPercentage}%`,
+                height: '100%',
                 borderRadius: 3,
-                backgroundColor: 'rgba(0,0,0,0.1)'
-              }}
-            />
+                backgroundColor: getProgressColor() === 'success' ? '#2e7d32'
+                  : getProgressColor() === 'primary' ? '#1976d2'
+                  : getProgressColor() === 'warning' ? '#ed6c02'
+                  : '#d32f2f',
+                transition: 'width 0.3s ease',
+              }} />
+              {/* 예상 진행률 마커 */}
+              <Tooltip title={`예상 진행률: ${Math.round(expectedPercentage)}%`} arrow placement="top">
+                <Box sx={{
+                  position: 'absolute',
+                  left: `${expectedPercentage}%`,
+                  top: -3,
+                  transform: 'translateX(-50%)',
+                  width: 0,
+                  height: 0,
+                  borderLeft: '4px solid transparent',
+                  borderRight: '4px solid transparent',
+                  borderTop: '5px solid rgba(0,0,0,0.45)',
+                  cursor: 'help',
+                }} />
+              </Tooltip>
+            </Box>
+            {/* 앞서감/뒤처짐 표시 */}
+            {weeklyGoal > 0 && (
+              <Typography
+                variant="caption"
+                sx={{
+                  mt: 0.5,
+                  display: 'block',
+                  textAlign: 'right',
+                  fontWeight: 600,
+                  fontSize: '0.65rem',
+                  color: progressPercentage >= expectedPercentage ? '#2e7d32' : '#d32f2f',
+                }}
+              >
+                {progressPercentage >= expectedPercentage
+                  ? `▲ 예상 대비 ${Math.round(progressPercentage - expectedPercentage)}%p 앞서감`
+                  : `▼ 예상 대비 ${Math.round(expectedPercentage - progressPercentage)}%p 뒤처짐`
+                }
+              </Typography>
+            )}
           </Box>
         )}
 

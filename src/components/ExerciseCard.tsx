@@ -245,25 +245,29 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
                 }} />
               </Tooltip>
             </Box>
-            {/* 앞서감/뒤처짐 표시 */}
-            {weeklyGoal > 0 && (
-              <Typography
-                variant="caption"
-                sx={{
-                  mt: 0.5,
-                  display: 'block',
-                  textAlign: 'right',
-                  fontWeight: 600,
-                  fontSize: '0.65rem',
-                  color: progressPercentage >= expectedPercentage ? '#2e7d32' : '#d32f2f',
-                }}
-              >
-                {progressPercentage >= expectedPercentage
-                  ? `▲ 예상 대비 ${Math.round(progressPercentage - expectedPercentage)}%p 앞서감`
-                  : `▼ 예상 대비 ${Math.round(expectedPercentage - progressPercentage)}%p 뒤처짐`
-                }
-              </Typography>
-            )}
+            {/* 앞서감/뒤처짐 표시 (실제 단위로) */}
+            {weeklyGoal > 0 && (() => {
+              const expectedAmount = Math.round((daysSinceMonday / 7) * weeklyGoal);
+              const diff = totalThisWeek - expectedAmount;
+              return (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    mt: 0.5,
+                    display: 'block',
+                    textAlign: 'right',
+                    fontWeight: 600,
+                    fontSize: '0.65rem',
+                    color: diff >= 0 ? '#2e7d32' : '#d32f2f',
+                  }}
+                >
+                  {diff >= 0
+                    ? `▲ 예상 대비 +${diff}${unit} 앞서감`
+                    : `▼ 예상 대비 ${diff}${unit} 뒤처짐`
+                  }
+                </Typography>
+              );
+            })()}
           </Box>
         )}
 

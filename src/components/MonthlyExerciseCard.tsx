@@ -55,6 +55,12 @@ const MonthlyExerciseCard: React.FC<MonthlyExerciseCardProps> = ({
   
   // 목표 진행률 계산
   const progressPercentage = monthlyGoal > 0 ? Math.min((totalThisMonth / monthlyGoal) * 100, 100) : 0;
+
+  // 예상 진행률 계산 (이번 달 경과일 / 이번 달 총 일수)
+  const now = new Date();
+  const currentDay = now.getDate();
+  const totalDaysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const expectedPercentage = (currentDay / totalDaysInMonth) * 100;
   
   // 차트 데이터 준비 - 적응형 스케일
   const maxValue = Math.max(...data.map(d => d.value), 1);
@@ -197,16 +203,57 @@ const MonthlyExerciseCard: React.FC<MonthlyExerciseCardProps> = ({
                 {title === '달리기' ? Math.round(totalThisMonth) : totalThisMonth}/{title === '달리기' ? Math.round(monthlyGoal) : monthlyGoal}{unit}
               </Typography>
             </Box>
-            <LinearProgress
-              variant="determinate"
-              value={progressPercentage}
-              color={getProgressColor()}
-              sx={{
-                height: 6,
+            <Box sx={{ position: 'relative', height: 6, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.1)' }}>
+              {/* 실제 진행률 바 */}
+              <Box sx={{
+                width: `${progressPercentage}%`,
+                height: '100%',
                 borderRadius: 3,
-                backgroundColor: 'rgba(0,0,0,0.1)'
-              }}
-            />
+                backgroundColor: getProgressColor() === 'success' ? '#2e7d32'
+                  : getProgressColor() === 'primary' ? '#1976d2'
+                  : getProgressColor() === 'warning' ? '#ed6c02'
+                  : '#d32f2f',
+                transition: 'width 0.3s ease',
+              }} />
+              {/* 예상 진행률 마커 */}
+              <Tooltip title={`예상 진행률: ${Math.round(expectedPercentage)}% (${currentDay}/${totalDaysInMonth}일)`} arrow placement="top">
+                <Box sx={{
+                  position: 'absolute',
+                  left: `${expectedPercentage}%`,
+                  top: -3,
+                  transform: 'translateX(-50%)',
+                  width: 0,
+                  height: 0,
+                  borderLeft: '4px solid transparent',
+                  borderRight: '4px solid transparent',
+                  borderTop: '5px solid rgba(0,0,0,0.45)',
+                  cursor: 'help',
+                }} />
+              </Tooltip>
+            </Box>
+            {/* 앞서감/뒤처짐 표시 (실제 단위로) */}
+            {monthlyGoal > 0 && (() => {
+              const expectedAmount = Math.round((currentDay / totalDaysInMonth) * monthlyGoal);
+              const diff = (title === '달리기' ? Math.round(totalThisMonth) : totalThisMonth) - expectedAmount;
+              return (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    mt: 0.5,
+                    display: 'block',
+                    textAlign: 'right',
+                    fontWeight: 600,
+                    fontSize: '0.65rem',
+                    color: diff >= 0 ? '#2e7d32' : '#d32f2f',
+                  }}
+                >
+                  {diff >= 0
+                    ? `▲ 예상 대비 +${diff}${unit} 앞서감`
+                    : `▼ 예상 대비 ${diff}${unit} 뒤처짐`
+                  }
+                </Typography>
+              );
+            })()}
           </Box>
         )}
 

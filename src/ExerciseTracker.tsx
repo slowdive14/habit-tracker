@@ -1666,9 +1666,20 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     };
 
     if (selectedMonthOffset === 0) {
-      // 이번 달인 경우 현재 계산된 목표 사용
-      const previousGoal = previousWeeklyGoals[exerciseType] || 0;
-      const weeklyGoal = calculateFinalWeeklyGoal(exerciseType, previousGoal);
+      // 이번 달인 경우: 저장된 주간 목표 기반으로 월간 목표 계산
+      const cwDayOfWeek = today.getDay();
+      const cwDaysFromMonday = cwDayOfWeek === 0 ? 6 : cwDayOfWeek - 1;
+      const currentWeekMonday = new Date(today);
+      currentWeekMonday.setDate(today.getDate() - cwDaysFromMonday);
+      const currentWeekMondayStr = getKoreanDateString(currentWeekMonday);
+
+      let weeklyGoal: number;
+      if (previousWeeklyGoals.weekOf === currentWeekMondayStr && previousWeeklyGoals[exerciseType] > 0) {
+        weeklyGoal = previousWeeklyGoals[exerciseType];
+      } else {
+        const previousGoal = previousWeeklyGoals[exerciseType] || 0;
+        weeklyGoal = calculateFinalWeeklyGoal(exerciseType, previousGoal);
+      }
       monthlyGoal = Math.ceil(weeklyGoal * 4);
     } else {
       // 과거 달인 경우

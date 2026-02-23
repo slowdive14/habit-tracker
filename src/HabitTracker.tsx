@@ -111,7 +111,6 @@ const getWeekInfo = (date: Date): { weekNumber: number; weekStart: Date; weekEnd
 
 // 데이터 변환 유틸리티 함수
 const transformDataForComponents = (rawData: HabitData | null): HabitData => {
-  console.log('변환 전 원본 데이터:', rawData);
   const result: HabitData = {};
 
   if (!rawData) {
@@ -179,7 +178,6 @@ const transformDataForComponents = (rawData: HabitData | null): HabitData => {
     });
   }
 
-  console.log('변환 후 데이터:', result);
   return result;
 };
 
@@ -228,31 +226,13 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
         // 컴포넌트가 언마운트되었다면 상태 업데이트 중단
         if (!isMounted) return;
 
-        console.log('로드된 원본 데이터 전체:', rawData);
-        console.log('원본 2025년 1월 데이터:', rawData?.['2025']?.['January']);
-
         if (rawData) {
           const transformed = transformDataForComponents(rawData);
-          console.log('변환된 데이터 전체:', transformed);
-          console.log('변환된 2025년 1월 데이터:', transformed['2025']?.['January']);
-
-          // 데이터 유효성 검사
-          if (transformed['2025']?.['January']) {
-            console.log('1월 데이터 유효성 검사:');
-            transformed['2025']['January'].forEach((habit, index) => {
-              console.log(`${habit.title}:`, {
-                daysLength: habit.days.length,
-                hasNonZeroValues: habit.days.some(score => score > 0),
-                weekNumbersLength: habit.weekNumbers.length
-              });
-            });
-          }
-
           setTransformedData(transformed);
         }
         setIsInitialized(true);
       } catch (err) {
-        console.error('Error loading data:', err);
+        // Error handled silently
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -275,11 +255,9 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
       if (!isInitialized) return;
 
       try {
-        console.log('저장하려는 데이터:', transformedData);
-        console.log('2025년 1월 데이터 (저장 시):', transformedData['2025']?.['January']);
         await saveHabitData(transformedData);
       } catch (err) {
-        console.error('Error saving data:', err);
+        // Error handled silently
       }
     };
 
@@ -292,22 +270,12 @@ const HabitTracker: React.FC<HabitTrackerProps> = ({ user, saveHabitData, loadHa
     const month = MONTHS[selectedDate.getMonth()];
     const day = selectedDate.getDate() - 1;
 
-    console.log('점수 업데이트 시도:', {
-      year: currentYear,
-      month,
-      habitIndex,
-      score,
-      day
-    });
-
     // 해당 연도와 월의 데이터가 없으면 생성
     let newData: HabitData = { ...transformedData };
     if (!newData[currentYear]) {
-      console.log(`${currentYear}년 데이터 없음, 새로 생성`);
       newData[currentYear] = {};
     }
     if (!newData[currentYear][month]) {
-      console.log(`${currentYear}년 ${month} 데이터 없음, 새로 생성`);
       newData[currentYear][month] = HABITS.map(habit => ({
         ...habit,
         days: Array(31).fill(0),

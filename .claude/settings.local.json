@@ -22,7 +22,9 @@
       "Bash(firebase projects:list:*)",
       "Bash(npm install:*)",
       "Bash(netlify deploy:*)",
-      "Skill(feature-planner)"
+      "Skill(feature-planner)",
+      "Bash(claude /plugin marketplace add affaan-m/everything-claude-code)",
+      "Bash(Get-Content -Path \"$env:LOCALAPPDATA\\\\Temp\\\\claude\\\\c--Users-user-Downloads-habit-tracker\\\\tasks\\\\aa85fcf.output\" -Tail 20)"
     ],
     "deny": [],
     "ask": []

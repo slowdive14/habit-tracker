@@ -227,11 +227,13 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     pushups: ConsistencyScore;
     pullups: ConsistencyScore;
     dips: ConsistencyScore;
+    lateralRaise: ConsistencyScore;
     running: ConsistencyScore;
   }>({
     pushups: { score: 0, grade: 'F', label: '시작하기', color: '#B71C1C', message: '규칙적인 운동 습관을 만들어보세요!', streakDays: 0, trendChange: 0 },
     pullups: { score: 0, grade: 'F', label: '시작하기', color: '#B71C1C', message: '규칙적인 운동 습관을 만들어보세요!', streakDays: 0, trendChange: 0 },
     dips: { score: 0, grade: 'F', label: '시작하기', color: '#B71C1C', message: '규칙적인 운동 습관을 만들어보세요!', streakDays: 0, trendChange: 0 },
+    lateralRaise: { score: 0, grade: 'F', label: '시작하기', color: '#B71C1C', message: '규칙적인 운동 습관을 만들어보세요!', streakDays: 0, trendChange: 0 },
     running: { score: 0, grade: 'F', label: '시작하기', color: '#B71C1C', message: '운동을 시작해보세요!', streakDays: 0, trendChange: 0 }
   });
 
@@ -729,7 +731,10 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     }
   };
 
-  const validateExerciseValue = (value: number, max: number = 10000): number => {
+  const validateExerciseValue = (value: number, max: number = 10000, allowDecimal: boolean = false): number => {
+    if (allowDecimal) {
+      return Math.min(max, Math.max(0, Math.round(value * 10) / 10 || 0));
+    }
     return Math.min(max, Math.max(0, Math.floor(value) || 0));
   };
 
@@ -751,7 +756,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         pullups: validateExerciseValue(Number(formData.pullups), 1000),
         dips: validateExerciseValue(Number(formData.dips), 2000),
         lateralRaise: validateExerciseValue(Number(formData.lateralRaise), 1000),
-        running: validateExerciseValue(Number(formData.running), 100),
+        running: validateExerciseValue(Number(formData.running), 100, true),
         avgPace: validatePace(formData.avgPace)
       };
 
@@ -1548,9 +1553,21 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     let weeklyGoal: number;
 
     if (selectedWeekOffset === 0) {
-      // 현재 주: 계산된 목표 사용
-      const previousGoal = previousWeeklyGoals[exerciseType] || 0;
-      weeklyGoal = calculateFinalWeeklyGoal(exerciseType, previousGoal);
+      // 현재 주: 이미 저장된 목표가 있으면 그대로 사용
+      const currentWeekMonday = new Date(today);
+      const cwDayOfWeek = today.getDay();
+      const cwDaysFromMonday = cwDayOfWeek === 0 ? 6 : cwDayOfWeek - 1;
+      currentWeekMonday.setDate(today.getDate() - cwDaysFromMonday);
+      const currentWeekMondayStr = getKoreanDateString(currentWeekMonday);
+
+      if (previousWeeklyGoals.weekOf === currentWeekMondayStr && previousWeeklyGoals[exerciseType] > 0) {
+        // 이번 주 목표가 이미 저장되어 있으면 직접 사용
+        weeklyGoal = previousWeeklyGoals[exerciseType];
+      } else {
+        // 새로운 주: 목표 계산
+        const previousGoal = previousWeeklyGoals[exerciseType] || 0;
+        weeklyGoal = calculateFinalWeeklyGoal(exerciseType, previousGoal);
+      }
     } else {
       // 과거/미래 주: 저장된 목표 사용
       const savedGoal = selectedWeekGoals[exerciseType];
@@ -1750,25 +1767,32 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       }
     }
 
-    // 추세 계산 (최근 3개월 vs 초반 3개월)
+    // 추세 계산 (실제 데이터가 있는 월 기반 선형 회귀)
     const calculateTrend = (): { trend: TrendType; percentage: number } => {
-      // 초반 3개월 (1-3월) 데이터
-      const firstQuarterData = chartData.slice(0, 3);
-      const firstQuarterTotal = firstQuarterData.reduce((sum, item) => sum + item.value, 0);
-      const firstQuarterAvg = firstQuarterTotal / 3;
+      // 데이터가 있는 월만 필터링
+      const monthsWithData = chartData
+        .map((item, index) => ({ ...item, index }))
+        .filter(item => item.value > 0);
 
-      // 최근 3개월 (10-12월) 데이터
-      const lastQuarterData = chartData.slice(9, 12);
-      const lastQuarterTotal = lastQuarterData.reduce((sum, item) => sum + item.value, 0);
-      const lastQuarterAvg = lastQuarterTotal / 3;
+      // 데이터가 2개월 미만이면 stable
+      if (monthsWithData.length < 2) {
+        return { trend: 'stable', percentage: 0 };
+      }
 
-      // 변화율 계산
+      // 선형 회귀로 추세 계산
+      const n = monthsWithData.length;
+      const sumX = monthsWithData.reduce((sum, item) => sum + item.index, 0);
+      const sumY = monthsWithData.reduce((sum, item) => sum + item.value, 0);
+      const sumXY = monthsWithData.reduce((sum, item) => sum + item.index * item.value, 0);
+      const sumX2 = monthsWithData.reduce((sum, item) => sum + item.index * item.index, 0);
+
+      const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+      const avgY = sumY / n;
+
+      // 기울기를 평균값 대비 비율로 변환
       let percentage = 0;
-      if (firstQuarterAvg > 0) {
-        percentage = ((lastQuarterAvg - firstQuarterAvg) / firstQuarterAvg) * 100;
-      } else if (lastQuarterAvg > 0) {
-        // 초반에 0이었다면 증가로 간주
-        percentage = 100;
+      if (avgY > 0) {
+        percentage = (slope / avgY) * 100;
       }
 
       // 5단계 분류
@@ -1805,7 +1829,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
   const calculateConsistencyScores = () => {
     // 운동별 일관성 점수 계산
-    const exerciseTypes = ['pushups', 'pullups', 'dips', 'running'] as const;
+    const exerciseTypes = ['pushups', 'pullups', 'dips', 'lateralRaise', 'running'] as const;
     const newScores = { ...consistencyScores };
 
     exerciseTypes.forEach((type) => {
@@ -2577,12 +2601,13 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
             월간 운동 현황
           </Typography>
           <Grid container spacing={3} sx={{ mb: 6 }}>
-            {(['pushups', 'pullups', 'dips', 'running'] as const).map((exerciseType) => {
+            {(['pushups', 'pullups', 'dips', 'lateralRaise', 'running'] as const).map((exerciseType) => {
               const data = prepareMonthlyCardData(exerciseType);
               const exerciseInfo = {
                 pushups: { title: '푸시업', color: '#8884d8', unit: '회' },
                 pullups: { title: '풀업', color: '#82ca9d', unit: '회' },
                 dips: { title: '딥스', color: '#ffc658', unit: '회' },
+                lateralRaise: { title: '사이드 래터럴 레이즈', color: '#ff7043', unit: '회' },
                 running: { title: '달리기', color: '#e91e63', unit: 'km' }
               };
 

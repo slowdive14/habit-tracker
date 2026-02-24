@@ -168,6 +168,15 @@ const getKoreanDateString = (date: Date): string => {
   return koreanTime.toISOString().split('T')[0];
 };
 
+// 운동별 절대 최대 주간 목표 (건강/안전 고려)
+const MAX_WEEKLY_GOALS: { [key: string]: number } = {
+  pushups: Infinity,
+  pullups: Infinity,
+  dips: Infinity,
+  lateralRaise: Infinity,
+  running: 20   // 주 20km 상한선 (월 80km 목표)
+};
+
 const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
   const { theme } = useTheme();
   const [tabValue, setTabValue] = useState(0);  // 0: 주간 통계
@@ -782,7 +791,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       pullups: 67,       // 268 / 4
       dips: 269,         // 1076 / 4
       lateralRaise: 0,
-      running: 19        // 76 / 4
+      running: 20        // 80 / 4
     };
 
     // 2026년 1월의 월요일들 (실제 달력 기준)
@@ -1082,14 +1091,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       running: 3  // 주 3km (하루 1km씩 3일)
     };
 
-    // 운동별 절대 최대값 (건강/안전 고려)
-    const maxWeeklyGoals = {
-      pushups: Infinity,  // 제한 없음
-      pullups: Infinity,  // 제한 없음
-      dips: Infinity,     // 제한 없음
-      lateralRaise: Infinity,  // 제한 없음
-      running: 19   // 주 19km 상한선 (월 76km 목표)
-    };
+    // 운동별 절대 최대값 (컴포넌트 외부 MAX_WEEKLY_GOALS 사용)
+    const maxWeeklyGoals = MAX_WEEKLY_GOALS;
 
     const baseGoal = calculateBaseWeeklyGoal(exerciseType);
     const trendBonus = calculateTrendBonus(exerciseType);
@@ -1561,8 +1564,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       const currentWeekMondayStr = getKoreanDateString(currentWeekMonday);
 
       if (previousWeeklyGoals.weekOf === currentWeekMondayStr && previousWeeklyGoals[exerciseType] > 0) {
-        // 이번 주 목표가 이미 저장되어 있으면 직접 사용
-        weeklyGoal = previousWeeklyGoals[exerciseType];
+        // 이번 주 목표가 이미 저장되어 있으면 직접 사용 (상한선 클램프 적용)
+        weeklyGoal = Math.min(previousWeeklyGoals[exerciseType], MAX_WEEKLY_GOALS[exerciseType] ?? Infinity);
       } else {
         // 새로운 주: 목표 계산
         const previousGoal = previousWeeklyGoals[exerciseType] || 0;
@@ -1675,7 +1678,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
       let weeklyGoal: number;
       if (previousWeeklyGoals.weekOf === currentWeekMondayStr && previousWeeklyGoals[exerciseType] > 0) {
-        weeklyGoal = previousWeeklyGoals[exerciseType];
+        // 저장된 목표 사용 (상한선 클램프 적용)
+        weeklyGoal = Math.min(previousWeeklyGoals[exerciseType], MAX_WEEKLY_GOALS[exerciseType] ?? Infinity);
       } else {
         const previousGoal = previousWeeklyGoals[exerciseType] || 0;
         weeklyGoal = calculateFinalWeeklyGoal(exerciseType, previousGoal);

@@ -1763,11 +1763,19 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     let yearOverYearChange: number | undefined;
 
     if (selectedYear > 2025) { // 2025년이 시작 연도라고 가정
-      // 전년도 데이터 집계
+      // 전년도 동일 기간 데이터 집계 (현재 연도면 같은 월까지만 비교)
+      const lastMonthToCompare = selectedYear === currentYear
+        ? koreanNow.getMonth() // 0-indexed: 현재 월까지만
+        : 11; // 과거 연도면 12개월 전체
+
       let prevYearTotal = 0;
-      for (let month = 0; month < 12; month++) {
+      for (let month = 0; month <= lastMonthToCompare; month++) {
         const daysInMonth = new Date(selectedYear - 1, month + 1, 0).getDate();
-        for (let day = 1; day <= daysInMonth; day++) {
+        // 현재 연도의 마지막 비교 월이면 오늘 날짜까지만
+        const lastDay = (selectedYear === currentYear && month === lastMonthToCompare)
+          ? koreanNow.getDate()
+          : daysInMonth;
+        for (let day = 1; day <= lastDay; day++) {
           const dateStr = `${selectedYear - 1}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
           const exercise = exerciseData[dateStr];
           if (exercise && exercise[exerciseType]) {

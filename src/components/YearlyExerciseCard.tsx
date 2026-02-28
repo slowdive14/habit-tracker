@@ -232,7 +232,7 @@ const YearlyExerciseCard: React.FC<YearlyExerciseCardProps> = ({
           {previousYearTotal !== undefined && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Chip
-                label={`전년: ${previousYearTotal.toLocaleString()} ${unit}`}
+                label={`전년 동기: ${previousYearTotal.toLocaleString()} ${unit}`}
                 size="small"
                 sx={{
                   backgroundColor: 'rgba(0, 0, 0, 0.05)',

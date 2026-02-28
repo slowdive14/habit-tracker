@@ -214,7 +214,7 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
                 </Tooltip>
               </Box>
               <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {totalThisWeek}/{weeklyGoal}{unit}
+                {title === '달리기' ? (Math.round(totalThisWeek * 10) / 10) : totalThisWeek}/{weeklyGoal}{unit}
               </Typography>
             </Box>
             <Box sx={{ position: 'relative', height: 6, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.1)' }}>

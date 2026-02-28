@@ -1628,18 +1628,18 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     const prevMonthStart = new Date(selectedMonthStart.getFullYear(), selectedMonthStart.getMonth() - 1, 1);
     const prevMonthEnd = new Date(selectedMonthStart.getFullYear(), selectedMonthStart.getMonth(), 0);
 
-    // 선택된 달 데이터
-    const selectedMonthData = Object.entries(exerciseData)
-      .filter(([date]) => new Date(date) >= selectedMonthStart && new Date(date) <= endDate)
-      .map(([, data]) => data[exerciseType] || 0);
+    // 선택된 달 데이터 - chartData에서 직접 합산 (타임존 이슈 없음)
+    const selectedMonthTotal = chartData.reduce((sum, item) => sum + item.value, 0);
 
-    // 이전 달 데이터
-    const prevMonthData = Object.entries(exerciseData)
-      .filter(([date]) => new Date(date) >= prevMonthStart && new Date(date) <= prevMonthEnd)
-      .map(([, data]) => data[exerciseType] || 0);
-
-    const selectedMonthTotal = selectedMonthData.reduce((sum, val) => sum + val, 0);
-    const prevMonthTotal = prevMonthData.reduce((sum, val) => sum + val, 0);
+    // 이전 달 데이터 - 동일한 패턴으로 날짜 생성 후 딕셔너리 직접 조회
+    const prevMonthDaysCount = prevMonthEnd.getDate();
+    const prevMonthDays = Array.from({ length: prevMonthDaysCount }, (_, i) => {
+      const date = new Date(prevMonthStart.getFullYear(), prevMonthStart.getMonth(), 1 + i);
+      return getKoreanDateString(date);
+    });
+    const prevMonthTotal = prevMonthDays.reduce(
+      (sum, date) => sum + (exerciseData[date]?.[exerciseType] || 0), 0
+    );
 
     // 선택된 달 평균 (실제 경과 날수로 계산)
     const daysPassedInSelectedMonth = daysToShow;

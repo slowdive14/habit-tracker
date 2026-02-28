@@ -200,7 +200,7 @@ const MonthlyExerciseCard: React.FC<MonthlyExerciseCardProps> = ({
                 </Tooltip>
               </Box>
               <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {title === '달리기' ? Math.round(totalThisMonth) : totalThisMonth}/{title === '달리기' ? Math.round(monthlyGoal) : monthlyGoal}{unit}
+                {title === '달리기' ? (Math.round(totalThisMonth * 10) / 10) : totalThisMonth}/{title === '달리기' ? Math.round(monthlyGoal) : monthlyGoal}{unit}
               </Typography>
             </Box>
             <Box sx={{ position: 'relative', height: 6, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.1)' }}>
@@ -234,7 +234,7 @@ const MonthlyExerciseCard: React.FC<MonthlyExerciseCardProps> = ({
             {/* 앞서감/뒤처짐 표시 (실제 단위로) */}
             {monthlyGoal > 0 && (() => {
               const expectedAmount = Math.round((currentDay / totalDaysInMonth) * monthlyGoal);
-              const diff = (title === '달리기' ? Math.round(totalThisMonth) : totalThisMonth) - expectedAmount;
+              const diff = (title === '달리기' ? Math.round(totalThisMonth * 10) / 10 : totalThisMonth) - expectedAmount;
               return (
                 <Typography
                   variant="caption"
@@ -294,7 +294,7 @@ const MonthlyExerciseCard: React.FC<MonthlyExerciseCardProps> = ({
             />
           </Tooltip>
           <Chip
-            label={`이번 달 총 ${title === '달리기' ? Math.round(totalThisMonth) : totalThisMonth}${unit}`}
+            label={`이번 달 총 ${title === '달리기' ? (Math.round(totalThisMonth * 10) / 10) : totalThisMonth}${unit}`}
             size="small"
             variant="filled"
             sx={{ 

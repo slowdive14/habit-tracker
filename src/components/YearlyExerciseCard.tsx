@@ -109,7 +109,7 @@ const YearlyExerciseCard: React.FC<YearlyExerciseCardProps> = ({
           </Typography>
           {yearOverYearChange !== undefined && (
             <Chip
-              icon={<TrendIcon />}
+              icon={yearOverYearChange > 0 ? <TrendingUpIcon /> : yearOverYearChange < 0 ? <TrendingDownIcon /> : <TrendingFlatIcon />}
               label={`${yearOverYearChange > 0 ? '+' : ''}${yearOverYearChange}%`}
               size="small"
               sx={{

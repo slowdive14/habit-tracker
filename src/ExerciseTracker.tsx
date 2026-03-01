@@ -654,6 +654,9 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       const selectedMonthStart = getSelectedMonthStart();
       const monthKey = `${selectedMonthStart.getFullYear()}-${String(selectedMonthStart.getMonth() + 1).padStart(2, '0')}`;
 
+      // 이전 데이터 즉시 초기화 → stale 데이터 방지
+      setSelectedMonthGoals(prev => ({ ...prev, monthOf: '' }));
+
       // 해당 월의 모든 주차 목표를 가져와서 월간 목표 계산
       // 해당 월의 첫 번째 월요일부터 마지막 주 월요일까지의 목표들을 합산
       const monthEnd = new Date(selectedMonthStart.getFullYear(), selectedMonthStart.getMonth() + 1, 0);
@@ -708,8 +711,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           totalGoals.lateralRaise += goals.lateralRaise * weightRatio;
           totalGoals.running += goals.running * weightRatio;
           weeksInMonth++;
-        } else if (selectedMonthOffset === 0 && previousWeeklyGoals) {
-          // 이번 달의 미래 주차: 현재 주간 목표로 프로젝션
+        } else if (previousWeeklyGoals) {
+          // Firestore에 없는 주차: previousWeeklyGoals로 프로젝션 (모든 월 공통)
           totalGoals.pushups += (previousWeeklyGoals.pushups || 0) * weightRatio;
           totalGoals.pullups += (previousWeeklyGoals.pullups || 0) * weightRatio;
           totalGoals.dips += (previousWeeklyGoals.dips || 0) * weightRatio;
@@ -1679,11 +1682,15 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     // 모든 월에 대해 selectedMonthGoals 사용 (통일된 계산 방식)
     const selectedMonth = getSelectedMonthStart();
     const isJanuary2026 = selectedMonth.getFullYear() === 2026 && selectedMonth.getMonth() === 0;
+    const expectedMonthKey = `${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth() + 1).padStart(2, '0')}`;
 
     if (isJanuary2026) {
       monthlyGoal = january2026Goals[exerciseType] || 0;
     } else {
-      const savedGoal = selectedMonthGoals[exerciseType];
+      // selectedMonthGoals가 현재 보고 있는 월의 데이터인지 검증
+      const savedGoal = (selectedMonthGoals.monthOf === expectedMonthKey)
+        ? selectedMonthGoals[exerciseType]
+        : 0;
       if (savedGoal && savedGoal > 0) {
         monthlyGoal = savedGoal;
       } else {

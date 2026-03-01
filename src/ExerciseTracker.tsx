@@ -174,7 +174,7 @@ const MAX_WEEKLY_GOALS: { [key: string]: number } = {
   pullups: Infinity,
   dips: Infinity,
   lateralRaise: Infinity,
-  running: 20   // 주 20km 상한선 (월 80km 목표)
+  running: 150  // 주 150km 상한선
 };
 
 const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
@@ -1047,8 +1047,9 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     const avgWeeklyFrequency = calculateWeeklyFrequency(exerciseType);
     const userCapacity = evaluateUserCapacity(exerciseType);
 
-    // 모든 운동에 동일한 배율 적용
-    const growthMultiplier = 1.05;
+    // 감소 추세 감지: 최근 능력이 지난달 평균보다 낮으면 증가 억제
+    const isDecreasing = lastMonthExerciseDaysAvg > 0 && userCapacity < lastMonthExerciseDaysAvg;
+    const growthMultiplier = isDecreasing ? 1.0 : 1.05;
     const capacityMultiplier = 0.8;
 
     // Case A: 지난달 데이터 존재 (신뢰도 높음)
@@ -1083,10 +1084,16 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     const lastMonthAvg = getExerciseDaysAverage(lastMonthDays, exerciseType);
     const avgWeeklyFrequency = calculateWeeklyFrequency(exerciseType);
 
-    // 지난주가 지난달보다 개선된 경우에만 보너스 부여 (모든 운동 동일)
+    // 상승: 보너스 (개선폭의 30% 반영)
     if (lastWeekAvg > lastMonthAvg && lastMonthAvg > 0) {
       const improvement = lastWeekAvg - lastMonthAvg;
       return Math.ceil(improvement * avgWeeklyFrequency * 0.3);
+    }
+
+    // 감소: 페널티 (감소폭의 50% 반영, 보너스보다 강하게 적용하여 빠른 현실 반영)
+    if (lastWeekAvg < lastMonthAvg && lastMonthAvg > 0) {
+      const decline = lastWeekAvg - lastMonthAvg; // 음수
+      return Math.floor(decline * avgWeeklyFrequency * 0.5);
     }
 
     return 0;
@@ -1113,10 +1120,15 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     // 초기 목표 = 기본 + 보너스 (최소값 보장)
     let finalGoal = Math.max(baseGoal + trendBonus, minWeeklyGoals[exerciseType]);
 
-    // 40% 증가 상한선 적용 (이전 목표가 있을 경우)
+    // 이전 목표 기반 변동 범위 제한 (급격한 변화 방지)
     if (previousGoal > 0) {
+      // 40% 증가 상한선
       const maxAllowedGoal = previousGoal * 1.4;
       finalGoal = Math.min(finalGoal, maxAllowedGoal);
+
+      // 30% 감소 하한선 (급격한 목표 하락 방지)
+      const minAllowedGoal = Math.ceil(previousGoal * 0.7);
+      finalGoal = Math.max(finalGoal, minAllowedGoal);
     }
 
     // 절대 상한선 적용 (최종 안전장치)
@@ -1131,7 +1143,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       추세보너스: trendBonus,
       최소보장: minWeeklyGoals[exerciseType],
       이전목표: previousGoal,
-      최대허용_40프로: previousGoal > 0 ? Math.round(previousGoal * 1.4) : 'N/A',
+      최소허용_70프로: previousGoal > 0 ? Math.ceil(previousGoal * 0.7) : 'N/A',
+      최대허용_140프로: previousGoal > 0 ? Math.round(previousGoal * 1.4) : 'N/A',
       절대상한선: maxWeeklyGoals[exerciseType],
       상한선적용전: goalBeforeCap,
       최종목표: finalGoal

@@ -683,6 +683,15 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         const goalsRef = doc(db, 'weeklyGoals', `${user.uid}_${mondayStr}`);
         const goalsDoc = await getDoc(goalsRef);
 
+        // 해당 주가 선택된 월에 포함되는 날 수 계산
+        const weekEnd = new Date(currentMonday);
+        weekEnd.setDate(currentMonday.getDate() + 6);
+
+        const overlapStart = new Date(Math.max(currentMonday.getTime(), selectedMonthStart.getTime()));
+        const overlapEnd = new Date(Math.min(weekEnd.getTime(), monthEnd.getTime()));
+        const daysInMonth = Math.ceil((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        const weightRatio = daysInMonth / 7;
+
         if (goalsDoc.exists()) {
           const data = goalsDoc.data();
           const goals = data.goals || {
@@ -693,20 +702,19 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
             running: data.running || 0
           };
 
-          // 해당 주가 선택된 월에 포함되는 날 수 계산
-          const weekEnd = new Date(currentMonday);
-          weekEnd.setDate(currentMonday.getDate() + 6);
-
-          const overlapStart = new Date(Math.max(currentMonday.getTime(), selectedMonthStart.getTime()));
-          const overlapEnd = new Date(Math.min(weekEnd.getTime(), monthEnd.getTime()));
-          const daysInMonth = Math.ceil((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-          const weightRatio = daysInMonth / 7;
-
           totalGoals.pushups += goals.pushups * weightRatio;
           totalGoals.pullups += goals.pullups * weightRatio;
           totalGoals.dips += goals.dips * weightRatio;
           totalGoals.lateralRaise += goals.lateralRaise * weightRatio;
           totalGoals.running += goals.running * weightRatio;
+          weeksInMonth++;
+        } else if (selectedMonthOffset === 0 && previousWeeklyGoals) {
+          // 이번 달의 미래 주차: 현재 주간 목표로 프로젝션
+          totalGoals.pushups += (previousWeeklyGoals.pushups || 0) * weightRatio;
+          totalGoals.pullups += (previousWeeklyGoals.pullups || 0) * weightRatio;
+          totalGoals.dips += (previousWeeklyGoals.dips || 0) * weightRatio;
+          totalGoals.lateralRaise += (previousWeeklyGoals.lateralRaise || 0) * weightRatio;
+          totalGoals.running += (previousWeeklyGoals.running || 0) * weightRatio;
           weeksInMonth++;
         }
 
@@ -857,7 +865,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     if (user) {
       loadSelectedMonthGoals();
     }
-  }, [selectedMonthOffset, user]);
+  }, [selectedMonthOffset, user, previousWeeklyGoals]);
 
   // 선택된 연도 변경 시 연간 데이터 재계산
   useEffect(() => {
@@ -1668,42 +1676,24 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       running: 76
     };
 
-    if (selectedMonthOffset === 0) {
-      // 이번 달인 경우: 저장된 주간 목표 기반으로 월간 목표 계산
-      const cwDayOfWeek = today.getDay();
-      const cwDaysFromMonday = cwDayOfWeek === 0 ? 6 : cwDayOfWeek - 1;
-      const currentWeekMonday = new Date(today);
-      currentWeekMonday.setDate(today.getDate() - cwDaysFromMonday);
-      const currentWeekMondayStr = getKoreanDateString(currentWeekMonday);
+    // 모든 월에 대해 selectedMonthGoals 사용 (통일된 계산 방식)
+    const selectedMonth = getSelectedMonthStart();
+    const isJanuary2026 = selectedMonth.getFullYear() === 2026 && selectedMonth.getMonth() === 0;
 
-      let weeklyGoal: number;
-      if (previousWeeklyGoals.weekOf === currentWeekMondayStr && previousWeeklyGoals[exerciseType] > 0) {
-        // 저장된 목표 사용 (상한선 클램프 적용)
-        weeklyGoal = Math.min(previousWeeklyGoals[exerciseType], MAX_WEEKLY_GOALS[exerciseType] ?? Infinity);
-      } else {
-        const previousGoal = previousWeeklyGoals[exerciseType] || 0;
-        weeklyGoal = calculateFinalWeeklyGoal(exerciseType, previousGoal);
-      }
-      monthlyGoal = Math.ceil(weeklyGoal * 4);
+    if (isJanuary2026) {
+      monthlyGoal = january2026Goals[exerciseType] || 0;
     } else {
-      // 과거 달인 경우
-      const selectedMonth = getSelectedMonthStart();
-      const isJanuary2026 = selectedMonth.getFullYear() === 2026 && selectedMonth.getMonth() === 0;
-
-      if (isJanuary2026) {
-        // 2026년 1월인 경우 하드코딩된 목표 사용
-        monthlyGoal = january2026Goals[exerciseType] || 0;
+      const savedGoal = selectedMonthGoals[exerciseType];
+      if (savedGoal && savedGoal > 0) {
+        monthlyGoal = savedGoal;
       } else {
-        // 다른 과거 달인 경우 저장된 목표 사용
-        const savedGoal = selectedMonthGoals[exerciseType];
-        if (savedGoal && savedGoal > 0) {
-          monthlyGoal = savedGoal;
-        } else {
-          // 저장된 목표가 없으면 기본 계산 사용
-          const previousGoal = previousWeeklyGoals[exerciseType] || 0;
-          const weeklyGoal = calculateFinalWeeklyGoal(exerciseType, previousGoal);
-          monthlyGoal = Math.ceil(weeklyGoal * 4);
-        }
+        // selectedMonthGoals 로딩 전 폴백
+        const previousGoal = previousWeeklyGoals[exerciseType] || 0;
+        const weeklyGoal = Math.min(
+          previousWeeklyGoals.weekOf ? (previousWeeklyGoals[exerciseType] || 0) : calculateFinalWeeklyGoal(exerciseType, previousGoal),
+          MAX_WEEKLY_GOALS[exerciseType] ?? Infinity
+        );
+        monthlyGoal = Math.ceil(weeklyGoal * 4);
       }
     }
 
@@ -1750,12 +1740,21 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
     // 최고/최저 월 찾기 (0이 아닌 값 중에서)
     const nonZeroData = chartData.filter(item => item.value > 0);
+    // 최저 월 비교 시 현재 연도의 진행 중인 월(15일 미만)은 제외
+    const currentMonthIdx = koreanNow.getMonth(); // 0-indexed
+    const completedMonthData = nonZeroData.filter((item, idx) => {
+      const monthIndex = chartData.indexOf(item);
+      if (selectedYear === currentYear && monthIndex === currentMonthIdx && koreanNow.getDate() < 15) {
+        return false;
+      }
+      return true;
+    });
     const bestMonth = nonZeroData.length > 0
       ? nonZeroData.reduce((max, item) => item.value > max.value ? item : max, nonZeroData[0])
       : { month: '-', value: 0 };
 
-    const worstMonth = nonZeroData.length > 0
-      ? nonZeroData.reduce((min, item) => item.value < min.value ? item : min, nonZeroData[0])
+    const worstMonth = completedMonthData.length > 0
+      ? completedMonthData.reduce((min, item) => item.value < min.value ? item : min, completedMonthData[0])
       : { month: '-', value: 0 };
 
     // 전년도 데이터 계산
@@ -1792,10 +1791,18 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
     // 추세 계산 (실제 데이터가 있는 월 기반 선형 회귀)
     const calculateTrend = (): { trend: TrendType; percentage: number } => {
-      // 데이터가 있는 월만 필터링
+      // 데이터가 있는 월만 필터링 (현재 연도의 진행 중인 월은 제외)
+      const currentMonth = koreanNow.getMonth(); // 0-indexed
       const monthsWithData = chartData
         .map((item, index) => ({ ...item, index }))
-        .filter(item => item.value > 0);
+        .filter(item => {
+          if (item.value <= 0) return false;
+          // 현재 연도의 현재 월은 불완전한 데이터이므로 제외
+          if (selectedYear === currentYear && item.index === currentMonth && koreanNow.getDate() < 15) {
+            return false;
+          }
+          return true;
+        });
 
       // 데이터가 2개월 미만이면 stable
       if (monthsWithData.length < 2) {

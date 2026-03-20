@@ -214,7 +214,7 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
                 </Tooltip>
               </Box>
               <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {title === '달리기' ? (Math.round(totalThisWeek * 10) / 10) : totalThisWeek}/{weeklyGoal}{unit}
+                {title === '달리기' ? Math.round(totalThisWeek) : totalThisWeek}/{weeklyGoal}{unit}
               </Typography>
             </Box>
             <Box sx={{ position: 'relative', height: 6, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.1)' }}>
@@ -248,7 +248,7 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
             {/* 앞서감/뒤처짐 표시 (실제 단위로) */}
             {weeklyGoal > 0 && (() => {
               const expectedAmount = Math.round((daysSinceMonday / 7) * weeklyGoal);
-              const diff = totalThisWeek - expectedAmount;
+              const diff = (title === '달리기' ? Math.round(totalThisWeek) : totalThisWeek) - expectedAmount;
               return (
                 <Typography
                   variant="caption"
@@ -345,7 +345,7 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
             disableTouchListener={false}
           >
             <Chip
-              label={`평균 ${averageValue.toFixed(1)}${unit}`}
+              label={`평균 ${title === '달리기' ? Math.round(averageValue) : averageValue.toFixed(1)}${unit}`}
               size="small"
               variant="outlined"
               sx={{ fontSize: '0.7rem', cursor: 'help' }}

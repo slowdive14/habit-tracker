@@ -731,7 +731,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
           pullups: Math.ceil(totalGoals.pullups),
           dips: Math.ceil(totalGoals.dips),
           lateralRaise: Math.ceil(totalGoals.lateralRaise),
-          running: Math.round(totalGoals.running * 10) / 10,
+          running: Math.round(totalGoals.running),
           monthOf: monthKey
         });
         console.log(`선택된 월 (${monthKey}) 목표 로드 성공:`, totalGoals);
@@ -1507,8 +1507,8 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
         }
       }
 
-      // running은 소수점 1자리까지
-      monthData.running = Math.round(monthData.running * 10) / 10;
+      // running은 정수로 반올림
+      monthData.running = Math.round(monthData.running);
 
       monthlyTotals.push(monthData);
     }
@@ -1756,7 +1756,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
     }
 
     // 일일 평균
-    const yearlyAverage = actualDays > 0 ? Math.round((yearlyTotal / actualDays) * 10) / 10 : 0;
+    const yearlyAverage = actualDays > 0 ? Math.round(yearlyTotal / actualDays) : 0;
 
     // 최고/최저 월 찾기 (0이 아닌 값 중에서)
     const nonZeroData = chartData.filter(item => item.value > 0);
@@ -1804,7 +1804,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       }
 
       if (prevYearTotal > 0) {
-        previousYearTotal = Math.round(prevYearTotal * 10) / 10;
+        previousYearTotal = Math.round(prevYearTotal);
         yearOverYearChange = Math.round(((yearlyTotal - prevYearTotal) / prevYearTotal) * 100);
       }
     }
@@ -1866,7 +1866,7 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
 
     return {
       chartData,
-      yearlyTotal: Math.round(yearlyTotal * 10) / 10,
+      yearlyTotal: Math.round(yearlyTotal),
       yearlyAverage,
       bestMonth,
       worstMonth,

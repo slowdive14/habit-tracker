@@ -192,6 +192,8 @@ const MAX_WEEKLY_GOALS: { [key: string]: number } = {
   pullups: Infinity,
   dips: Infinity,
   lateralRaise: Infinity,
+  boxStepUp: Infinity,
+  legRaise: Infinity,
   running: 150  // 주 150km 상한선
 };
 

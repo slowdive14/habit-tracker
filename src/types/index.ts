@@ -25,6 +25,8 @@ export interface Exercise {
   lateralRaise: number;
   running: number;
   avgPace: string;
+  boxStepUp: number;
+  legRaise: number;
 }
 
 export interface WeeklyGoals {
@@ -33,4 +35,6 @@ export interface WeeklyGoals {
   dips: number;
   lateralRaise: number;
   running: number;
+  boxStepUp: number;
+  legRaise: number;
 }

@@ -2152,13 +2152,24 @@ const ExerciseTracker: React.FC<ExerciseTrackerProps> = ({ user }) => {
       return;
     }
 
+    const exercises = [
+      { key: 'pushups', label: 'Push-up', unit: '회', emoji: '💪' },
+      { key: 'pullups', label: 'Pull-up', unit: '회', emoji: '🏋️' },
+      { key: 'dips', label: 'Dips', unit: '회', emoji: '🔥' },
+      { key: 'lateralRaise', label: 'Lateral Raise', unit: '회', emoji: '🏋️‍♂️' },
+      { key: 'boxStepUp', label: 'Box Step-up', unit: '회', emoji: '🦵' },
+      { key: 'legRaise', label: 'Leg Raise', unit: '회', emoji: '🦿' },
+    ];
+    const lines = exercises
+      .filter(e => (dayData as any)[e.key] > 0)
+      .map(e => `${e.label}: ${(dayData as any)[e.key]}${e.unit} ${e.emoji}`);
+    if (dayData.running > 0) {
+      lines.push(`Running: ${dayData.running}km${dayData.avgPace ? ` (avg pace: ${dayData.avgPace})` : ''} 🏃`);
+    }
+
     const tweetText = `${shareDate} 운동 기록 📝
 
-Push-up: ${dayData.pushups}회 💪
-Pull-up: ${dayData.pullups}회 🏋️
-Dips: ${dayData.dips}회 🔥
-Lateral Raise: ${dayData.lateralRaise}회 🏋️‍♂️
-Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
+${lines.join('\n')}
 
 #내재역량 #저속노화 #감정조절 #인지기능개선`;
 
@@ -2452,7 +2463,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                placeholder="푸시업"
+                label="푸시업"
                 name="pushups"
                 type="number"
                 value={formData.pushups}
@@ -2462,7 +2473,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                placeholder="풀업"
+                label="풀업"
                 name="pullups"
                 type="number"
                 value={formData.pullups}
@@ -2472,7 +2483,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                placeholder="딥스"
+                label="딥스"
                 name="dips"
                 type="number"
                 value={formData.dips}
@@ -2482,7 +2493,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                placeholder="사이드 래터럴 레이즈"
+                label="사이드 래터럴 레이즈"
                 name="lateralRaise"
                 type="number"
                 value={formData.lateralRaise}
@@ -2492,7 +2503,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                placeholder="박스 스텝업"
+                label="박스 스텝업"
                 name="boxStepUp"
                 type="number"
                 value={formData.boxStepUp}
@@ -2502,7 +2513,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                placeholder="레그 레이즈"
+                label="레그 레이즈"
                 name="legRaise"
                 type="number"
                 value={formData.legRaise}
@@ -2512,7 +2523,7 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                placeholder="달리기 (km)"
+                label="달리기 (km)"
                 name="running"
                 type="number"
                 inputProps={{ step: "0.1" }}
@@ -2524,7 +2535,8 @@ Running: ${dayData.running}km (avg pace: ${dayData.avgPace}) 🏃
               <TextField
                 fullWidth
                 name="avgPace"
-                placeholder="평균 페이스 (mm:ss) 예: 05:30"
+                label="평균 페이스 (mm:ss)"
+                placeholder="예: 05:30"
                 value={formData.avgPace}
                 onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
                   let value = e.target.value;
